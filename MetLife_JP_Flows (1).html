@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MetLife Japan · Agentic AI · Scenario Flow Diagrams</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#0d1117;
+  --surface:#161b22;
+  --surface2:#1c2333;
+  --border:#2d3748;
+  --text:#e6edf3;
+  --muted:#8b949e;
+  --dim:#6e7681;
+  --mono:'JetBrains Mono',monospace;
+  --sans:'Inter',sans-serif;
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;font-size:13px;}
+
+/* ── PRINT ── */
+@media print{
+  .screen-ui{display:none!important;}
+  body{background:#0d1117!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .page{display:block!important;page-break-after:always;padding:20px 24px!important;}
+  .page:last-child{page-break-after:avoid;}
+  .node,.lg-box,.note,.db-chip,.branch-label{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  @page{size:A3 landscape;margin:10mm;}
+}
+
+/* ── HEADER ── */
+.app-header{background:var(--surface);border-bottom:1px solid var(--border);padding:13px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-mark{width:30px;height:30px;border-radius:6px;background:linear-gradient(135deg,#1d4ed8,#0ea5e9);display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:800;color:#fff;}
+.logo-name{font-size:.82rem;font-weight:700;}
+.logo-sub{font-size:.6rem;color:var(--muted);margin-top:1px;}
+.hdr-right{display:flex;align-items:center;gap:10px;}
+.btn-pdf{display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:5px;font-size:.7rem;font-weight:600;cursor:pointer;border:none;background:#1d4ed8;color:#fff;letter-spacing:.2px;}
+.btn-pdf:hover{background:#1e40af;}
+.hdr-meta{font-size:.6rem;color:var(--dim);text-align:right;line-height:1.6;}
+
+/* ── TABS ── */
+.tab-bar{background:var(--surface);border-bottom:1px solid var(--border);display:flex;overflow-x:auto;padding:0 20px;scrollbar-width:none;position:sticky;top:53px;z-index:100;}
+.tab-bar::-webkit-scrollbar{display:none;}
+.tab{padding:10px 15px;font-size:.65rem;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s;user-select:none;display:flex;align-items:center;gap:5px;letter-spacing:.4px;text-transform:uppercase;}
+.tab:hover{color:var(--text);}
+.tab.active{color:var(--text);border-bottom-color:var(--tc,#1d4ed8);}
+.s-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+
+/* ── PAGE ── */
+.page{display:none;padding:28px 36px 52px;}
+.page.active{display:block;}
+
+/* ── PAGE HEADER ── */
+.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border);}
+.ph-l .slabel{font-size:.57rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:4px;}
+.ph-l h2{font-size:1.15rem;font-weight:700;line-height:1.2;}
+.ph-l .ssub{font-size:.7rem;color:var(--muted);margin-top:3px;line-height:1.5;}
+.tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;}
+.tag{padding:2px 8px;border-radius:3px;font-size:.58rem;font-weight:600;border:1px solid;letter-spacing:.2px;}
+
+/* ── LEGEND ── */
+.legend{display:flex;gap:14px;flex-wrap:wrap;padding:7px 0 14px;border-bottom:1px solid var(--border);margin-bottom:22px;}
+.leg{display:flex;align-items:center;gap:4px;font-size:.6rem;color:var(--muted);}
+.leg-sq{width:9px;height:9px;border-radius:2px;border:1.5px solid;flex-shrink:0;}
+
+/* ── FLOW ── */
+.flow{display:flex;flex-direction:column;align-items:center;}
+
+/* ── NODES ── */
+.node{position:relative;border-radius:6px;border:1px solid;padding:10px 13px;font-size:.68rem;line-height:1.45;width:320px;}
+.node.sm{width:220px;} .node.md{width:270px;} .node.lg{width:360px;} .node.xl{width:420px;}
+.nbadge{font-size:.52rem;font-weight:700;text-transform:uppercase;letter-spacing:.7px;opacity:.75;margin-bottom:2px;}
+.ntitle{font-size:.74rem;font-weight:700;line-height:1.3;margin-bottom:3px;}
+.nbody{font-size:.65rem;color:var(--muted);line-height:1.5;}
+.nbody strong{color:var(--text);font-weight:600;}
+.nbody code{font-family:var(--mono);font-size:.58rem;background:rgba(255,255,255,.07);padding:1px 4px;border-radius:2px;color:#93c5fd;}
+.pills{display:flex;gap:3px;flex-wrap:wrap;margin-top:5px;}
+.pill{padding:2px 6px;border-radius:3px;font-size:.55rem;font-weight:700;border:1px solid;letter-spacing:.2px;}
+
+/* node colors */
+.n-trigger{background:rgba(29,78,216,.13);border-color:#1d4ed8;color:#93c5fd;}
+.n-trigger .nbadge{color:#60a5fa;}
+.n-agent{background:rgba(15,118,110,.12);border-color:#0f766e;color:#5eead4;}
+.n-agent .nbadge{color:#2dd4bf;}
+.n-llm{background:rgba(180,83,9,.13);border-color:#b45309;color:#fcd34d;}
+.n-llm .nbadge{color:#fbbf24;}
+.n-rule{background:rgba(71,85,105,.12);border-color:#475569;color:#94a3b8;}
+.n-rule .nbadge{color:#94a3b8;}
+.n-score{background:rgba(124,58,237,.12);border-color:#7c3aed;color:#c4b5fd;}
+.n-score .nbadge{color:#a78bfa;}
+.n-hitl{background:rgba(120,53,15,.22);border-color:#d97706;color:#fde68a;}
+.n-hitl .nbadge{color:#fbbf24;}
+.n-decision{background:rgba(107,33,168,.14);border-color:#6b21a8;color:#d8b4fe;}
+.n-decision .nbadge{color:#c084fc;}
+.n-good{background:rgba(22,101,52,.14);border-color:#166534;color:#86efac;}
+.n-good .nbadge{color:#4ade80;}
+.n-bad{background:rgba(153,27,27,.14);border-color:#991b1b;color:#fca5a5;}
+.n-bad .nbadge{color:#f87171;}
+
+/* pill colors */
+.pl{background:rgba(180,83,9,.2);border-color:#b45309;color:#fcd34d;}
+.pr{background:rgba(71,85,105,.2);border-color:#475569;color:#94a3b8;}
+.pm{background:rgba(124,58,237,.2);border-color:#7c3aed;color:#c4b5fd;}
+.pg{background:rgba(146,64,14,.2);border-color:#92400e;color:#fde68a;}
+.pd{background:rgba(30,64,175,.2);border-color:#1e40af;color:#93c5fd;}
+
+/* ── ARROW ── */
+.arr{display:flex;flex-direction:column;align-items:center;}
+.al{width:1.5px;background:#2d3748;flex-shrink:0;}
+.al.h10{height:10px;} .al.h16{height:16px;} .al.h22{height:22px;}
+.ah{width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:6px solid #2d3748;}
+
+/* ── BRANCH ── */
+.branch{display:flex;align-items:flex-start;justify-content:center;gap:10px;width:100%;}
+.bcol{display:flex;flex-direction:column;align-items:center;flex:1;min-width:0;}
+.blabel{font-size:.56rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);background:var(--bg);padding:2px 7px;border-radius:3px;border:1px solid var(--border);margin-bottom:4px;white-space:nowrap;}
+
+/* ── LANGGRAPH BOX ── */
+.lgbox{border:1px dashed #374151;border-radius:7px;padding:11px 13px;margin:5px 0;background:rgba(22,28,40,.55);width:420px;}
+.lgbox-title{font-size:.56rem;font-weight:700;text-transform:uppercase;letter-spacing:.9px;color:#60a5fa;margin-bottom:8px;display:flex;align-items:center;gap:4px;}
+.lgbox-title::before{content:'⬡';font-size:.6rem;}
+
+/* ── SECTION SEP ── */
+.ssep{font-size:.56rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--dim);display:flex;align-items:center;gap:7px;width:420px;margin:11px 0 7px;}
+.ssep::before,.ssep::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* ── DB CHIPS ── */
+.dbrow{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin:4px 0;}
+.dbc{display:flex;align-items:center;gap:3px;padding:3px 8px;border-radius:4px;background:rgba(30,64,175,.12);border:1px solid #1e40af;font-size:.58rem;font-weight:600;color:#93c5fd;font-family:var(--mono);}
+.dbc::before{content:'⬡';font-size:.52rem;color:#60a5fa;}
+
+/* ── NOTE ── */
+.note{max-width:380px;padding:6px 10px;border-radius:4px;background:rgba(120,53,15,.15);border:1px solid #78350f;font-size:.61rem;color:#fde68a;line-height:1.45;text-align:center;margin:4px 0;}
+</style>
+</head>
+<body>
+
+<header class="app-header screen-ui">
+  <div class="logo">
+    <div class="logo-mark">MJ</div>
+    <div>
+      <div class="logo-name">MetLife Japan · Agentic AI Lead Nurturing</div>
+      <div class="logo-sub">LangGraph Orchestration · 7 Scenario Flows · All Agent Transitions · HITL Gates</div>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <button class="btn-pdf" onclick="window.print()">⬇ Download PDF</button>
+    <div class="hdr-meta">Confidential · Internal Use Only<br>v3 · 26 March 2026</div>
+  </div>
+</header>
+
+<nav class="tab-bar screen-ui">
+  <div class="tab active" data-tab="s1" style="--tc:#3b82f6;"><div class="s-dot" style="background:#3b82f6;"></div>S1 · Young Professional</div>
+  <div class="tab" data-tab="s2" style="--tc:#8b5cf6;"><div class="s-dot" style="background:#8b5cf6;"></div>S2 · Recently Married</div>
+  <div class="tab" data-tab="s3" style="--tc:#6366f1;"><div class="s-dot" style="background:#6366f1;"></div>S3 · Senior Citizen</div>
+  <div class="tab" data-tab="s4" style="--tc:#ef4444;"><div class="s-dot" style="background:#ef4444;"></div>S4 · Dormant Revival</div>
+  <div class="tab" data-tab="s5" style="--tc:#0ea5e9;"><div class="s-dot" style="background:#0ea5e9;"></div>S5 · Active Buyer</div>
+  <div class="tab" data-tab="s6" style="--tc:#14b8a6;"><div class="s-dot" style="background:#14b8a6;"></div>S6 · F2F Consultation</div>
+  <div class="tab" data-tab="s7" style="--tc:#f97316;"><div class="s-dot" style="background:#f97316;"></div>S7 · Web-to-Call</div>
+</nav>
+
+
+<!-- ═══════════ S1 · YOUNG PROFESSIONAL ═══════════ -->
+<div class="page active" id="s1">
+  <div class="ph">
+    <div class="ph-l">
+      <div class="slabel">Scenario 01 · LangGraph Flow</div>
+      <h2>Young Professional — Newsletter Entry</h2>
+      <div class="ssub">Masaki · 28M · F-1 · ANS3=C, ANS4=No, ANS5=No, Age≤34 · 3-day cadence · Base score 0.40 · Handoff ≥ 0.80</div>
+      <div class="tags">
+        <span class="tag" style="background:rgba(34,197,94,.1);border-color:#166534;color:#4ade80;">JP Approved</span>
+        <span class="tag" style="background:rgba(180,83,9,.1);border-color:#b45309;color:#fcd34d;">Email #1 = Existing Asset (No LLM)</span>
+        <span class="tag" style="background:rgba(124,58,237,.1);border-color:#7c3aed;color:#c4b5fd;">LLM: Intent Analysis + Content Gen #2+</span>
+        <span class="tag" style="background:rgba(30,64,175,.1);border-color:#1e40af;color:#93c5fd;">Score: Rule-Based (ML at Tier 3)</span>
+      </div>
+    </div>
+  </div>
+  <div class="legend">
+    <div class="leg"><div class="leg-sq" style="background:rgba(29,78,216,.2);border-color:#1d4ed8;"></div>Trigger</div>
+    <div class="leg"><div class="leg-sq" style="background:rgba(15,118,110,.2);border-color:#0f766e;"></div>Agent (Auto)</div>
+    <div class="leg"><div class="leg-sq" style="background:rgba(180,83,9,.2);border-color:#b45309;"></div>LLM Node</div>
+    <div class="leg"><div class="leg-sq" style="background:rgba(71,85,105,.2);border-color:#475569;"></div>Rule-Based</div>
+    <div class="leg"><div class="leg-sq" style="background:rgba(124,58,237,.2);border-color:#7c3aed;"></div>Scoring</div>
+    <div class="leg"><div class="leg-sq" style="background:rgba(120,53,15,.3);border-color:#d97706;"></div>HITL Gate</div>
+    <div class="leg"><div class="leg-sq" style="background:rgba(107,33,168,.2);border-color:#6b21a8;"></div>LangGraph Decision</div>
+    <div class="leg"><div class="leg-sq" style="background:rgba(30,64,175,.2);border-color:#1e40af;"></div>Data Store</div>
+  </div>
+
+  <div class="flow">
+
+    <div class="node n-trigger lg">
+      <div class="nbadge">⚡ LangGraph Entry Trigger · Event: lead_created</div>
+      <div class="ntitle">Pre-Registration: Newsletter Form Submitted</div>
+      <div class="nbody">Oracle <code>T_YEC_QUOTE_MST</code> record created. FastAPI backend receives webhook → fires <code>lead_created</code> event → LangGraph workflow S1 initialised with <code>journey_stage = entry</code>.</div>
+      <div class="pills"><span class="pill pd">T_YEC_QUOTE_MST</span><span class="pill pr">Webhook → FastAPI</span></div>
+    </div>
+    <div class="arr"><div class="al h16"></div><div class="ah"></div></div>
+
+    <div class="node n-rule md">
+      <div class="nbadge">Rule Check · Pre-Flight</div>
+      <div class="ntitle">OPT_IN Eligibility</div>
+      <div class="nbody"><code>OPT_IN=1</code> → workflow terminates, archived. <code>OPT_IN=0</code> → proceed.</div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+
+    <div class="node n-rule lg">
+      <div class="nbadge">Rule-Based Router · Entry Routing Decision Tree</div>
+      <div class="ntitle">ANS3 / ANS4 / ANS5 / Age → Scenario Assignment</div>
+      <div class="nbody"><code>ANS3=C</code> + <code>ANS4=No</code> + <code>ANS5=No</code> + Age ≤ 34 → <strong>S1 / F-1</strong>. ANS4=Yes → S2. Age ≥ 35 → S3. ANS3=A/B → S5.</div>
+    </div>
+    <div class="arr"><div class="al h16"></div><div class="ah"></div></div>
+
+    <div class="lgbox">
+      <div class="lgbox-title">LangGraph Orchestration · Workflow S1 Initialised</div>
+
+      <div class="node n-agent" style="width:100%;margin-bottom:4px;">
+        <div class="nbadge">A1 · Identity &amp; Signal Unifier · Automated</div>
+        <div class="ntitle">Lead Profile Assembly</div>
+        <div class="nbody">Reads <code>T_YEC_QUOTE_MST</code>. Builds unified record: name, email, age, gender, device (<code>MOBILE_SITE</code>), campaign source (<code>BANNER_CODE</code>), registration hour from <code>COMMIT_TIME</code>.</div>
+        <div class="pills"><span class="pill pr">Rule-Based</span><span class="pill pd">Read: T_YEC_QUOTE_MST</span><span class="pill pd">Write: LangGraph State</span></div>
+      </div>
+      <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+
+      <div class="node n-agent" style="width:100%;margin-bottom:4px;">
+        <div class="nbadge">A2 · Life-Stage &amp; Persona Classifier · Automated</div>
+        <div class="ntitle">Persona Assignment → F-1 / Masaki</div>
+        <div class="nbody">Deterministic: full survey data available. Confidence = <strong>0.92</strong>. Sets <code>keigo=casual</code>. Stores <code>persona, confidence</code> in LangGraph State.</div>
+        <div class="pills"><span class="pill pr">Deterministic</span><span class="pill pd">Write: State · persona · confidence</span></div>
+      </div>
+      <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+
+      <div class="node n-hitl" style="width:100%;">
+        <div class="nbadge">⏸ HITL Gate · G2 · interrupt_before · Rarely Fires for S1</div>
+        <div class="ntitle">G2 · Persona Override</div>
+        <div class="nbody">Fires only if confidence &lt; 0.60. For S1 confidence ≈ 0.92 → G2 almost never fires. <strong>Override</strong> → marketing assigns correct persona. <strong>Accept</strong> → proceed. LangGraph checkpoints state to PostgreSQL/CosmosDB.</div>
+        <div class="pills"><span class="pill pg">interrupt_before</span><span class="pill pd">Checkpoint: PostgreSQL / CosmosDB</span></div>
+      </div>
+    </div>
+
+    <div class="arr"><div class="al h16"></div><div class="ah"></div></div>
+    <div class="dbrow"><div class="dbc">PostgreSQL · Unified Lead Profile</div><div class="dbc">LangGraph State · persona · confidence</div></div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+
+    <div class="node n-rule lg">
+      <div class="nbadge">A5 · Asset Selector · Email #1 · No LLM</div>
+      <div class="ntitle">Select Pre-Approved Existing Email Asset</div>
+      <div class="nbody">First email <strong>always from existing library</strong> — no generation. Asset lookup by <code>PRODUCT_CODE</code> → F-1 welcome. Name fill only (<code>POWN_KLNM</code>). Flags content type for G1.</div>
+      <div class="pills"><span class="pill pr">Asset Lookup Only</span></div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+
+    <div class="node n-hitl md">
+      <div class="nbadge">⏸ HITL Gate · G1 · All Emails · interrupt_before</div>
+      <div class="ntitle">G1 · Content Compliance</div>
+      <div class="nbody"><strong>Approved</strong> → A6 schedules send. <strong>Rejected</strong> → returns to A5 for revision. Pre-approved brand assets may auto-bypass.</div>
+      <div class="pills"><span class="pill pg">interrupt_before</span></div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+
+    <div class="node n-agent md">
+      <div class="nbadge">A6 · Send Orchestrator · Automated</div>
+      <div class="ntitle">Quiet Hours Check + Send Email #1</div>
+      <div class="nbody">Re-checks <code>OPT_IN</code>. 21:00–08:00 JST → hold until 08:00. Sends via Adobe Campaign. <strong>3-day cadence</strong> initiated.</div>
+      <div class="pills"><span class="pill pr">Rule-Based</span><span class="pill pd">Write: Adobe Campaign</span></div>
+    </div>
+    <div class="arr"><div class="al h22"></div><div class="ah"></div></div>
+
+    <div class="ssep">Event-Driven Loop · Fires on Every Email Engagement</div>
+
+    <div class="node n-llm lg">
+      <div class="nbadge">A3 · Intent Listener &amp; Topic Miner · LLM</div>
+      <div class="ntitle">Engagement Signal Analysis → Intent Extraction</div>
+      <div class="nbody">Reads Adobe Campaign <strong>opens, click URLs</strong>. LLM extracts: interest category, product preference, urgency. Monitors <code>T_CONSULT_REQ</code> for consultation booking. Fires on every event — not scheduled.</div>
+      <div class="pills"><span class="pill pl">GPT-4 mini · Intent Analysis</span><span class="pill pd">Adobe Campaign · T_CONSULT_REQ</span></div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+
+    <div class="node n-score lg">
+      <div class="nbadge">A8 · Propensity Scoring Engine · Rule-Based → ML (Tier 3)</div>
+      <div class="ntitle">Score Update · Base 0.40</div>
+      <div class="nbody">Open +0.10 · Click +0.15 · Consult page visit (T2) +0.40 · Consultation booked → 0.90+. Writes updated score to LangGraph State.</div>
+      <div class="pills"><span class="pill pm">Rule-Based POC → ML Model T3</span><span class="pill pd">Write: State · propensity_score</span></div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+
+    <div class="node n-decision lg">
+      <div class="nbadge">⬡ LangGraph Decision Node · conditional_edge · A8 Score Router</div>
+      <div class="ntitle">Route: Continue Nurture / Edge Review / Sales Handoff</div>
+      <div class="nbody">Evaluated after every engagement event via <code>conditional_edge</code>.</div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+
+    <div class="branch">
+      <div class="bcol">
+        <div class="blabel">Score &lt; 0.70 · Continue</div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-llm" style="width:195px;">
+          <div class="nbadge">A4 + A5 · LLM · Emails #2–5</div>
+          <div class="ntitle">LLM Content Generation</div>
+          <div class="nbody">A4 derives theme from A3 intent. A5 generates personalised email. G1 → A6 → 3-day cadence. Loops back to A3.</div>
+          <div class="pills"><span class="pill pl">GPT-4 · Content Gen</span></div>
+        </div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-bad" style="width:195px;">
+          <div class="nbadge">Terminal</div>
+          <div class="ntitle">5 Emails Exhausted</div>
+          <div class="nbody">No conversion. Eligible for S4 Dormant Revival after 180 days.</div>
+        </div>
+      </div>
+      <div class="bcol">
+        <div class="blabel">Score 0.70–0.85 · Edge</div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-hitl" style="width:195px;">
+          <div class="nbadge">⏸ G5 · interrupt_before</div>
+          <div class="ntitle">G5 · Score Threshold Override</div>
+          <div class="nbody">Lead Manager: score trend, engagement history. <strong>Promote</strong> → force to A9. <strong>Hold</strong> → back to nurture.</div>
+          <div class="pills"><span class="pill pg">interrupt_before</span></div>
+        </div>
+      </div>
+      <div class="bcol">
+        <div class="blabel">Score ≥ 0.80 / Booked</div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-llm" style="width:195px;">
+          <div class="nbadge">A9 · Sales Handoff Agent · LLM</div>
+          <div class="ntitle">Enriched Sales Briefing</div>
+          <div class="nbody">LLM: engagement timeline, talk track, objections, product interest from A3 topics.</div>
+          <div class="pills"><span class="pill pl">GPT-4</span></div>
+        </div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-hitl" style="width:195px;">
+          <div class="nbadge">⏸ G4 · interrupt_before</div>
+          <div class="ntitle">G4 · Sales Handoff Review</div>
+          <div class="nbody"><strong>Approve</strong> → advisor contacts. <strong>Hold</strong> → return to nurture.</div>
+          <div class="pills"><span class="pill pg">interrupt_before</span></div>
+        </div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-good" style="width:195px;">
+          <div class="nbadge">Terminal · Converted</div>
+          <div class="ntitle">✓ Lead Handed to Sales</div>
+          <div class="nbody">Advisor contacts lead. Salesforce updated (Tier 3).</div>
+          <div class="pills"><span class="pill pd">Write: Salesforce (T3)</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════ S2 · RECENTLY MARRIED ═══════════ -->
+<div class="page" id="s2">
+  <div class="ph">
+    <div class="ph-l">
+      <div class="slabel">Scenario 02 · LangGraph Flow</div>
+      <h2>Recently Married — Life-Event Nurture</h2>
+      <div class="ssub">Kana · 32F · Scenario E · ANS3=C, ANS4=Yes (life event) · 3-day cadence · Base score 0.45</div>
+      <div class="tags">
+        <span class="tag" style="background:rgba(139,92,246,.1);border-color:#7c3aed;color:#c4b5fd;">Life-Event Entry</span>
+        <span class="tag" style="background:rgba(180,83,9,.1);border-color:#b45309;color:#fcd34d;">Email #1 = Existing Asset</span>
+        <span class="tag" style="background:rgba(124,58,237,.1);border-color:#7c3aed;color:#c4b5fd;">LLM: Intent + Content #2+</span>
+        <span class="tag" style="background:rgba(146,64,14,.2);border-color:#92400e;color:#fde68a;">ANS4 Code Mapping Gap (Tier 1)</span>
+      </div>
+    </div>
+  </div>
+  <div class="flow">
+    <div class="node n-trigger lg">
+      <div class="nbadge">⚡ LangGraph Entry Trigger · Event: lead_created</div>
+      <div class="ntitle">Newsletter Registration — Life Event Declared</div>
+      <div class="nbody"><code>ANS3=C</code> + <code>ANS4=Yes</code> → Scenario E. Age not evaluated. FastAPI → workflow S2 initialised.</div>
+      <div class="pills"><span class="pill pd">T_YEC_QUOTE_MST</span></div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+    <div class="node n-rule md"><div class="nbadge">Rule Check</div><div class="ntitle">OPT_IN Eligibility</div><div class="nbody"><code>OPT_IN=1</code> → terminate. <code>OPT_IN=0</code> → proceed.</div></div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+
+    <div class="lgbox">
+      <div class="lgbox-title">LangGraph Orchestration · Workflow S2</div>
+      <div class="node n-agent" style="width:100%;">
+        <div class="nbadge">A1 · Identity Unifier + A2 · Persona Classifier</div>
+        <div class="ntitle">Profile + Persona E Assignment (Deterministic)</div>
+        <div class="nbody"><code>ANS3=C</code> + <code>ANS4=Yes</code> → Persona E / Kana. Confidence = High. <code>life_event_flag=TRUE</code>. <code>event_context</code> from ANS4 code. G2 bypassed (high confidence).</div>
+        <div class="pills"><span class="pill pr">Deterministic · G2 bypassed</span><span class="pill pd">Write: State · life_event_flag</span></div>
+      </div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+    <div class="note">⚠ ANS4 is CHAR(1) — exact mapping (marriage / pregnancy / home) undocumented in Tier 1. Generic "Life Event" theme used until Tier 2 (ANS4 mapping doc required).</div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+
+    <div class="node n-rule lg">
+      <div class="nbadge">A5 · Email #1 · Existing Asset · No LLM</div>
+      <div class="ntitle">Select Pre-Approved Scenario E Asset</div>
+      <div class="nbody">Existing "Life Event Protection" welcome asset. No LLM. G1 Compliance → A6 sends, 3-day cadence, quiet hours 21:00–08:00 JST.</div>
+      <div class="pills"><span class="pill pr">Asset Lookup</span><span class="pill pg">→ G1</span></div>
+    </div>
+    <div class="arr"><div class="al h16"></div><div class="ah"></div></div>
+    <div class="ssep">Event-Driven Intent Loop</div>
+
+    <div class="node n-llm lg">
+      <div class="nbadge">A3 · Intent Listener · LLM</div>
+      <div class="ntitle">Engagement Analysis → Life-Event Topic Extraction</div>
+      <div class="nbody">LLM reads opens/clicks. Extracts: marriage / pregnancy / home context (Tier 2+), product interest. Monitors <code>T_CONSULT_REQ</code>.</div>
+      <div class="pills"><span class="pill pl">GPT-4 mini · Intent</span><span class="pill pd">Adobe Campaign · T_CONSULT_REQ</span></div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+    <div class="node n-score lg">
+      <div class="nbadge">A8 · Scoring · Base 0.45</div>
+      <div class="ntitle">Score Update</div>
+      <div class="nbody">Open +0.10 · Click +0.15 · Consultation booked → 0.90+.</div>
+      <div class="pills"><span class="pill pm">Rule-Based → ML (T3)</span><span class="pill pd">Write: State</span></div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+    <div class="node n-llm lg">
+      <div class="nbadge">A4 · Content Strategist + A5 · LLM · Emails #2–5</div>
+      <div class="ntitle">LLM Personalised Content Generation</div>
+      <div class="nbody">A4 uses A3 intent → selects theme. LLM generates: marriage → couple protection, pregnancy → family planning, home → mortgage protection. G1 → A6.</div>
+      <div class="pills"><span class="pill pl">GPT-4 · Content Generation</span><span class="pill pg">→ G1</span></div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+    <div class="node n-decision lg">
+      <div class="nbadge">⬡ LangGraph Decision Node · conditional_edge</div>
+      <div class="ntitle">Score Router → Continue / G5 / Handoff</div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+    <div class="branch">
+      <div class="bcol">
+        <div class="blabel">Score ≥ 0.80 / Consult Booked</div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-llm" style="width:195px;"><div class="nbadge">A9 · LLM</div><div class="ntitle">Family-Oriented Briefing</div><div class="nbody">LLM: couple/family talk track, life-event context, objections.</div><div class="pills"><span class="pill pl">GPT-4</span></div></div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-hitl" style="width:195px;"><div class="nbadge">⏸ G4 · interrupt_before</div><div class="ntitle">G4 Sales Review</div></div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-good" style="width:195px;"><div class="nbadge">Terminal</div><div class="ntitle">✓ Converted</div></div>
+      </div>
+      <div class="bcol">
+        <div class="blabel">5 Emails · No Convert</div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-bad" style="width:195px;"><div class="nbadge">Terminal</div><div class="ntitle">Sequence Complete</div><div class="nbody">S4 Dormant Revival after 180 days.</div></div>
+      </div>
+      <div class="bcol">
+        <div class="blabel">Unsubscribe / Bounce</div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-bad" style="width:195px;"><div class="nbadge">Terminal</div><div class="ntitle">⛔ Suppressed</div><div class="nbody">OPT_IN updated permanently.</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════ S3 · SENIOR CITIZEN ═══════════ -->
+<div class="page" id="s3">
+  <div class="ph">
+    <div class="ph-l">
+      <div class="slabel">Scenario 03 · LangGraph Flow</div>
+      <h2>Senior Citizen — Formal Trust-Building Nurture</h2>
+      <div class="ssub">Makiko · 44F+ · Scenario F-2 · ANS3=C, ANS4=No, ANS5=No, Age≥35 · <strong>1-day cadence</strong> · Base score 0.35</div>
+      <div class="tags">
+        <span class="tag" style="background:rgba(99,102,241,.1);border-color:#4f46e5;color:#a5b4fc;">1-Day Cadence</span>
+        <span class="tag" style="background:rgba(71,85,105,.15);border-color:#475569;color:#94a3b8;">Formal Japanese: 丁寧語 / 敬語 / 最敬語</span>
+        <span class="tag" style="background:rgba(180,83,9,.1);border-color:#b45309;color:#fcd34d;">Email #1 = Existing Formal Asset</span>
+        <span class="tag" style="background:rgba(124,58,237,.1);border-color:#7c3aed;color:#c4b5fd;">LLM: Seminar/F2F Detection + Formal Content</span>
+      </div>
+    </div>
+  </div>
+  <div class="flow">
+    <div class="node n-trigger lg">
+      <div class="nbadge">⚡ LangGraph Entry Trigger · Event: lead_created</div>
+      <div class="ntitle">Newsletter Registration — Senior Demographics</div>
+      <div class="nbody"><code>ANS3=C</code> + <code>ANS4=No</code> + <code>ANS5=No</code> + Age ≥ 35 → Scenario F-2. FastAPI → workflow S3.</div>
+      <div class="pills"><span class="pill pd">T_YEC_QUOTE_MST</span></div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+    <div class="node n-rule md"><div class="nbadge">Rule Check</div><div class="ntitle">OPT_IN Eligibility</div><div class="nbody"><code>OPT_IN=1</code> → terminate.</div></div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+
+    <div class="lgbox">
+      <div class="lgbox-title">LangGraph Orchestration · Workflow S3</div>
+      <div class="node n-agent" style="width:100%;margin-bottom:4px;">
+        <div class="nbadge">A1 · Profile + A2 · Persona + Formality Tier Assignment</div>
+        <div class="ntitle">Profile Assembly + F-2 Persona + Japanese Formality Level</div>
+        <div class="nbody">Age from <code>POWN_DOB</code>: <strong>35–55</strong> → 丁寧語 · <strong>55–65</strong> → 敬語 · <strong>65+</strong> → 最敬語. Formality tag stored in State → used by A4/A5 for all content.</div>
+        <div class="pills"><span class="pill pr">Deterministic</span><span class="pill pd">Write: State · keigo_level</span></div>
+      </div>
+      <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+      <div class="node n-rule" style="width:100%;">
+        <div class="nbadge">A6 · Quiet Hours — Critical for Seniors</div>
+        <div class="ntitle">Quiet Hours Enforcement</div>
+        <div class="nbody">Seniors register late at night. <code>COMMIT_TIME</code> 21:00–08:00 → hold until 08:00 next day. <strong>1-day cadence</strong> (not 3-day).</div>
+        <div class="pills"><span class="pill pr">Rule-Based</span></div>
+      </div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+
+    <div class="node n-rule lg">
+      <div class="nbadge">A5 · Email #1 · Existing Formal Asset</div>
+      <div class="ntitle">Select Pre-Approved F-2 Formal Asset by Formality Tier</div>
+      <div class="nbody">Existing asset selected by <code>keigo_level</code>. Trust-building, retirement/health theme. G1 → A6.</div>
+      <div class="pills"><span class="pill pr">Asset Lookup</span><span class="pill pg">→ G1</span></div>
+    </div>
+    <div class="arr"><div class="al h16"></div><div class="ah"></div></div>
+    <div class="ssep">Event-Driven Loop · 1-Day Intervals</div>
+
+    <div class="node n-llm lg">
+      <div class="nbadge">A3 · Intent Listener · LLM · Seminar + F2F Detection</div>
+      <div class="ntitle">Engagement Analysis + Seminar / F2F Interest Detection</div>
+      <div class="nbody">LLM reads email engagement. Detects: retirement, health, legacy. Queries <code>T_SEMINAR_CONSULT_REQ</code> for seminar inquiry. Checks <code>T_CONSULT_REQ.FACE_TO_FACE</code>.</div>
+      <div class="pills"><span class="pill pl">GPT-4 mini · Intent</span><span class="pill pd">T_SEMINAR_CONSULT_REQ · T_CONSULT_REQ</span></div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+    <div class="node n-score lg">
+      <div class="nbadge">A8 · Scoring · Base 0.35</div>
+      <div class="ntitle">Score Update</div>
+      <div class="nbody">Open +0.10 · Click +0.15 · <strong>Seminar inquiry +0.20</strong> · <strong>F2F request +0.30</strong>.</div>
+      <div class="pills"><span class="pill pm">Rule-Based → ML (T3)</span><span class="pill pd">Write: State</span></div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+    <div class="node n-llm lg">
+      <div class="nbadge">A4 + A5 · LLM · Emails #2–5 · Formality-Constrained</div>
+      <div class="ntitle">LLM Formal Personalised Content</div>
+      <div class="nbody">LLM generates with <code>keigo_level</code> constraint on vocabulary/tone. Topics: retirement, legacy, health. G1 → A6 → 1-day send.</div>
+      <div class="pills"><span class="pill pl">GPT-4 · Formality Constraint</span><span class="pill pg">→ G1</span></div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+    <div class="node n-decision lg">
+      <div class="nbadge">⬡ LangGraph Decision Node · conditional_edge</div>
+      <div class="ntitle">Score Router → Continue / G5 / Handoff</div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+    <div class="branch">
+      <div class="bcol">
+        <div class="blabel">Score ≥ 0.80 / Seminar/F2F</div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-llm" style="width:195px;"><div class="nbadge">A9 · LLM</div><div class="ntitle">Etiquette-Aware Briefing</div><div class="nbody">Greeting levels, gift protocol, family hierarchy (Tier 3).</div><div class="pills"><span class="pill pl">GPT-4</span></div></div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-hitl" style="width:195px;"><div class="nbadge">⏸ G4</div><div class="ntitle">G4 Sales Review</div></div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-good" style="width:195px;"><div class="nbadge">Terminal</div><div class="ntitle">✓ F2F / Seminar Booked</div></div>
+      </div>
+      <div class="bcol">
+        <div class="blabel">5 Emails · No Convert</div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-bad" style="width:195px;"><div class="nbadge">Terminal</div><div class="ntitle">Sequence Complete</div><div class="nbody">S4 Revival after 180 days.</div></div>
+      </div>
+      <div class="bcol">
+        <div class="blabel">Unsubscribe / Bounce</div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-bad" style="width:195px;"><div class="nbadge">Terminal</div><div class="ntitle">⛔ Suppressed</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════ S4 · DORMANT REVIVAL ═══════════ -->
+<div class="page" id="s4">
+  <div class="ph">
+    <div class="ph-l">
+      <div class="slabel">Scenario 04 · LangGraph Flow</div>
+      <h2>Dormant Lead Revival — Batch Triggered</h2>
+      <div class="ssub">Any persona · 180+ days no conversion · A10 batch scan · JP Approved · Max 2 touches · P1/P2/P3 segmentation</div>
+      <div class="tags">
+        <span class="tag" style="background:rgba(34,197,94,.1);border-color:#166534;color:#4ade80;">JP Approved</span>
+        <span class="tag" style="background:rgba(239,68,68,.1);border-color:#991b1b;color:#fca5a5;">System-Triggered (Not Lead Action)</span>
+        <span class="tag" style="background:rgba(146,64,14,.2);border-color:#92400e;color:#fde68a;">G3 Campaign Approval Mandatory</span>
+        <span class="tag" style="background:rgba(124,58,237,.1);border-color:#7c3aed;color:#c4b5fd;">LLM Content for Email #2</span>
+      </div>
+    </div>
+  </div>
+  <div class="flow">
+    <div class="node n-trigger lg">
+      <div class="nbadge">⚡ LangGraph Batch Trigger · A10 · Scheduled: Daily / Weekly</div>
+      <div class="ntitle">Dormancy Scan — Batch Job</div>
+      <div class="nbody">Eligibility (ALL must be true): <code>COMMIT_TIME ≥ 180 days</code> · No <code>T_CONSULT_REQ</code> · <code>OPT_IN=0</code> · No hard bounce · No active <code>cooldown_flag</code></div>
+      <div class="pills"><span class="pill pr">Rule-Based Batch Scan</span><span class="pill pd">T_YEC_QUOTE_MST · T_CONSULT_REQ</span></div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+    <div class="dbrow">
+      <div class="dbc">T_YEC_QUOTE_MST</div>
+      <div class="dbc">T_CONSULT_REQ</div>
+      <div class="dbc">Adobe Analytics · 6m Web Behaviour</div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+    <div class="node n-rule lg">
+      <div class="nbadge">A10 · Dormancy Agent · Rule-Based Segmentation</div>
+      <div class="ntitle">P1 / P2 / P3 Segment Assignment (6m Behaviour)</div>
+      <div class="nbody"><strong>P1</strong> — No visits → Brand Campaign · <strong>P2</strong> — Visited, no product/sim → New Product + Sim invite · <strong>P3</strong> — Product/Sim viewed → Consultation Campaign</div>
+      <div class="pills"><span class="pill pr">Deterministic</span><span class="pill pd">Write: State · revival_segment</span></div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+
+    <div class="lgbox">
+      <div class="lgbox-title">LangGraph Orchestration · Workflow S4</div>
+      <div class="node n-agent" style="width:100%;margin-bottom:4px;">
+        <div class="nbadge">A1 · Identity Refresh · 180+ Day Gap</div>
+        <div class="ntitle">Profile Refresh + Web Behaviour Re-Link</div>
+        <div class="nbody">Re-reads Oracle for consent/address changes. Re-links web behaviour via <code>SESSION_ID</code>.</div>
+        <div class="pills"><span class="pill pd">Write: Refreshed LangGraph State</span></div>
+      </div>
+      <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+      <div class="node n-hitl" style="width:100%;">
+        <div class="nbadge">⏸ G3 · HITL Gate · S4 Only · Mandatory · interrupt_before</div>
+        <div class="ntitle">G3 · Revival Campaign Approval</div>
+        <div class="nbody">Campaign Manager: batch size, P1/P2/P3 counts, proposed assets. <strong>Rejected</strong> → adjust criteria, re-scan (loop back to A10). <strong>Approved</strong> → G1 → send.</div>
+        <div class="pills"><span class="pill pg">interrupt_before · Checkpoint: PostgreSQL</span></div>
+      </div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+
+    <div class="node n-rule lg">
+      <div class="nbadge">A5 · Email #1 · Existing Asset by Segment · No LLM</div>
+      <div class="ntitle">Select P1/P2/P3 Pre-Approved Asset → G1 → Send</div>
+      <div class="nbody">Asset lookup by <code>revival_segment</code>. G1 Compliance. A6 re-checks <code>OPT_IN</code>. <strong>7-day response window starts.</strong></div>
+      <div class="pills"><span class="pill pr">No LLM</span><span class="pill pg">→ G1</span><span class="pill pd">Write: email1_sent_at</span></div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+    <div class="node n-agent lg">
+      <div class="nbadge">A6 + A8 · 7-Day Response Collection Window (D+0 to D+7)</div>
+      <div class="ntitle">Response Window Monitoring</div>
+      <div class="nbody">Collects: opens/clicks · website visits · product/sim views · conversion events. <strong>If <code>converted_7d=true</code> → workflow terminates. No Email #2 ever.</strong></div>
+      <div class="pills"><span class="pill pd">Adobe Campaign · Adobe Analytics</span><span class="pill pd">Write: converted_7d · responded_7d</span></div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+    <div class="node n-decision lg">
+      <div class="nbadge">⬡ LangGraph Decision Node · 7-Day Response Check</div>
+      <div class="ntitle">Route: Converted / Engaged / No Response</div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+    <div class="branch">
+      <div class="bcol">
+        <div class="blabel">Converted in 7 days</div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-llm" style="width:195px;"><div class="nbadge">A9 · LLM</div><div class="ntitle">Revival Briefing</div><div class="pills"><span class="pill pl">GPT-4</span></div></div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-hitl" style="width:195px;"><div class="nbadge">⏸ G4</div><div class="ntitle">G4 Sales Review</div></div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-good" style="width:195px;"><div class="nbadge">Terminal</div><div class="ntitle">✓ Revival Conversion</div></div>
+      </div>
+      <div class="bcol">
+        <div class="blabel">Engaged · No Conversion</div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-rule" style="width:195px;"><div class="nbadge">A8 · Re-Segmentation</div><div class="ntitle">Re-Assign Segment</div><div class="nbody">Based on 7-day signals. P1→P3 possible if product browsed.</div></div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-llm" style="width:195px;"><div class="nbadge">A5 · LLM · Email #2</div><div class="ntitle">LLM Re-Engagement Content</div><div class="nbody">Personalised for new segment. G1 → D+7. <strong>Max 2 touches.</strong></div><div class="pills"><span class="pill pl">GPT-4</span></div></div>
+      </div>
+      <div class="bcol">
+        <div class="blabel">No Engagement</div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-rule" style="width:195px;"><div class="nbadge">A5 · Email #2</div><div class="ntitle">P1 Brand Asset (Final)</div><div class="nbody">Last attempt. G1 → D+7.</div></div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-bad" style="width:195px;"><div class="nbadge">Terminal</div><div class="ntitle">Archived · Cooldown Set</div><div class="nbody"><code>cooldown_flag</code> set.</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════ S5 · ACTIVE BUYER ═══════════ -->
+<div class="page" id="s5">
+  <div class="ph">
+    <div class="ph-l">
+      <div class="slabel">Scenario 05 · LangGraph Flow</div>
+      <h2>Active Buyer — CV Promotion</h2>
+      <div class="ssub">All active shoppers · ANS3=A or B · Q2/Q3 skipped · Base score 0.60 (highest) · Most technically feasible</div>
+      <div class="tags">
+        <span class="tag" style="background:rgba(34,197,94,.1);border-color:#166534;color:#4ade80;">Highest Intent Entry</span>
+        <span class="tag" style="background:rgba(14,165,233,.1);border-color:#0369a1;color:#7dd3fc;">3-CTA Branch Email</span>
+        <span class="tag" style="background:rgba(180,83,9,.1);border-color:#b45309;color:#fcd34d;">Email #1 = Existing 3-CTA Asset</span>
+        <span class="tag" style="background:rgba(124,58,237,.1);border-color:#7c3aed;color:#c4b5fd;">LLM: Click Intent + Personalised Follow-up</span>
+      </div>
+    </div>
+  </div>
+  <div class="flow">
+    <div class="node n-trigger lg">
+      <div class="nbadge">⚡ LangGraph Entry Trigger · Event: lead_created</div>
+      <div class="ntitle">Newsletter Registration — Active Intent Declared</div>
+      <div class="nbody"><code>ANS3=A</code> (new enrollment) or <code>ANS3=B</code> (reviewing). <strong>Q2/Q3 skipped entirely.</strong> Highest intent entry. FastAPI → workflow S5.</div>
+      <div class="pills"><span class="pill pd">T_YEC_QUOTE_MST</span></div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+
+    <div class="lgbox">
+      <div class="lgbox-title">LangGraph Orchestration · Workflow S5</div>
+      <div class="node n-agent" style="width:100%;">
+        <div class="nbadge">A1 + A2 · Profile + Active Buyer Flag</div>
+        <div class="ntitle">Profile Assembly + High-Intent Persona</div>
+        <div class="nbody">A8 base = <strong>0.60</strong>. Pre-seeds product interest if <code>PRODUCT_CODE</code> populated. <code>active_buyer=TRUE</code> in State.</div>
+        <div class="pills"><span class="pill pr">Deterministic</span><span class="pill pd">Write: State · active_buyer=TRUE</span></div>
+      </div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+
+    <div class="node n-rule lg">
+      <div class="nbadge">A5 · Email #1 · Existing 3-CTA Asset · No LLM</div>
+      <div class="ntitle">Send Common Scenario 3-CTA Comparison Email</div>
+      <div class="nbody">Existing asset with 3 CTAs: <strong>Medical Insurance</strong> · <strong>Life/Death Insurance</strong> · <strong>Asset Formation</strong>. CTA click → product interest path. G1 → A6.</div>
+      <div class="pills"><span class="pill pr">Existing Asset</span><span class="pill pg">→ G1</span></div>
+    </div>
+    <div class="arr"><div class="al h16"></div><div class="ah"></div></div>
+    <div class="ssep">Event-Driven · CTA Click Detection</div>
+
+    <div class="node n-llm lg">
+      <div class="nbadge">A3 · Intent Listener · LLM · CTA Click Analysis</div>
+      <div class="ntitle">CTA Click → Product Interest Extraction</div>
+      <div class="nbody">LLM analyses clicked CTA. <strong>No click</strong> → default Medical Insurance (highest conversion volume per MetLife JP data).</div>
+      <div class="pills"><span class="pill pl">GPT-4 mini · Click Intent</span><span class="pill pd">Adobe Campaign click events</span></div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+    <div class="node n-score lg">
+      <div class="nbadge">A8 · Scoring · Base 0.60</div>
+      <div class="ntitle">Score After CTA Branch</div>
+      <div class="nbody">CTA click +0.15 · No click +0.00 (defaults Medical).</div>
+      <div class="pills"><span class="pill pm">Rule-Based → ML (T3)</span></div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+
+    <div class="branch">
+      <div class="bcol">
+        <div class="blabel">Medical / Default</div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-llm" style="width:185px;"><div class="nbadge">A4+A5 · LLM</div><div class="ntitle">Medical Sequence</div><div class="nbody">Health/hospitalisation content. G1 → A6.</div><div class="pills"><span class="pill pl">GPT-4</span></div></div>
+      </div>
+      <div class="bcol">
+        <div class="blabel">Life Insurance</div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-llm" style="width:185px;"><div class="nbadge">A4+A5 · LLM</div><div class="ntitle">Life Protection Sequence</div><div class="nbody">Income replacement, family. G1 → A6.</div><div class="pills"><span class="pill pl">GPT-4</span></div></div>
+      </div>
+      <div class="bcol">
+        <div class="blabel">Asset Formation</div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-llm" style="width:185px;"><div class="nbadge">A4+A5 · LLM</div><div class="ntitle">Savings Sequence</div><div class="nbody">Long-term financial planning. G1 → A6.</div><div class="pills"><span class="pill pl">GPT-4</span></div></div>
+      </div>
+    </div>
+    <div class="arr"><div class="al h16"></div><div class="ah"></div></div>
+
+    <div class="node n-score lg">
+      <div class="nbadge">A3 + A8 · Ongoing · Consultation Check</div>
+      <div class="ntitle">Continuous Engagement Scoring</div>
+      <div class="nbody">Checks <code>T_CONSULT_REQ</code> after each email. Booking → 0.90+ → immediate handoff. Score 0.70–0.85 → G5.</div>
+      <div class="pills"><span class="pill pd">T_CONSULT_REQ</span><span class="pill pd">Write: State · propensity_score</span></div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+    <div class="node n-decision lg">
+      <div class="nbadge">⬡ LangGraph Decision Node</div>
+      <div class="ntitle">Score Router → Continue / G5 / Handoff</div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+    <div class="branch">
+      <div class="bcol">
+        <div class="blabel">Score ≥ 0.80 / Booked</div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-llm" style="width:200px;"><div class="nbadge">A9 · LLM</div><div class="ntitle">Product Briefing</div><div class="nbody">Competitive analysis (Tier 3).</div><div class="pills"><span class="pill pl">GPT-4</span></div></div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-hitl" style="width:200px;"><div class="nbadge">⏸ G4</div><div class="ntitle">G4 Sales Review</div></div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-good" style="width:200px;"><div class="nbadge">Terminal</div><div class="ntitle">✓ Priority Conversion</div></div>
+      </div>
+      <div class="bcol">
+        <div class="blabel">Sequence Complete</div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-bad" style="width:200px;"><div class="nbadge">Terminal</div><div class="ntitle">S4 Dormant Revival</div><div class="nbody">P3 segment. After 180 days.</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════ S6 · F2F CONSULTATION ═══════════ -->
+<div class="page" id="s6">
+  <div class="ph">
+    <div class="ph-l">
+      <div class="slabel">Scenario 06 · LangGraph Flow</div>
+      <h2>F2F Consultation Request</h2>
+      <div class="ssub">Forms W011/W022/W033 · T_CONSULT_REQ · No ANS3/4/5 · 0–3 day journey · Initial score 0.85 · G2 always fires</div>
+      <div class="tags">
+        <span class="tag" style="background:rgba(20,184,166,.1);border-color:#0f766e;color:#5eead4;">Highest Form-Based Intent</span>
+        <span class="tag" style="background:rgba(239,68,68,.1);border-color:#991b1b;color:#fca5a5;">Different DB: T_CONSULT_REQ</span>
+        <span class="tag" style="background:rgba(124,58,237,.1);border-color:#7c3aed;color:#c4b5fd;">MEMO = Primary LLM Signal</span>
+        <span class="tag" style="background:rgba(146,64,14,.2);border-color:#92400e;color:#fde68a;">G2 Always Fires (Degraded Persona)</span>
+      </div>
+    </div>
+  </div>
+  <div class="flow">
+    <div class="node n-trigger lg">
+      <div class="nbadge">⚡ LangGraph Entry Trigger · Event: consultation_requested</div>
+      <div class="ntitle">F2F Form Submitted — W011 / W022 / W033</div>
+      <div class="nbody">Creates <code>T_CONSULT_REQ</code> record. <strong>No ANS3/4/5.</strong> Fields: <code>DOB</code> <code>GENDER(M/F)</code> <code>EMAIL</code> <code>PHONE</code> <code>MEMO</code>(4000 chars) <code>FACE_TO_FACE</code></div>
+      <div class="pills"><span class="pill pd">T_CONSULT_REQ · Schema differs from T_YEC_QUOTE_MST</span></div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+
+    <div class="lgbox">
+      <div class="lgbox-title">LangGraph Orchestration · Workflow S6</div>
+      <div class="node n-agent" style="width:100%;margin-bottom:4px;">
+        <div class="nbadge">A1 · Profile from Consultation Form</div>
+        <div class="ntitle">Profile Assembly — T_CONSULT_REQ</div>
+        <div class="nbody">GENDER=M/F (not 0/1). <code>email_captured=TRUE/FALSE</code>. A8 initial score = <strong>0.85</strong>.</div>
+        <div class="pills"><span class="pill pr">Rule-Based</span><span class="pill pd">Write: State · email_captured · score=0.85</span></div>
+      </div>
+      <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+      <div class="node n-agent" style="width:100%;margin-bottom:4px;">
+        <div class="nbadge">A2 · Degraded Mode · Always Low Confidence</div>
+        <div class="ntitle">Persona — DOB + GENDER Only (Tentative)</div>
+        <div class="nbody">No survey → confidence always &lt; 0.60 → <strong>G2 always fires for S6.</strong></div>
+        <div class="pills"><span class="pill pr">GPT-4 mini (thin data)</span></div>
+      </div>
+      <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+      <div class="node n-hitl" style="width:100%;">
+        <div class="nbadge">⏸ G2 · Always Fires · interrupt_before</div>
+        <div class="ntitle">G2 · Persona Override (Mandatory)</div>
+        <div class="nbody"><strong>Override</strong> → marketing assigns correct persona. <strong>Accept</strong> → proceed with tentative, MEMO compensates. Both paths unblock.</div>
+        <div class="pills"><span class="pill pg">interrupt_before · Checkpoint: PostgreSQL</span></div>
+      </div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+
+    <div class="node n-llm lg">
+      <div class="nbadge">A3 · Intent Listener · LLM · Primary Signal · MEMO Analysis</div>
+      <div class="ntitle">MEMO Field LLM Analysis — Japanese Insurance Free-Text</div>
+      <div class="nbody">MEMO up to 4000 chars. LLM extracts: topics (cancer, retirement, competitor), urgency, intent. <strong>Fallback:</strong> MEMO empty → <code>CAMPAIGN_CODE</code> + demographics.</div>
+      <div class="pills"><span class="pill pl">GPT-4 mini · Japanese NLP</span><span class="pill pd">Read: T_CONSULT_REQ.MEMO</span></div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+    <div class="node n-llm lg">
+      <div class="nbadge">A4 + A5 · LLM · Single Email Touch</div>
+      <div class="ntitle">Pre-Consultation Email — LLM Personalised</div>
+      <div class="nbody">LLM generates from MEMO topics. Acknowledges request, relevant context. G1 → A6.</div>
+      <div class="pills"><span class="pill pl">GPT-4</span><span class="pill pg">→ G1</span></div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+    <div class="node n-llm lg">
+      <div class="nbadge">A9 · Sales Handoff Agent · LLM · Enriched F2F Briefing</div>
+      <div class="ntitle">MEMO-Enriched Advisor Brief</div>
+      <div class="nbody">LLM: MEMO topics, persona, engagement, talk track, objections. Tier 3: etiquette (greeting levels, gift protocol, family hierarchy).</div>
+      <div class="pills"><span class="pill pl">GPT-4</span><span class="pill pd">Write: Salesforce handoff (T3)</span></div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+    <div class="node n-hitl md">
+      <div class="nbadge">⏸ G4 · Threshold ≥ 0.85 · interrupt_before</div>
+      <div class="ntitle">G4 · Sales Handoff Review</div>
+      <div class="nbody"><strong>Approved</strong> → F2F meeting (0–3 days). <strong>Hold</strong> → resend, G4 re-triggered.</div>
+      <div class="pills"><span class="pill pg">interrupt_before</span></div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+    <div class="node n-good md">
+      <div class="nbadge">Terminal · Converted</div>
+      <div class="ntitle">✓ F2F Meeting Arranged</div>
+      <div class="nbody">Enriched briefing delivered. Journey 0–3 days total.</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════ S7 · WEB-TO-CALL ═══════════ -->
+<div class="page" id="s7">
+  <div class="ph">
+    <div class="ph-l">
+      <div class="slabel">Scenario 07 · LangGraph Flow</div>
+      <h2>Web-to-Call (W2C) — Inbound Phone Lead</h2>
+      <div class="ssub">BANNER_CODE pos 3 = 7 · Manual agent entry · Email may be missing · Initial score 0.88 (highest signal)</div>
+      <div class="tags">
+        <span class="tag" style="background:rgba(34,197,94,.1);border-color:#166534;color:#4ade80;">Strongest Intent: Phone Call</span>
+        <span class="tag" style="background:rgba(249,115,22,.1);border-color:#c2410c;color:#fdba74;">Variable Data Quality</span>
+        <span class="tag" style="background:rgba(239,68,68,.1);border-color:#991b1b;color:#fca5a5;">Email May Be Missing → Two Paths</span>
+        <span class="tag" style="background:rgba(124,58,237,.1);border-color:#7c3aed;color:#c4b5fd;">LLM on MEMO (Call Notes)</span>
+      </div>
+    </div>
+  </div>
+  <div class="flow">
+    <div class="node n-trigger lg">
+      <div class="nbadge">⚡ LangGraph Entry Trigger · Event: consultation_requested (W2C)</div>
+      <div class="ntitle">Inbound Phone Call → Agent Creates T_CONSULT_REQ</div>
+      <div class="nbody"><code>BANNER_CODE</code> pos 3 = <code>7</code>. <strong>No automatic record</strong> — agent manually types: name, DOB, PHONE (confirmed caller ID), EMAIL (may be null), MEMO (call notes).</div>
+      <div class="pills"><span class="pill pd">T_CONSULT_REQ · Manual Entry</span></div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+
+    <div class="lgbox">
+      <div class="lgbox-title">LangGraph Orchestration · Workflow S7</div>
+      <div class="node n-agent" style="width:100%;margin-bottom:4px;">
+        <div class="nbadge">A1 · Identity Unifier · With Quality Flags</div>
+        <div class="ntitle">Profile from Verbal Capture</div>
+        <div class="nbody">PHONE confirmed (caller ID). EMAIL conditional. Data quality flags. A8 initial score = <strong>0.88</strong>. <code>email_captured=TRUE/FALSE</code> → routes next decision.</div>
+        <div class="pills"><span class="pill pr">Rule-Based</span><span class="pill pd">Write: State · email_captured · quality_flags</span></div>
+      </div>
+      <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+      <div class="node n-llm" style="width:100%;margin-bottom:4px;">
+        <div class="nbadge">A3 · LLM · MEMO Analysis + A2 · Degraded Persona</div>
+        <div class="ntitle">Call Notes Analysis → Topic Extraction + Tentative Persona</div>
+        <div class="nbody">A3 LLM analyses MEMO (call agent notes): reasons for call, products, concerns, competitors. A2 tentative persona from DOB+GENDER only → always LOW confidence → <strong>G2 always fires.</strong></div>
+        <div class="pills"><span class="pill pl">GPT-4 mini · Call Note Analysis</span><span class="pill pd">Read: T_CONSULT_REQ.MEMO</span></div>
+      </div>
+      <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+      <div class="node n-hitl" style="width:100%;">
+        <div class="nbadge">⏸ G2 · Always Fires · interrupt_before</div>
+        <div class="ntitle">G2 · Persona Override (Mandatory for S7)</div>
+        <div class="nbody">Always low confidence. <strong>Override</strong> → assign correct. <strong>Accept</strong> → proceed with tentative.</div>
+        <div class="pills"><span class="pill pg">interrupt_before · Checkpoint</span></div>
+      </div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+
+    <div class="node n-decision lg">
+      <div class="nbadge">⬡ LangGraph Decision Node · Critical Fork</div>
+      <div class="ntitle">Email Captured? → Two Completely Different Paths</div>
+      <div class="nbody">Most impactful fork in S7. Reads <code>email_captured</code> from State.</div>
+    </div>
+    <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+
+    <div class="branch">
+      <div class="bcol">
+        <div class="blabel" style="background:rgba(22,101,52,.2);border-color:#166534;color:#4ade80;border:1px solid;">✓ Email Captured — Full Digital Path</div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-llm" style="width:205px;">
+          <div class="nbadge">A4+A5 · LLM · Same-Day</div>
+          <div class="ntitle">Post-Call Email — LLM Personalised</div>
+          <div class="nbody">LLM generates from MEMO topics. G1 → A6 sends <strong>same day</strong>.</div>
+          <div class="pills"><span class="pill pl">GPT-4</span><span class="pill pg">→ G1</span></div>
+        </div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-score" style="width:205px;"><div class="nbadge">A8 · Tracking</div><div class="ntitle">Open/Click Tracking</div><div class="nbody">Score may reach 0.92+.</div></div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-llm" style="width:205px;"><div class="nbadge">A9 · LLM · Full Context</div><div class="ntitle">Handoff Briefing</div><div class="nbody">Call + MEMO + email engagement + talk track.</div><div class="pills"><span class="pill pl">GPT-4</span></div></div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-hitl" style="width:205px;"><div class="nbadge">⏸ G4 ≥ 0.85</div><div class="ntitle">G4 Sales Review</div></div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-good" style="width:205px;"><div class="nbadge">Terminal</div><div class="ntitle">✓ Advisor Contacts Lead</div></div>
+      </div>
+      <div class="bcol">
+        <div class="blabel" style="background:rgba(153,27,27,.2);border-color:#991b1b;color:#fca5a5;border:1px solid;">✗ No Email — Direct Handoff Path</div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-rule" style="width:205px;"><div class="nbadge">Skip Email</div><div class="ntitle">No Nurturing Available</div><div class="nbody">Route directly to A9. No tracking possible.</div></div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-llm" style="width:205px;"><div class="nbadge">A9 · LLM · MEMO Only</div><div class="ntitle">Call-Notes Briefing</div><div class="nbody">Call context + MEMO topics. Phone/F2F recommended.</div><div class="pills"><span class="pill pl">GPT-4</span></div></div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-hitl" style="width:205px;"><div class="nbadge">⏸ G4 ≥ 0.85</div><div class="ntitle">G4 Sales Review</div><div class="nbody">Advisor calls back directly.</div></div>
+        <div class="arr"><div class="al h10"></div><div class="ah"></div></div>
+        <div class="node n-good" style="width:205px;"><div class="nbadge">Terminal</div><div class="ntitle">✓ Phone / F2F Follow-Up</div></div>
+      </div>
+    </div>
+    <div style="height:12px;"></div>
+    <div class="note">⚠ Edge Case — Both email bounce + phone invalid → <code>data_quality_flag</code> → archived → manual review queue.</div>
+  </div>
+</div>
+
+
+<script>
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.tab).classList.add('active');
+    window.scrollTo({top:0,behavior:'smooth'});
+  });
+});
+</script>
+</body>
+</html>
