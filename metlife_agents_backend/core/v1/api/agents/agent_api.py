@@ -2,11 +2,14 @@
 Agent Workflow API — start, pause, and monitor agent workflows.
 """
 
+import json
 import logging
+from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+import sqlalchemy as sa
+from sqlalchemy import select, update as sa_update
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 
 from model.api.v1 import APIResponse
 from model.api.v1.agents import (
@@ -15,19 +18,23 @@ from model.api.v1.agents import (
     ResumeWorkflowRequest,
     EventTrackRequest,
     WorkflowHistoryResponse,
+    WorkflowStateResponse,
+    ExecutionLogEntry,
+    BatchRunResponse,
 )
 from model.database.v1.leads import Lead
+from model.database.v1.communications import Communication
+from model.database.v1.emails import EmailEvent
+from model.database.v1.batch_runs import BatchRun
 from core.v1.services.agents.graph import (
     start_workflow,
     resume_workflow,
     build_graph,
     get_checkpointer,
 )
+from core.v1.services.sse.manager import event_manager, batch_progress_event
 from utils.v1.connections import get_db
-
 from config.v1.database_config import db_config
-from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy.orm import sessionmaker
 
 logger = logging.getLogger(__name__)
 
@@ -141,7 +148,6 @@ async def get_workflow_status(
     Used by the frontend to restore state after a page refresh.
     Reads directly from the LangGraph persistence checkpoint.
     """
-
     try:
         config = {"configurable": {"thread_id": thread_id}}
         async with get_checkpointer() as cp:
@@ -195,7 +201,6 @@ async def get_workflow_history(
 
     Returns the chronological sequence of node executions and agent decisions.
     """
-
     try:
         config = {"configurable": {"thread_id": thread_id}}
         async with get_checkpointer() as cp:
@@ -211,7 +216,6 @@ async def get_workflow_history(
         state = state_snapshot.values
         execution_log = state.get("execution_log", [])
 
-        # Ensure timeline uniqueness/formatting if needed, but primarily direct passthrough
         response_data = WorkflowHistoryResponse(
             thread_id=thread_id,
             execution_log=execution_log,
@@ -235,54 +239,337 @@ async def get_workflow_history(
 
 @router.post(
     "/batch/run",
-    response_model=APIResponse[dict],
+    response_model=APIResponse[BatchRunResponse],
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def run_batch_orchestrator(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
-    """Batch Orchestrator — launches LangGraph threads for all pending leads.
+    """Batch Orchestrator — single entry point for the Work Flow Engine 'Run' button.
 
-    Queries all leads with workflow_status='New', then uses BackgroundTasks
-    to fire up the agent workflows concurrently without blocking the UI.
+    Handles two lead populations in one call:
+    - workflow_status='New'      → standard flow starting at identity_unifier (A1)
+    - workflow_status='Dormant'  → S4 revival flow starting at dormancy_agent (A10)
+      (cooldown_flag=False only)
+
+    Creates a ``BatchRun`` record immediately and returns its ``batch_id``.
+    Progress is tracked per-lead in the background and broadcast via SSE
+    ``batch_progress`` events so the UI can show a live progress bar.
+
+    Poll GET /agents/batch/{batch_id} or watch SSE for live updates.
     """
-    result = await db.execute(select(Lead).where(Lead.workflow_status == "New"))
-    leads = result.scalars().all()
+    # Select only the id column — returns plain Python UUID values, never ORM objects.
+    # This avoids the MissingGreenlet crash that occurs when a commit() expires
+    # ORM objects and SQLAlchemy tries to lazy-reload them outside a greenlet.
+    new_id_result = await db.execute(
+        select(Lead.id).where(Lead.workflow_status == "New")
+    )
+    new_lead_ids: list[str] = [str(row[0]) for row in new_id_result.all()]
 
-    if not leads:
+    # Auto-promote stale leads to Dormant per spec:
+    # "Not active since 180 days" — use last_active_at if populated,
+    # fall back to commit_time (Oracle registration date) when it is null.
+    dormancy_cutoff = datetime.now(timezone.utc) - timedelta(days=180)
+    stale_id_result = await db.execute(
+        select(Lead.id).where(
+            Lead.workflow_status.in_(["Active", "New"]),
+            Lead.opt_in == False,  # noqa: E712
+            Lead.cooldown_flag == False,  # noqa: E712
+            Lead.is_converted == False,  # noqa: E712
+            sa.or_(
+                sa.and_(
+                    Lead.last_active_at.isnot(None),
+                    Lead.last_active_at <= dormancy_cutoff,
+                ),
+                sa.and_(
+                    Lead.last_active_at.is_(None),
+                    Lead.commit_time.isnot(None),
+                    Lead.commit_time <= dormancy_cutoff,
+                ),
+            ),
+        )
+    )
+    stale_ids = [row[0] for row in stale_id_result.all()]
+    if stale_ids:
+        await db.execute(
+            sa_update(Lead)
+            .where(Lead.id.in_(stale_ids))
+            .values(workflow_status="Dormant")
+        )
+        await db.commit()
+        logger.info(
+            "Auto-promoted %d stale lead(s) to Dormant (180d rule)", len(stale_ids)
+        )
+        # Newly promoted leads are now eligible for dormant revival;
+        # re-fetch the full dormant pool after the commit.
+
+    dormant_id_result = await db.execute(
+        select(Lead.id).where(
+            Lead.workflow_status == "Dormant",
+            Lead.cooldown_flag == False,  # noqa: E712
+            Lead.is_converted == False,  # noqa: E712
+        )
+    )
+    dormant_lead_ids: list[str] = [str(row[0]) for row in dormant_id_result.all()]
+
+    total = len(new_lead_ids) + len(dormant_lead_ids)
+    if total == 0:
         return APIResponse(
             success=False,
             status_code=status.HTTP_200_OK,
-            data={"leads_started": 0},
-            message="No pending leads found to process.",
+            data=BatchRunResponse(
+                batch_id="",
+                status="completed",
+                total=0,
+                total_new=0,
+                total_dormant=0,
+                processed_count=0,
+                success_count=0,
+                failed_count=0,
+                pct=0,
+            ),
+            message="No leads found to process (neither New nor eligible Dormant).",
         )
 
-    async def process_leads(leads_list):
-        # Create a fresh isolated session for the background task
+    batch = BatchRun(
+        total_new=len(new_lead_ids),
+        total_dormant=len(dormant_lead_ids),
+        total=total,
+        status="running",
+    )
+    db.add(batch)
+    await db.commit()
+    await db.refresh(batch)
+    batch_id = str(batch.id)
+
+    async def process_all(
+        batch_id: str,
+        new_list: list[str],
+        dormant_list: list[str],
+    ) -> None:
+        """Background task: run every lead, track progress, update BatchRun."""
         db_url = db_config.get_database_url()
         engine = create_async_engine(db_url, echo=False)
-        AsyncSessionLocal = sessionmaker(
+        AsyncSessionLocal = async_sessionmaker(
             engine, class_=AsyncSession, expire_on_commit=False
         )
 
-        async with AsyncSessionLocal() as bg_db:
-            for lead in leads_list:
-                try:
-                    await start_workflow(
-                        lead_id=str(lead.id),
-                        db_session=bg_db,
-                    )
-                except Exception as e:
-                    logger.error(f"Batch processing failed for lead {lead.id}: {e}")
+        success_count = 0
+        failed_count = 0
+        failed_ids: list[str] = []
+        errors: dict[str, str] = {}
+        total_leads = len(new_list) + len(dormant_list)
 
-    background_tasks.add_task(process_leads, leads)
+        async with AsyncSessionLocal() as bg_db:
+            all_items = [(lead_id_str, False) for lead_id_str in new_list] + [
+                (lead_id_str, True) for lead_id_str in dormant_list
+            ]
+
+            for lead_id_str, is_dormant in all_items:
+                try:
+                    if is_dormant:
+                        await start_workflow(
+                            lead_id=lead_id_str,
+                            db_session=bg_db,
+                            scenario="S4",
+                        )
+                    else:
+                        await start_workflow(
+                            lead_id=lead_id_str,
+                            db_session=bg_db,
+                        )
+                    success_count += 1
+                except Exception as exc:
+                    failed_count += 1
+                    failed_ids.append(lead_id_str)
+                    errors[lead_id_str] = str(exc)
+                    logger.error(
+                        "Batch lead %s failed: %s",
+                        lead_id_str,
+                        exc,
+                        exc_info=True,
+                    )
+
+                processed = success_count + failed_count
+                current_status = "running"
+
+                # Update BatchRun progress row (use batch_id string — batch ORM
+                # object belongs to the request session which is already closed)
+                await bg_db.execute(
+                    sa_update(BatchRun)
+                    .where(BatchRun.id == batch_id)
+                    .values(
+                        processed_count=processed,
+                        success_count=success_count,
+                        failed_count=failed_count,
+                        failed_lead_ids=json.dumps(failed_ids),
+                        error_summary=json.dumps(errors),
+                    )
+                )
+                await bg_db.commit()
+
+                # SSE progress broadcast
+                await event_manager.publish(
+                    batch_progress_event(
+                        batch_id=batch_id,
+                        processed=processed,
+                        total=total_leads,
+                        success=success_count,
+                        failed=failed_count,
+                        status=current_status,
+                    )
+                )
+
+            # ── Mark final status ────────────────────────────────────
+            if failed_count == 0:
+                final_status = "completed"
+            elif success_count == 0:
+                final_status = "failed"
+            else:
+                final_status = "partial_failure"
+
+            await bg_db.execute(
+                sa_update(BatchRun)
+                .where(BatchRun.id == batch_id)
+                .values(
+                    status=final_status,
+                    completed_at=datetime.now(timezone.utc),
+                )
+            )
+            await bg_db.commit()
+
+            # Final SSE event
+            await event_manager.publish(
+                batch_progress_event(
+                    batch_id=batch_id,
+                    processed=total_leads,
+                    total=total_leads,
+                    success=success_count,
+                    failed=failed_count,
+                    status=final_status,
+                )
+            )
+
+            logger.info(
+                "Batch %s finished — total=%d success=%d failed=%d status=%s",
+                batch_id,
+                total_leads,
+                success_count,
+                failed_count,
+                final_status,
+            )
+
+        await engine.dispose()
+
+    background_tasks.add_task(process_all, batch_id, new_lead_ids, dormant_lead_ids)
 
     return APIResponse(
         success=True,
         status_code=status.HTTP_202_ACCEPTED,
-        data={"leads_started": len(leads)},
-        message=f"Batch orchestrator launched for {len(leads)} leads.",
+        data=BatchRunResponse(
+            batch_id=batch_id,
+            status="running",
+            total=total,
+            total_new=len(new_lead_ids),
+            total_dormant=len(dormant_lead_ids),
+            processed_count=0,
+            success_count=0,
+            failed_count=0,
+            pct=0,
+        ),
+        message=(
+            f"Batch started (id={batch_id}): "
+            f"{len(new_lead_ids)} new lead(s), {len(dormant_lead_ids)} dormant revival(s). "
+            f"Watch SSE batch_progress events or poll GET /agents/batch/{batch_id}."
+        ),
+    )
+
+
+@router.get(
+    "/batch/latest",
+    response_model=APIResponse[BatchRunResponse],
+    status_code=status.HTTP_200_OK,
+)
+async def get_latest_batch(db: AsyncSession = Depends(get_db)):
+    """Return the most recent batch run.
+
+    Used by the UI on page load / browser refresh to show the last
+    known batch status without needing to store the batch_id client-side.
+    """
+    result = await db.execute(
+        select(BatchRun).order_by(BatchRun.started_at.desc()).limit(1)
+    )
+    batch = result.scalars().first()
+    if not batch:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No batch runs found.",
+        )
+    return APIResponse(
+        success=True,
+        status_code=status.HTTP_200_OK,
+        data=_batch_to_response(batch),
+        message="Latest batch run retrieved.",
+    )
+
+
+@router.get(
+    "/batch/{batch_id}",
+    response_model=APIResponse[BatchRunResponse],
+    status_code=status.HTTP_200_OK,
+)
+async def get_batch_status(
+    batch_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Return status + progress for a specific batch run.
+
+    Poll this endpoint to show a progress bar when SSE is not available.
+    Returns live counters while status='running' and final counts when done.
+    """
+    result = await db.execute(select(BatchRun).where(BatchRun.id == batch_id))
+    batch = result.scalars().first()
+    if not batch:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Batch run {batch_id} not found.",
+        )
+    return APIResponse(
+        success=True,
+        status_code=status.HTTP_200_OK,
+        data=_batch_to_response(batch),
+        message=f"Batch {batch_id} — status: {batch.status}",
+    )
+
+
+def _batch_to_response(batch: BatchRun) -> "BatchRunResponse":
+    failed_ids: list[str] = []
+    errors: dict = {}
+    try:
+        if batch.failed_lead_ids:
+            failed_ids = json.loads(batch.failed_lead_ids)
+        if batch.error_summary:
+            errors = json.loads(batch.error_summary)
+    except Exception:
+        pass
+
+    total = batch.total or 0
+    processed = batch.processed_count or 0
+    return BatchRunResponse(
+        batch_id=str(batch.id),
+        status=batch.status,
+        total=total,
+        total_new=batch.total_new or 0,
+        total_dormant=batch.total_dormant or 0,
+        processed_count=processed,
+        success_count=batch.success_count or 0,
+        failed_count=batch.failed_count or 0,
+        pct=round(processed / total * 100) if total else 0,
+        failed_lead_ids=failed_ids,
+        error_summary=errors,
+        started_at=str(batch.started_at) if batch.started_at else None,
+        completed_at=str(batch.completed_at) if batch.completed_at else None,
     )
 
 
@@ -297,35 +584,161 @@ async def track_engagement_event(
 ):
     """Event Tracking API — simulates customer engagement inputs.
 
-    Resumes a paused workflow so the score engine (A8) can process
-    the 'email_opened' or 'email_clicked' event.
+    Updates the LangGraph checkpoint state AND writes the engagement
+    timestamp to the Communications table (internal mock event store).
     """
     try:
-        graph = build_graph(db_session=db)
         config = {"configurable": {"thread_id": request.thread_id}}
 
-        # Get current state
-        state_snapshot = await graph.aget_state(config)
-        if not state_snapshot or not state_snapshot.values:
-            raise HTTPException(status_code=404, detail="Active workflow not found.")
+        # Must use the persistent checkpointer — NOT a fresh MemorySaver
+        async with get_checkpointer() as cp:
+            graph = build_graph(db_session=db, checkpointer=cp)
+            state_snapshot = await graph.aget_state(config)
 
-        current_state = state_snapshot.values
-        score_increment = 0.0
-
-        if request.event_type == "email_opened":
-            score_increment = 0.10
-        elif request.event_type == "email_clicked":
-            score_increment = 0.15
-
-        # Natively update the langgraph state (simulating an external node injecting values)
-        await graph.aupdate_state(
-            config,
-            {
-                "engagement_score": round(
-                    current_state.get("engagement_score", 0.0) + score_increment, 4
+            if not state_snapshot or not state_snapshot.values:
+                raise HTTPException(
+                    status_code=404, detail="Active workflow not found."
                 )
-            },
-        )
+
+            current_state = state_snapshot.values
+            now = datetime.now(timezone.utc)
+
+            # All trackable events + their score deltas (mirrors scoring_rules.py)
+            _SCORE_MAP = {
+                "email_opened": 0.10,
+                "email_clicked": 0.15,
+                "consult_page_visit": 0.40,
+                "consultation_booked": 0.50,  # triggers immediate handoff path
+                "seminar_inquiry": 0.20,  # S3 bonus
+                "f2f_request": 0.30,  # S3 bonus
+                "direct_reply": 0.25,
+                # Negative / neutral — no score change
+                "unsubscribe": 0.0,
+                "bounce": 0.0,
+            }
+            score_increment = _SCORE_MAP.get(request.event_type, 0.0)
+
+            new_score = round(
+                current_state.get("engagement_score", 0.0) + score_increment, 4
+            )
+
+            # Build the state patch to inject back into the checkpoint
+            state_patch: dict = {"engagement_score": new_score}
+
+            # For S5 CTA clicks: update product_interest so A4 generates the right content
+            if request.event_type == "email_clicked" and request.clicked_label:
+                _label_to_interest = {
+                    "Medical Insurance": "medical_insurance",
+                    "Life Insurance": "life_insurance",
+                    "Asset Formation": "asset_formation",
+                }
+                mapped = _label_to_interest.get(request.clicked_label)
+                if mapped:
+                    state_patch["product_interest"] = mapped
+                    logger.info(
+                        "S5 CTA click detected — product_interest set to '%s' for lead thread %s",
+                        mapped,
+                        request.thread_id,
+                    )
+
+            # consultation_booked → immediate handoff signal in state
+            if request.event_type == "consultation_booked":
+                state_patch["consultation_booked"] = True
+                logger.info(
+                    "Consultation booked — thread %s score → %.2f",
+                    request.thread_id,
+                    new_score,
+                )
+
+            # Inject all updates into the persistent checkpoint
+            await graph.aupdate_state(config, state_patch)
+
+        # Update Communications + create EmailEvent + update Lead score
+        if request.event_type in (
+            "email_opened",
+            "email_clicked",
+            "unsubscribe",
+            "bounce",
+            "seminar_inquiry",
+            "consult_page_visit",
+            "consultation_booked",
+            "f2f_request",
+            "direct_reply",
+        ):
+            lead_result = await db.execute(
+                select(Lead).where(Lead.thread_id == request.thread_id)
+            )
+            lead = lead_result.scalars().first()
+            if lead:
+                # Find the latest sent email for this lead
+                comm_result = await db.execute(
+                    select(Communication)
+                    .where(Communication.lead_id == lead.id)
+                    .order_by(Communication.sent_at.desc())
+                    .limit(1)
+                )
+                comm = comm_result.scalars().first()
+                email_num = comm.email_number if comm else 0
+
+                if comm:
+                    if request.event_type == "email_opened" and comm.opened_at is None:
+                        comm.opened_at = now
+                    elif request.event_type == "email_clicked":
+                        if comm.clicked_at is None:
+                            comm.clicked_at = now
+                        # Store which CTA was clicked (first click wins for dedup)
+                        if request.clicked_url and comm.clicked_cta_url is None:
+                            comm.clicked_cta_url = request.clicked_url
+                        if request.clicked_label and comm.clicked_cta_label is None:
+                            comm.clicked_cta_label = request.clicked_label
+                    elif request.event_type == "unsubscribe":
+                        comm.unsubscribed_at = now
+                    elif request.event_type == "bounce":
+                        comm.bounced_at = now
+                    await db.commit()
+
+                # Unsubscribe / hard bounce → OPT_IN=True + Suppressed permanently (spec)
+                if request.event_type in ("unsubscribe", "bounce"):
+                    await db.execute(
+                        sa_update(Lead)
+                        .where(Lead.id == lead.id)
+                        .values(opt_in=True, workflow_status="Suppressed")
+                    )
+                    await db.commit()
+                    logger.info(
+                        "Lead %s suppressed permanently (%s)",
+                        lead.id,
+                        request.event_type,
+                    )
+
+                # Write EmailEvent row so the full engagement history is auditable
+                db.add(
+                    EmailEvent(
+                        lead_id=lead.id,
+                        communication_id=comm.id if comm else None,
+                        event_type=request.event_type,
+                        score_delta=score_increment,
+                        email_number=email_num,
+                        # Capture CTA click details when provided
+                        clicked_url=request.clicked_url
+                        if request.event_type == "email_clicked"
+                        else None,
+                        clicked_label=request.clicked_label
+                        if request.event_type == "email_clicked"
+                        else None,
+                    )
+                )
+
+                # Update engagement_score + last_active_at on the Lead row.
+                # last_active_at tracks lead-initiated activity for 180-day dormancy check.
+                lead_updates: dict = {"engagement_score": new_score}
+                if request.event_type not in ("unsubscribe", "bounce"):
+                    # Only positive engagement events reset the 180-day clock
+                    lead_updates["last_active_at"] = now
+                await db.execute(
+                    sa_update(Lead).where(Lead.id == lead.id).values(**lead_updates)
+                )
+                await db.commit()
 
         return APIResponse(
             success=True,
@@ -334,12 +747,92 @@ async def track_engagement_event(
                 "thread_id": request.thread_id,
                 "event_logged": request.event_type,
                 "score_boost": score_increment,
+                "new_score": new_score,
             },
             message=f"Event '{request.event_type}' ingested into graph state.",
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("Event ingestion failed: %s", e, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to ingest event: {str(e)}",
+        )
+
+
+@router.get(
+    "/state/{thread_id}",
+    response_model=APIResponse[WorkflowStateResponse],
+    status_code=status.HTTP_200_OK,
+)
+async def get_workflow_state(
+    thread_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Full LangGraph checkpoint state inspector.
+
+    Returns every field stored in the checkpoint for a given thread —
+    useful for the Lead Detail screen, debugging, and the admin audit panel.
+    """
+    try:
+        config = {"configurable": {"thread_id": thread_id}}
+        async with get_checkpointer() as cp:
+            graph = build_graph(db_session=db, checkpointer=cp)
+            snapshot = await graph.aget_state(config)
+
+        if not snapshot or not snapshot.values:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No checkpoint found for thread {thread_id}",
+            )
+
+        s = snapshot.values
+        raw_log = s.get("execution_log", [])
+        parsed_log = []
+        for entry in raw_log:
+            try:
+                parsed_log.append(ExecutionLogEntry(**entry))
+            except Exception:
+                pass
+
+        return APIResponse(
+            success=True,
+            status_code=status.HTTP_200_OK,
+            data=WorkflowStateResponse(
+                thread_id=thread_id,
+                lead_id=s.get("lead_id"),
+                scenario=s.get("scenario"),
+                persona_code=s.get("persona_code"),
+                persona_confidence=s.get("persona_confidence"),
+                keigo_level=s.get("keigo_level"),
+                engagement_score=s.get("engagement_score", 0.0),
+                base_score=s.get("base_score", 0.0),
+                handoff_threshold=s.get("handoff_threshold", 0.80),
+                email_number=s.get("email_number", 0),
+                max_emails=s.get("max_emails", 5),
+                content_type=s.get("content_type"),
+                draft_email_subject=s.get("draft_email_subject"),
+                intent_summary=s.get("intent_summary"),
+                urgency=s.get("urgency"),
+                product_interest=s.get("product_interest"),
+                hitl_gate=s.get("hitl_gate"),
+                hitl_status=s.get("hitl_status"),
+                hitl_resume_value=s.get("hitl_resume_value"),
+                workflow_status=s.get("workflow_status"),
+                current_node=s.get("current_node"),
+                revival_segment=s.get("revival_segment"),
+                is_converted=s.get("is_converted", False),
+                target_language=s.get("target_language", "JA"),
+                execution_log=parsed_log,
+            ),
+            message="Workflow state retrieved successfully.",
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Failed to fetch workflow state: %s", e, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch workflow state: {str(e)}",
         )

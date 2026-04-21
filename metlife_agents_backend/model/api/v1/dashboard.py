@@ -11,4 +11,6 @@ class DashboardStatsResponse(BaseModel):
     hitl_leads: int
     converted_leads: int
     dormant_leads: int
+    suppressed_leads: int
     node_counts: dict[str, int]
+    scenario_breakdown: dict[str, int]  # S1–S7 lead counts

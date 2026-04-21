@@ -94,12 +94,14 @@ class LeadState(dict):
     hitl_status: Optional[str]  # idle | pending | approved | edited | rejected
     hitl_gate: Optional[str]  # G1–G5
     hitl_reviewer_notes: Optional[str]
+    hitl_resume_value: Optional[
+        str
+    ]  # Last human decision: approved | edited | rejected | hold
 
     # ── Workflow state ───────────────────────────────────────────────
     workflow_status: str  # active | paused | completed | failed | suppressed
     current_node: Optional[str]
     is_converted: bool
-    pause_requested: bool
 
     # ── Language ─────────────────────────────────────────────────────
     target_language: str  # EN | JA
@@ -173,11 +175,11 @@ def create_initial_state(
         "hitl_status": "idle",
         "hitl_gate": None,
         "hitl_reviewer_notes": None,
+        "hitl_resume_value": None,
         # Workflow
         "workflow_status": "active",
         "current_node": None,
         "is_converted": False,
-        "pause_requested": False,
         # Language
         "target_language": target_language,
         # Handoff

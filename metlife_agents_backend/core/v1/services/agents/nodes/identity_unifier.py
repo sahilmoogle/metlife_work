@@ -18,6 +18,7 @@ from model.database.v1.quotes import Quote
 from model.database.v1.consultation import ConsultationRequest
 from core.v1.services.sse.manager import event_manager, node_transition_event
 from core.v1.services.agents.state import create_log_entry
+from utils.v1.db_sync import sync_lead_state
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +91,16 @@ async def identity_unifier(state: dict, *, db: AsyncSession) -> dict:
 
     state["context_block"] = " | ".join(p for p in parts if p)
     state["current_node"] = NODE_ID
+
+    # Write back thread linkage and status so the leads table stays current
+    if db is not None:
+        await sync_lead_state(
+            db,
+            lead_id,
+            thread_id=state.get("thread_id"),
+            workflow_status="Active",
+            current_agent_node=NODE_ID,
+        )
 
     latency_ms = int((time.perf_counter() - start) * 1000)
     logger.info("A1 completed for lead %s in %dms", lead_id, latency_ms)

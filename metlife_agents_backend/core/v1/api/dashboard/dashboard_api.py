@@ -26,7 +26,9 @@ async def get_dashboard_stats(
 ):
     """Get aggregated metrics for the orchestration dashboard.
 
-    Returns counts grouping leads by workflow_status and current_agent_node.
+    Returns counts grouping leads by workflow_status, current_agent_node,
+    and scenario_id so the frontend funnel, stat cards, and scenario bars
+    all have real data.
     """
     # 1. Total Status Counts
     status_query = select(Lead.workflow_status, func.count(Lead.id)).group_by(
@@ -44,6 +46,17 @@ async def get_dashboard_stats(
     node_res = await db.execute(node_query)
     node_counts = {k: v for k, v in dict(node_res.all()).items() if k is not None}
 
+    # 3. Scenario Breakdown (all leads, regardless of status)
+    scenario_query = (
+        select(Lead.scenario_id, func.count(Lead.id))
+        .where(Lead.scenario_id.isnot(None))
+        .group_by(Lead.scenario_id)
+    )
+    scenario_res = await db.execute(scenario_query)
+    scenario_breakdown = {
+        k: v for k, v in dict(scenario_res.all()).items() if k is not None
+    }
+
     stats = DashboardStatsResponse(
         total_leads=sum(status_counts.values()),
         active_leads=status_counts.get("Active", 0)
@@ -51,7 +64,9 @@ async def get_dashboard_stats(
         hitl_leads=status_counts.get("Pending_HITL", 0) + status_counts.get("HITL", 0),
         converted_leads=status_counts.get("Converted", 0),
         dormant_leads=status_counts.get("Dormant", 0),
+        suppressed_leads=status_counts.get("Suppressed", 0),
         node_counts=node_counts,
+        scenario_breakdown=scenario_breakdown,
     )
 
     return APIResponse(

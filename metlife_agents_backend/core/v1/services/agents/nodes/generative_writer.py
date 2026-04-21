@@ -14,6 +14,7 @@ import time
 from prompts.writer import A4A5_WRITER_SYSTEM, A4A5_WRITER_USER
 from core.v1.services.agents.rules.scenario_rules import SCENARIO_DEFAULTS
 from core.v1.services.sse.manager import event_manager, node_transition_event
+from core.v1.services.agents.state import create_log_entry
 from langchain_core.messages import SystemMessage, HumanMessage
 
 logger = logging.getLogger(__name__)
@@ -98,4 +99,18 @@ async def generative_writer(state: dict, *, llm=None) -> dict:
         node_transition_event(lead_id, NODE_ID, "completed", f"{latency_ms}ms")
     )
 
+    content_label = (
+        "existing_asset" if content_type == "existing_asset" else "LLM-generated"
+    )
+    state["execution_log"] = [
+        create_log_entry(
+            title=f"A5 - GENERATIVE WRITER · COMPLETED (Email #{state.get('email_number', 1)})",
+            description=(
+                f"{content_label} — Subject: {str(state.get('draft_email_subject', ''))[:60]}"
+            ),
+            badges=["Pass-through"]
+            if content_type == "existing_asset"
+            else ["LLM", "Azure OpenAI"],
+        )
+    ]
     return state
