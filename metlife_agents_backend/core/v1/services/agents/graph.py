@@ -25,8 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
-from langgraph.types import Command
-
+from langgraph.types import interrupt, Command
 from config.v1.database_config import db_config
 from model.database.v1.leads import Lead
 
@@ -415,12 +414,36 @@ def build_graph(*, db_session=None, checkpointer=None):
     graph.add_node("prep_g4", bound_prep_g4)
     graph.add_node("prep_g5", bound_prep_g5)
 
-    # ── HITL pause nodes (graph suspends before these) ───────────────
-    graph.add_node("g1_pause", lambda state: state)
-    graph.add_node("g2_pause", lambda state: state)
-    graph.add_node("g3_pause", lambda state: state)
-    graph.add_node("g4_pause", lambda state: state)
-    graph.add_node("g5_pause", lambda state: state)
+    # ── HITL pause nodes — call interrupt() so LangGraph suspends inside
+    # the node and stores the FULL state in the checkpoint.  Resuming with
+    # Command(resume=value) causes interrupt() to return that value; the
+    # node then writes it to hitl_resume_value before returning the full
+    # state, so downstream conditional edges can read the decision.
+    async def g1_pause(state: dict) -> dict:
+        decision = interrupt({"gate": "G1", "lead_id": state.get("lead_id")})
+        return {**state, "hitl_resume_value": str(decision)}
+
+    async def g2_pause(state: dict) -> dict:
+        decision = interrupt({"gate": "G2", "lead_id": state.get("lead_id")})
+        return {**state, "hitl_resume_value": str(decision)}
+
+    async def g3_pause(state: dict) -> dict:
+        decision = interrupt({"gate": "G3", "lead_id": state.get("lead_id")})
+        return {**state, "hitl_resume_value": str(decision)}
+
+    async def g4_pause(state: dict) -> dict:
+        decision = interrupt({"gate": "G4", "lead_id": state.get("lead_id")})
+        return {**state, "hitl_resume_value": str(decision)}
+
+    async def g5_pause(state: dict) -> dict:
+        decision = interrupt({"gate": "G5", "lead_id": state.get("lead_id")})
+        return {**state, "hitl_resume_value": str(decision)}
+
+    graph.add_node("g1_pause", g1_pause)
+    graph.add_node("g2_pause", g2_pause)
+    graph.add_node("g3_pause", g3_pause)
+    graph.add_node("g4_pause", g4_pause)
+    graph.add_node("g5_pause", g5_pause)
 
     # ── Entry point ─────────────────────────────────────────────────
     # S4 dormant leads skip straight to dormancy_agent (A10) so the segment
@@ -523,11 +546,12 @@ def build_graph(*, db_session=None, checkpointer=None):
     graph.add_edge("g3_pause", "identity_unifier")
 
     # ── Compile ──────────────────────────────────────────────────────
+    # No interrupt_before — each gX_pause node calls interrupt() internally.
+    # This is the recommended LangGraph HITL pattern: the full checkpoint
+    # state is stored at the interrupt() call site, so resuming with
+    # Command(resume=value) always recovers the complete lead state.
     saver = checkpointer or MemorySaver()
-    compiled = graph.compile(
-        checkpointer=saver,
-        interrupt_before=["g1_pause", "g2_pause", "g3_pause", "g4_pause", "g5_pause"],
-    )
+    compiled = graph.compile(checkpointer=saver)
     logger.info("LangGraph compiled with %d nodes", len(graph.nodes))
     return compiled
 
@@ -597,15 +621,24 @@ async def resume_workflow(
 ) -> dict:
     """Resume a paused workflow after HITL decision.
 
-    Injects hitl_resume_value into state before resuming so conditional
-    edges (G1 rejection → re-generate, G5 hold → back to nurture) route
-    correctly.
+    Each pause node (g1_pause … g5_pause) calls ``interrupt()`` internally.
+    LangGraph stores the full checkpoint state at that call site.  Resuming
+    with ``Command(resume=value)`` causes ``interrupt()`` to return ``value``
+    inside the node; the node then writes it to ``hitl_resume_value`` and
+    returns the complete state so downstream conditional edges can route on it.
+
+    This avoids the ``KeyError: 'lead_id'`` bug that plagued the previous
+    ``aupdate_state + ainvoke(None)`` approach where ``aupdate_state`` with
+    ``StateGraph(dict)`` replaced the checkpoint state with only the one
+    patched key instead of merging it.
     """
     config = {"configurable": {"thread_id": thread_id}}
 
     async with get_checkpointer() as cp:
         graph = build_graph(db_session=db_session, checkpointer=cp)
-        await graph.aupdate_state(config, {"hitl_resume_value": resume_value})
+        # Command(resume=value) delivers `value` as the return of interrupt().
+        # LangGraph loads the full saved checkpoint, runs from the interrupt
+        # site, and continues until the next interrupt() or END.
         result = await graph.ainvoke(Command(resume=resume_value), config=config)
 
     return {

@@ -281,29 +281,46 @@ async def approve_hitl(
 
     if should_resume:
         try:
-            await resume_workflow(
+            result = await resume_workflow(
                 thread_id=thread_id,
                 db_session=db,
                 resume_value=request.action,
             )
-            return APIResponse(
-                success=True,
-                status_code=status.HTTP_200_OK,
-                data={"thread_id": thread_id, "resumed": True, "gate": gate_type},
-                message=f"HITL {request.action}. Workflow resumed.",
+            state = result.get("state", {})
+            next_gate = state.get("hitl_gate")
+            msg = (
+                f"HITL {request.action}. Workflow running — next gate: {next_gate}."
+                if next_gate
+                else f"HITL {request.action}. Workflow completed."
             )
-        except Exception as e:
-            logger.error("Resume after HITL failed: %s", e, exc_info=True)
             return APIResponse(
                 success=True,
                 status_code=status.HTTP_200_OK,
                 data={
                     "thread_id": thread_id,
-                    "resumed": False,
+                    "resumed": True,
                     "gate": gate_type,
-                    "error": str(e),
+                    "next_gate": next_gate,
+                    "current_node": state.get("current_node"),
                 },
-                message=f"HITL {request.action}. Resume failed — manual retry needed.",
+                message=msg,
+            )
+        except Exception as e:
+            logger.error(
+                "Resume after HITL failed for thread %s: %s",
+                thread_id,
+                e,
+                exc_info=True,
+            )
+            # Raise a real 500 so the caller knows the workflow is stuck.
+            # The HITL record is already marked Approved in the DB — to unstick,
+            # call POST /api/v1/agents/{thread_id}/resume
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=(
+                    f"HITL decision saved but workflow resume failed: {str(e)}. "
+                    f"To unstick: POST /api/v1/agents/{thread_id}/resume"
+                ),
             )
 
     return APIResponse(

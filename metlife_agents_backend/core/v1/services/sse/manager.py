@@ -33,12 +33,39 @@ class EventManager:
         self._subscribers: list[asyncio.Queue[dict]] = []
         self._lock = asyncio.Lock()
 
-        # Sequential counter — each event gets a unique monotone integer id
+        # Sequential counter — each event gets a unique monotone integer id.
+        # Starts at 0; synced to DB max on first publish so server restarts
+        # never collide with already-persisted IDs.
         self._counter: int = 0
+        self._counter_synced: bool = False
+
+        # Dedicated lock for the one-time DB sync.  Prevents the race where
+        # 100 concurrent publish() calls all see _counter_synced=False and
+        # each reset _counter back to max_id AFTER other coroutines have
+        # already incremented it — producing duplicate IDs and UNIQUE errors.
+        self._sync_lock = asyncio.Lock()
 
         # Rolling buffer: deque would be ideal but a list with slicing is fine
         # at 1 000 entries.  Each entry is the fully-enriched event dict.
         self._buffer: list[dict] = []
+
+    async def _sync_counter(self) -> None:
+        """Set counter to max(sse_events.id) from DB so restarts don't collide."""
+        try:
+            from sqlalchemy import text
+            from utils.v1.connections import SessionLocal
+
+            async with SessionLocal() as db:
+                result = await db.execute(
+                    text("SELECT COALESCE(MAX(id), 0) FROM sse_events")
+                )
+                max_id = result.scalar() or 0
+                self._counter = int(max_id)
+                logger.info("SSE counter initialised from DB max id: %d", self._counter)
+        except Exception as exc:
+            logger.warning("SSE counter DB sync failed (using 0): %s", exc)
+        finally:
+            self._counter_synced = True
 
     # ── Subscription management ──────────────────────────────────────
 
@@ -62,10 +89,21 @@ class EventManager:
         """Broadcast an event to all subscribers and persist it to DB.
 
         The event dict is mutated in-place to add:
-          - ``id``        sequential integer
+          - ``id``        sequential integer (continues from DB max on restart)
           - ``timestamp`` UTC ISO-8601 string
         """
         event.setdefault("timestamp", datetime.now(timezone.utc).isoformat())
+
+        # Sync the counter from DB exactly once after server start.
+        # Double-checked locking: cheap flag check first, then acquire the
+        # sync lock to ensure only one coroutine executes _sync_counter().
+        # Without the lock, 100 concurrent publish() calls can all see
+        # _counter_synced=False, each call _sync_counter(), and each reset
+        # _counter back to max_id — producing duplicate sequential IDs.
+        if not self._counter_synced:
+            async with self._sync_lock:
+                if not self._counter_synced:  # re-check after acquiring lock
+                    await self._sync_counter()
 
         async with self._lock:
             self._counter += 1

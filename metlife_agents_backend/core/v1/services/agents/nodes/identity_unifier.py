@@ -58,6 +58,15 @@ async def identity_unifier(state: dict, *, db: AsyncSession) -> dict:
     state["opt_in"] = bool(lead.opt_in)
     state["email_captured"] = bool(lead.email)
 
+    # Seed the workflow state with the lead's accumulated engagement score
+    # from the DB so the propensity scorer starts from the real baseline
+    # (not 0.0).  Without this, purely email-sent events (+0.05 each) can
+    # never reach the 0.80 handoff threshold across a 5-email sequence.
+    if lead.engagement_score and lead.engagement_score > state.get(
+        "engagement_score", 0.0
+    ):
+        state["engagement_score"] = float(lead.engagement_score)
+
     # ── Fetch quote data ─────────────────────────────────────────────
     quote_result = await db.execute(select(Quote).where(Quote.lead_id == lead_id))
     quote = quote_result.scalar_one_or_none()
@@ -115,7 +124,7 @@ async def identity_unifier(state: dict, *, db: AsyncSession) -> dict:
         ),
         create_log_entry(
             title="A1 - IDENTITY & SIGNAL UNIFIER · COMPLETED",
-            description=f"Reads data. Assembled profile for: {lead.first_name} {lead.last_name}",
+            description=f"Reads data. Assembled profile for: {state.get('first_name', '')} {state.get('last_name', '')}",
             badges=["Rule-Based", "Read: DB"],
         ),
     ]

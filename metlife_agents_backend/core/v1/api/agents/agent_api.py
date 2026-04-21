@@ -134,6 +134,59 @@ async def resume_agent_workflow(
         )
 
 
+@router.post(
+    "/{thread_id}/resume",
+    response_model=APIResponse[StartWorkflowResponse],
+    status_code=status.HTTP_200_OK,
+)
+async def retry_resume_workflow(
+    thread_id: str,
+    db: AsyncSession = Depends(get_db),
+    resume_value: str = "approved",
+):
+    """Retry / unstick a workflow that was approved but never resumed.
+
+    Use this when a HITL record shows review_status='Approved' but the
+    workflow is still paused (the next gate never appeared).  This happens
+    when the server crashed or a bug prevented the resume after approval.
+
+    Pass ``resume_value`` query param to override the decision
+    (default: ``"approved"``).  The checkpoint state already holds
+    ``hitl_resume_value`` from the original approval, so this is only
+    needed if you want to change the decision.
+    """
+    try:
+        result = await resume_workflow(
+            thread_id=thread_id,
+            db_session=db,
+            resume_value=resume_value,
+        )
+        state = result.get("state", {})
+        response_data = StartWorkflowResponse(
+            thread_id=thread_id,
+            lead_id=state.get("lead_id", ""),
+            scenario=state.get("scenario"),
+            current_node=state.get("current_node"),
+            engagement_score=state.get("engagement_score", 0.0),
+            workflow_status=state.get("workflow_status", "active"),
+            hitl_gate=state.get("hitl_gate"),
+        )
+        return APIResponse(
+            success=True,
+            status_code=status.HTTP_200_OK,
+            data=response_data,
+            message=f"Workflow resumed from thread {thread_id}. Next gate: {state.get('hitl_gate') or 'none (completed)'}",
+        )
+    except Exception as e:
+        logger.error(
+            "Manual resume failed for thread %s: %s", thread_id, e, exc_info=True
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Resume failed: {str(e)}",
+        )
+
+
 @router.get(
     "/{thread_id}/status",
     response_model=APIResponse[StartWorkflowResponse],
