@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 import uuid
 from functools import partial
+from contextlib import asynccontextmanager
 
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
@@ -27,75 +28,92 @@ from core.v1.services.agents.nodes.dormancy_agent import dormancy_agent
 from core.v1.services.agents.nodes.hitl_gates import (
     should_fire_g2,
     should_fire_g5,
+    persist_hitl_record,
 )
 from core.v1.services.agents.rules.scoring_rules import evaluate_score_route
 from config.v1.llm_config import get_llm
+from langgraph.types import Command
+
+try:
+    from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+except ImportError:
+    AsyncPostgresSaver = None
+
+try:
+    from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+    import aiosqlite  # noqa: F401
+except ImportError:
+    AsyncSqliteSaver = None
 
 logger = logging.getLogger(__name__)
 
 
-# ── Checkpoint persistence ───────────────────────────────────────────
-# MemorySaver for development.  Swap to SqliteSaver / PostgresSaver
-# in production for "refresh & continue" persistence.
-
-
-def _get_checkpointer():
+@asynccontextmanager
+async def get_checkpointer():
     """Return the appropriate checkpointer for the environment.
 
     Tries PostgresSaver first. Falls back to SqliteSaver if Postgres
     is unavailable. Falls back to MemorySaver if SQLite is unavailable.
     """
     try:
-        from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
         from utils.v1.connections import get_settings
 
         settings = get_settings()
-        if hasattr(settings, "DATABASE_URL") and settings.DATABASE_URL.startswith(
-            "postgresql"
+        if (
+            AsyncPostgresSaver
+            and hasattr(settings, "DATABASE_URL")
+            and settings.DATABASE_URL.startswith("postgresql")
         ):
-            # Requires psycopg pool management in production, using connection string for now
-            return AsyncPostgresSaver.from_conn_string(settings.DATABASE_URL)
-    except ImportError:
+            async with AsyncPostgresSaver.from_conn_string(
+                settings.DATABASE_URL
+            ) as saver:
+                yield saver
+            return
+    except Exception:
         logger.info("Postgres checkpointer unavailable")
 
-    try:
-        from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
-        import aiosqlite  # noqa: F401
-
+    if AsyncSqliteSaver:
         logger.info("Using SQLite checkpointer")
-        return AsyncSqliteSaver.from_conn_string("metlife_checkpoints.db")
-    except ImportError:
+        async with AsyncSqliteSaver.from_conn_string("metlife_checkpoints.db") as saver:
+            yield saver
+        return
+    else:
         logger.info("SQLite checkpointer unavailable — using MemorySaver")
-        return MemorySaver()
+        yield MemorySaver()
 
 
 # ── Conditional edge routers & DB Injectors ────────────
 
+
 async def prep_g1(state: dict, *, db=None) -> dict:
-    from core.v1.services.agents.nodes.hitl_gates import persist_hitl_record
     await persist_hitl_record(state, "G1", "Content Compliance", db=db)
     return {**state, "hitl_gate": "G1", "hitl_status": "pending"}
 
+
 async def prep_g2(state: dict, *, db=None) -> dict:
-    from core.v1.services.agents.nodes.hitl_gates import persist_hitl_record
     await persist_hitl_record(state, "G2", "Persona Override", db=db)
     return {**state, "hitl_gate": "G2", "hitl_status": "pending"}
 
+
 async def prep_g4(state: dict, *, db=None) -> dict:
-    from core.v1.services.agents.nodes.hitl_gates import persist_hitl_record
     await persist_hitl_record(state, "G4", "Sales Handoff Review", db=db)
     return {**state, "hitl_gate": "G4", "hitl_status": "pending"}
 
+
 async def prep_g5(state: dict, *, db=None) -> dict:
-    from core.v1.services.agents.nodes.hitl_gates import persist_hitl_record
     await persist_hitl_record(state, "G5", "Edge Score Override", db=db)
     return {**state, "hitl_gate": "G5", "hitl_status": "pending"}
 
 
 def _route_after_classifier(state: dict) -> str:
-    """Route after A2: check if G2 gate should fire."""
+    """Route after A2: Check scenario-specific bypass paths."""
     if state.get("workflow_status") == "suppressed":
         return "end"
+
+    # Blueprint Rules: S6 (F2F) and S7 (Phone) bypass all email nurture
+    if state.get("scenario") in ("S6", "S7"):
+        return "intent_analyser"
+
     if should_fire_g2(state):
         return "prep_g2"
     return "content_strategy"
@@ -197,6 +215,7 @@ def build_graph(*, db_session=None, checkpointer=None):
             "end": END,
             "prep_g2": "prep_g2",
             "content_strategy": "content_strategist",
+            "intent_analyser": "intent_analyser",
         },
     )
 
@@ -232,8 +251,9 @@ def build_graph(*, db_session=None, checkpointer=None):
     graph.add_conditional_edges(
         "sales_handoff",
         _route_after_handoff,
-        {"g4_pause": "g4_pause"},
+        {"prep_g4": "prep_g4"},
     )
+    graph.add_edge("prep_g4", "g4_pause")
     graph.add_edge("g4_pause", END)
 
     # ── A10 (dormancy) entry — standalone trigger ────────────────────
@@ -272,10 +292,11 @@ async def start_workflow(
         target_language=target_language,
     )
 
-    graph = build_graph(db_session=db_session)
-
     config = {"configurable": {"thread_id": thread_id}}
-    result = await graph.ainvoke(initial_state, config=config)
+
+    async with get_checkpointer() as cp:
+        graph = build_graph(db_session=db_session, checkpointer=cp)
+        result = await graph.ainvoke(initial_state, config=config)
 
     return {
         "thread_id": thread_id,
@@ -295,15 +316,15 @@ async def resume_workflow(
 
     Loads the checkpointed state and continues execution.
     """
-    from langgraph.types import Command
 
-    graph = build_graph(db_session=db_session)
     config = {"configurable": {"thread_id": thread_id}}
 
-    result = await graph.ainvoke(
-        Command(resume=resume_value),
-        config=config,
-    )
+    async with get_checkpointer() as cp:
+        graph = build_graph(db_session=db_session, checkpointer=cp)
+        result = await graph.ainvoke(
+            Command(resume=resume_value),
+            config=config,
+        )
 
     return {
         "thread_id": thread_id,

@@ -14,6 +14,7 @@ import time
 from prompts.writer import A4A5_WRITER_SYSTEM, A4A5_WRITER_USER
 from core.v1.services.agents.rules.scenario_rules import SCENARIO_DEFAULTS
 from core.v1.services.sse.manager import event_manager, node_transition_event
+from langchain_core.messages import SystemMessage, HumanMessage
 
 logger = logging.getLogger(__name__)
 
@@ -57,8 +58,6 @@ async def generative_writer(state: dict, *, llm=None) -> dict:
         )
 
         try:
-            from langchain_core.messages import SystemMessage, HumanMessage
-
             response = await llm.ainvoke(
                 [
                     SystemMessage(content=system_msg),
@@ -68,6 +67,9 @@ async def generative_writer(state: dict, *, llm=None) -> dict:
             parsed = json.loads(response.content)
             state["draft_email_subject"] = parsed.get("subject", "")
             state["draft_email_body"] = parsed.get("body", "")
+            state["hitl_reviewer_notes"] = json.dumps(
+                parsed.get("compliance_checklist", [])
+            )
         except Exception as exc:
             logger.warning("A5 LLM failed, using fallback: %s", exc)
             state["draft_email_subject"] = (

@@ -3,11 +3,6 @@ import random
 import string
 import logging
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(levelname)s:\t%(name)s - %(message)s"
-)
-
 from fastapi import FastAPI, Request
 from fastapi.logger import logger as fastapi_logger
 from fastapi.responses import JSONResponse
@@ -23,6 +18,8 @@ from utils.v1.connections import (
     create_connections,
     remove_connections,
 )
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s:\t%(name)s - %(message)s")
 
 
 logger = logging.getLogger(__name__)

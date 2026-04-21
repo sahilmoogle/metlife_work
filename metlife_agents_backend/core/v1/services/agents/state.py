@@ -8,8 +8,19 @@ so the workflow survives server restarts and browser refreshes.
 from __future__ import annotations
 
 from typing import Annotated, Optional
+import operator
+import datetime
 
 from langgraph.graph.message import add_messages
+
+
+def create_log_entry(title: str, description: str, badges: list[str]) -> dict:
+    return {
+        "title": title,
+        "description": description,
+        "badges": badges,
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    }
 
 
 # ── State Definition ─────────────────────────────────────────────────
@@ -99,6 +110,9 @@ class LeadState(dict):
     # ── Messages (LangGraph reducer) ─────────────────────────────────
     messages: Annotated[list, add_messages]
 
+    # ── Execution History (Audit Trail) ──────────────────────────────
+    execution_log: Annotated[list, operator.add]
+
 
 # ── Factory ──────────────────────────────────────────────────────────
 def create_initial_state(
@@ -168,6 +182,8 @@ def create_initial_state(
         "target_language": target_language,
         # Handoff
         "handoff_briefing": None,
+        # Execution History
+        "execution_log": [],
         # Messages
         "messages": [],
     }

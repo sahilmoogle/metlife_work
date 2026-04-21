@@ -12,6 +12,7 @@ import json
 import logging
 import time
 
+from langchain_core.messages import SystemMessage, HumanMessage
 from prompts.briefing import A9_BRIEFING_SYSTEM, A9_BRIEFING_USER
 from core.v1.services.agents.rules.scenario_rules import SCENARIO_DEFAULTS
 from core.v1.services.sse.manager import event_manager, node_transition_event
@@ -50,8 +51,6 @@ async def sales_handoff(state: dict, *, llm=None) -> dict:
         )
 
         try:
-            from langchain_core.messages import SystemMessage, HumanMessage
-
             response = await llm.ainvoke(
                 [
                     SystemMessage(content=system_msg),

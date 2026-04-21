@@ -16,6 +16,7 @@ from core.v1.services.agents.rules.scenario_rules import (
     resolve_keigo_level,
 )
 from core.v1.services.sse.manager import event_manager, node_transition_event
+from core.v1.services.agents.state import create_log_entry
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,13 @@ async def persona_classifier(state: dict) -> dict:
                 lead_id, NODE_ID, "completed", "OPT_IN=1 → suppressed"
             )
         )
+        state["execution_log"] = [
+            create_log_entry(
+                title="RULE CHECK · COMPLETED",
+                description="OPT_IN=1 → Unsubscribed. Workflow suppressed.",
+                badges=["Rule-Based", "Suppressed"],
+            )
+        ]
         return state
 
     # ── Deterministic classification ─────────────────────────────────
@@ -106,5 +114,22 @@ async def persona_classifier(state: dict) -> dict:
             f"{scenario} conf={confidence:.2f} {latency_ms}ms",
         )
     )
+    state["execution_log"] = [
+        create_log_entry(
+            title="RULE CHECK · COMPLETED: OPT_IN Eligibility",
+            description="OPT_IN=0 → Eligible. Proceed.",
+            badges=["Rule-Based"],
+        ),
+        create_log_entry(
+            title=f"ROUTER · COMPLETED: {scenario} Assignment",
+            description=f"ANS3={state.get('ans3')} + ANS4={state.get('ans4')} + Age={state.get('age')} → {scenario}",
+            badges=["Decision Tree"],
+        ),
+        create_log_entry(
+            title="A2 - LIFE-STAGE & PERSONA CLASSIFIER · COMPLETED",
+            description=f"Confidence {confidence:.2f} — Persona {config['persona_code']}",
+            badges=["Rule-Based" if confidence > 0.6 else "LLM Fallback"],
+        ),
+    ]
 
     return state

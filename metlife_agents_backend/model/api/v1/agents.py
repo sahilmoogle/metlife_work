@@ -41,6 +41,10 @@ class HITLApproveRequest(BaseModel):
 class HITLQueueItem(BaseModel):
     id: str
     lead_id: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    scenario_id: Optional[str] = None
+    engagement_score: Optional[float] = None
     thread_id: str
     gate_type: str
     gate_description: Optional[str] = None
@@ -50,9 +54,22 @@ class HITLQueueItem(BaseModel):
     suggested_persona: Optional[str] = None
     persona_confidence: Optional[float] = None
     review_status: str
+    reviewer_notes: Optional[str] = None
     created_at: Optional[str] = None
 
 
 class EventTrackRequest(BaseModel):
     thread_id: str
     event_type: str  # e.g., 'email_opened', 'email_clicked'
+
+
+class ExecutionLogEntry(BaseModel):
+    title: str
+    description: str
+    badges: list[str]
+    timestamp: str
+
+
+class WorkflowHistoryResponse(BaseModel):
+    thread_id: str
+    execution_log: list[ExecutionLogEntry]

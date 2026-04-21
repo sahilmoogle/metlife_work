@@ -14,10 +14,20 @@ from model.api.v1.agents import (
     StartWorkflowResponse,
     ResumeWorkflowRequest,
     EventTrackRequest,
+    WorkflowHistoryResponse,
 )
 from model.database.v1.leads import Lead
-from core.v1.services.agents.graph import start_workflow, resume_workflow
+from core.v1.services.agents.graph import (
+    start_workflow,
+    resume_workflow,
+    build_graph,
+    get_checkpointer,
+)
 from utils.v1.connections import get_db
+
+from config.v1.database_config import db_config
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.orm import sessionmaker
 
 logger = logging.getLogger(__name__)
 
@@ -131,13 +141,12 @@ async def get_workflow_status(
     Used by the frontend to restore state after a page refresh.
     Reads directly from the LangGraph persistence checkpoint.
     """
-    from core.v1.services.agents.graph import build_graph
 
     try:
-        graph = build_graph(db_session=db)
         config = {"configurable": {"thread_id": thread_id}}
-
-        state_snapshot = await graph.aget_state(config)
+        async with get_checkpointer() as cp:
+            graph = build_graph(db_session=db, checkpointer=cp)
+            state_snapshot = await graph.aget_state(config)
 
         if not state_snapshot or not state_snapshot.values:
             raise HTTPException(
@@ -173,6 +182,57 @@ async def get_workflow_status(
         )
 
 
+@router.get(
+    "/{thread_id}/history",
+    response_model=APIResponse[WorkflowHistoryResponse],
+    status_code=status.HTTP_200_OK,
+)
+async def get_workflow_history(
+    thread_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get the execution history (audit trail) of a workflow.
+
+    Returns the chronological sequence of node executions and agent decisions.
+    """
+
+    try:
+        config = {"configurable": {"thread_id": thread_id}}
+        async with get_checkpointer() as cp:
+            graph = build_graph(db_session=db, checkpointer=cp)
+            state_snapshot = await graph.aget_state(config)
+
+        if not state_snapshot or not state_snapshot.values:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No active workflow found for thread {thread_id}",
+            )
+
+        state = state_snapshot.values
+        execution_log = state.get("execution_log", [])
+
+        # Ensure timeline uniqueness/formatting if needed, but primarily direct passthrough
+        response_data = WorkflowHistoryResponse(
+            thread_id=thread_id,
+            execution_log=execution_log,
+        )
+
+        return APIResponse(
+            success=True,
+            status_code=status.HTTP_200_OK,
+            data=response_data,
+            message="Workflow history retrieved successfully.",
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Failed to fetch workflow history: %s", e, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch workflow history: {str(e)}",
+        )
+
+
 @router.post(
     "/batch/run",
     response_model=APIResponse[dict],
@@ -199,10 +259,6 @@ async def run_batch_orchestrator(
         )
 
     async def process_leads(leads_list):
-        from config.v1.database_config import db_config
-        from sqlalchemy.ext.asyncio import create_async_engine
-        from sqlalchemy.orm import sessionmaker
-
         # Create a fresh isolated session for the background task
         db_url = db_config.get_database_url()
         engine = create_async_engine(db_url, echo=False)
@@ -245,8 +301,6 @@ async def track_engagement_event(
     the 'email_opened' or 'email_clicked' event.
     """
     try:
-        from core.v1.services.agents.graph import build_graph
-
         graph = build_graph(db_session=db)
         config = {"configurable": {"thread_id": request.thread_id}}
 

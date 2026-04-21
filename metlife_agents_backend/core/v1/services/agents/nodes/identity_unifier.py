@@ -17,6 +17,7 @@ from model.database.v1.leads import Lead
 from model.database.v1.quotes import Quote
 from model.database.v1.consultation import ConsultationRequest
 from core.v1.services.sse.manager import event_manager, node_transition_event
+from core.v1.services.agents.state import create_log_entry
 
 logger = logging.getLogger(__name__)
 
@@ -95,5 +96,17 @@ async def identity_unifier(state: dict, *, db: AsyncSession) -> dict:
     await event_manager.publish(
         node_transition_event(lead_id, NODE_ID, "completed", f"{latency_ms}ms")
     )
+    state["execution_log"] = [
+        create_log_entry(
+            title="⚡ TRIGGER · COMPLETED: Form Submitted",
+            description="T_QUOTE record → FastAPI webhook → lead_created → Workflow init",
+            badges=["Webhook → FastAPI", "T_QUOTE"],
+        ),
+        create_log_entry(
+            title="A1 - IDENTITY & SIGNAL UNIFIER · COMPLETED",
+            description=f"Reads data. Assembled profile for: {lead.first_name} {lead.last_name}",
+            badges=["Rule-Based", "Read: DB"],
+        ),
+    ]
 
     return state

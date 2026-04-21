@@ -13,6 +13,7 @@ from datetime import datetime, timezone, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from model.database.v1.communications import Communication
 from core.v1.services.sse.manager import event_manager, node_transition_event
 
 logger = logging.getLogger(__name__)
@@ -64,8 +65,6 @@ async def send_engine(state: dict, *, db: AsyncSession | None = None) -> dict:
 
     # ── Persist to communications table ──────────────────────────────
     if db is not None:
-        from model.database.v1.communications import Communication
-
         comm = Communication(
             lead_id=lead_id,
             subject=subject,

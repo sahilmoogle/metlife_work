@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from model.api.v1 import APIResponse
 from model.api.v1.agents import HITLApproveRequest, HITLQueueItem
 from model.database.v1.hitl import HITLQueue
+from model.database.v1.leads import Lead
 from core.v1.services.agents.graph import resume_workflow
 from core.v1.services.sse.manager import event_manager, hitl_resolved_event
 from utils.v1.connections import get_db
@@ -34,28 +35,37 @@ async def get_hitl_queue(
 
     Optional ``gate_type`` filter: G1, G2, G3, G4, G5.
     """
-    query = select(HITLQueue).where(HITLQueue.review_status == "Awaiting")
+    query = (
+        select(HITLQueue, Lead)
+        .join(Lead, HITLQueue.lead_id == Lead.id)
+        .where(HITLQueue.review_status == "Awaiting")
+    )
     if gate_type:
         query = query.where(HITLQueue.gate_type == gate_type)
     query = query.order_by(HITLQueue.created_at.desc())
 
     result = await db.execute(query)
-    records = result.scalars().all()
+    records = result.all()
 
     items = [
         HITLQueueItem(
-            id=str(r.id),
-            lead_id=str(r.lead_id),
-            thread_id=r.thread_id,
-            gate_type=r.gate_type,
-            gate_description=r.gate_description,
-            draft_subject=r.draft_subject,
-            draft_body=r.draft_body,
-            handoff_briefing=r.handoff_briefing,
-            suggested_persona=r.suggested_persona,
-            persona_confidence=r.persona_confidence,
-            review_status=r.review_status,
-            created_at=str(r.created_at) if r.created_at else None,
+            id=str(r.HITLQueue.id),
+            lead_id=str(r.HITLQueue.lead_id),
+            first_name=r.Lead.first_name,
+            last_name=r.Lead.last_name,
+            scenario_id=r.Lead.scenario_id,
+            engagement_score=r.Lead.engagement_score,
+            thread_id=r.HITLQueue.thread_id,
+            gate_type=r.HITLQueue.gate_type,
+            gate_description=r.HITLQueue.gate_description,
+            draft_subject=r.HITLQueue.draft_subject,
+            draft_body=r.HITLQueue.draft_body,
+            handoff_briefing=r.HITLQueue.handoff_briefing,
+            suggested_persona=r.HITLQueue.suggested_persona,
+            persona_confidence=r.HITLQueue.persona_confidence,
+            review_status=r.HITLQueue.review_status,
+            reviewer_notes=r.HITLQueue.reviewer_notes,
+            created_at=str(r.HITLQueue.created_at) if r.HITLQueue.created_at else None,
         )
         for r in records
     ]
