@@ -13,6 +13,7 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from model.database.v1.hitl import HITLQueue
+from core.v1.services.sse.manager import event_manager, hitl_required_event
 
 logger = logging.getLogger(__name__)
 
@@ -49,13 +50,13 @@ async def persist_hitl_record(
         campaign_batch_size=state.get("revival_segment"),
         # Review
         review_status="Awaiting",
+        reviewer_notes=state.get("hitl_reviewer_notes"),
     )
     db.add(record)
     await db.commit()
     logger.info("HITL %s record persisted for lead %s", gate_type, state["lead_id"])
 
     # Broadcast event via SSE so the UI knows instantly
-    from core.v1.services.sse.manager import event_manager, hitl_required_event
     await event_manager.publish(
         hitl_required_event(
             lead_id=state["lead_id"],

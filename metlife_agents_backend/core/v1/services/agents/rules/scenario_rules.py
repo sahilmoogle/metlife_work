@@ -91,21 +91,29 @@ def classify_scenario(
     ans5: Optional[str],
     age: Optional[int],
     registration_source: Optional[str] = None,
+    banner_code: Optional[str] = None,
 ) -> str:
     """Deterministic scenario assignment per the blueprint decision tree.
 
     Priority order:
-      1. registration_source overrides (S6 / S7)
-      2. ANS3 = A or B → S5 (Active Buyer — skips survey Q2/Q3)
-      3. ANS3 = C + ANS4 = Yes → S2 (Life Event)
-      4. ANS3 = C + ANS4 = No + ANS5 = No + Age ≥ 35 → S3 (Senior)
-      5. ANS3 = C + ANS4 = No + ANS5 = No + Age < 35 → S1 (Young Pro)
-      6. Fallback → S1
+      1. registration_source = f2f_form       → S6
+      2. registration_source = web_callback   → S7
+      3. BANNER_CODE position 3 (0-indexed) = '7' → S7 (Web-to-Call inbound)
+      4. ANS3 = A or B                        → S5 (Active Buyer)
+      5. ANS3 = C + ANS4 = Yes               → S2 (Life Event)
+      6. ANS3 = C + ANS4 = No + Age ≥ 35    → S3 (Senior)
+      7. ANS3 = C + ANS4 = No + Age < 35    → S1 (Young Professional)
+      8. Fallback                             → S1
     """
-    # S6 / S7 come from different forms, not from T_YEC_QUOTE_MST
+    # S6 / S7 come from different entry forms, not from T_YEC_QUOTE_MST
     if registration_source == "f2f_form":
         return "S6"
     if registration_source == "web_callback":
+        return "S7"
+
+    # S7: BANNER_CODE position 3 (0-indexed) = '7'
+    # e.g. "AB7CD" → pos 2 = '7'  (spec: position 3, 1-indexed → index 2)
+    if banner_code and len(banner_code) >= 3 and banner_code[2] == "7":
         return "S7"
 
     # ANS3 = A or B → Active Buyer (Q2/Q3 skipped entirely)

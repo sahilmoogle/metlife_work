@@ -22,9 +22,15 @@ vocabulary throughout. Never mix formality levels.
 Respond ONLY with valid JSON:
 {{
   "subject": "Email subject line",
-  "body": "Full email body with appropriate greeting and closing",
+  "body": "Full email body with appropriate greeting and closing. (MUST include 'Unsubscribe' link representation)",
   "content_themes": ["theme1", "theme2"],
-  "cta_text": "Call-to-action button text"
+  "cta_text": "Call-to-action button text",
+  "compliance_checklist": [
+    {{"rule": "Brand tone matches persona", "passed": true}},
+    {{"rule": "No prohibited claims", "passed": true}},
+    {{"rule": "Unsubscribe link present", "passed": true}},
+    {{"rule": "CTA links to approved page", "passed": true}}
+  ]
 }}"""
 
 A4A5_WRITER_USER = """Lead Context:

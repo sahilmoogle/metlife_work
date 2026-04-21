@@ -1,7 +1,9 @@
 """
-External communications  –  outbound email tracking via SendGrid / Adobe Campaign.
+Outbound email tracking  –  records every email dispatched to a lead.
 
 Maps to Section 2 → ``communications`` and the UI comm history panel.
+Engagement events (open / click / bounce / unsubscribe) are written here
+directly by the internal events/track API — no external provider required.
 """
 
 import uuid
@@ -18,9 +20,9 @@ class Communication(Base):
     id = Column(GUID(), primary_key=True, default=uuid.uuid4)
     lead_id = Column(GUID(), nullable=False, index=True)
 
-    # SMTP / Campaign provider reference
-    external_message_id = Column(String(200), nullable=True, index=True)
-    channel = Column(String(30), default="email")  # email | sms | push
+    # Internal message reference (assigned by send_engine, used for deduplication)
+    internal_message_ref = Column(String(200), nullable=True, index=True)
+    channel = Column(String(10), default="email")  # always "email" in mock mode
 
     # Content
     subject = Column(String(500), nullable=True)

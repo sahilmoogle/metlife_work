@@ -12,9 +12,11 @@ import json
 import logging
 import time
 
+from langchain_core.messages import SystemMessage, HumanMessage
 from prompts.briefing import A9_BRIEFING_SYSTEM, A9_BRIEFING_USER
 from core.v1.services.agents.rules.scenario_rules import SCENARIO_DEFAULTS
 from core.v1.services.sse.manager import event_manager, node_transition_event
+from core.v1.services.agents.state import create_log_entry
 
 logger = logging.getLogger(__name__)
 
@@ -50,8 +52,6 @@ async def sales_handoff(state: dict, *, llm=None) -> dict:
         )
 
         try:
-            from langchain_core.messages import SystemMessage, HumanMessage
-
             response = await llm.ainvoke(
                 [
                     SystemMessage(content=system_msg),
@@ -89,4 +89,19 @@ async def sales_handoff(state: dict, *, llm=None) -> dict:
         node_transition_event(lead_id, NODE_ID, "completed", f"{latency_ms}ms")
     )
 
+    state["execution_log"] = [
+        create_log_entry(
+            title="A9 - SALES HANDOFF · COMPLETED — Awaiting G4 Review",
+            description=(
+                f"Score: {state.get('engagement_score', 0):.2f} — "
+                f"Briefing ready for advisor. "
+                f"Emails sent: {state.get('email_number', 0)}. "
+                f"Intent: {state.get('intent_summary', 'N/A')[:60]}"
+            ),
+            badges=[
+                "G4 · Pending Review",
+                "LLM Briefing" if llm else "Fallback Briefing",
+            ],
+        )
+    ]
     return state

@@ -2,14 +2,11 @@ import time
 import random
 import string
 import logging
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(levelname)s:\t%(name)s - %(message)s"
-)
+import logging.config
+from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.logger import logger as fastapi_logger
 from fastapi.responses import JSONResponse
 
 from starlette.middleware.cors import CORSMiddleware
@@ -24,12 +21,26 @@ from utils.v1.connections import (
     remove_connections,
 )
 
+_LOG_CONF = Path(__file__).parent / "config" / "v1" / "logging.conf"
+logging.config.fileConfig(_LOG_CONF, disable_existing_loggers=False)
 
 logger = logging.getLogger(__name__)
 
-fastapi_logger.handlers = logger.handlers
 
-application = FastAPI(title=api_config.PROJECT_NAME, openapi_url="/openapi.json")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan — startup and shutdown logic."""
+    create_connections()
+    await check_connections()
+    yield
+    await remove_connections()
+
+
+application = FastAPI(
+    title=api_config.PROJECT_NAME,
+    openapi_url="/openapi.json",
+    lifespan=lifespan,
+)
 
 
 @application.exception_handler(InternalServerException)
@@ -68,23 +79,9 @@ if api_config.BACKEND_CORS_ORIGINS:
     )
 
 
-@application.on_event("startup")
-async def startup():
-    create_connections()
-    await check_connections()
-
-
-@application.on_event("shutdown")
-async def shutdown():
-    await remove_connections()
-
-
-# Include API routers
-
 application.include_router(connect_router_v1, prefix=api_config.API_VER_STR_V1)
 
 
-# Health check endpoint
-@application.post("/health-check")
+@application.get("/health-check")
 def health_check():
-    return "AI metlife agents Backend V1 APIs"
+    return {"status": "ok", "service": "MetLife Agentic AI Backend V1"}

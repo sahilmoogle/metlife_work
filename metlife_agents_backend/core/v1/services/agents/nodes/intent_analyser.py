@@ -13,6 +13,8 @@ import time
 
 from prompts.intent import A3_INTENT_SYSTEM, A3_INTENT_USER
 from core.v1.services.sse.manager import event_manager, node_transition_event
+from core.v1.services.agents.state import create_log_entry
+from langchain_core.messages import SystemMessage, HumanMessage
 
 logger = logging.getLogger(__name__)
 
@@ -44,8 +46,6 @@ async def intent_analyser(state: dict, *, llm=None) -> dict:
 
     if llm is not None:
         try:
-            from langchain_core.messages import SystemMessage, HumanMessage
-
             response = await llm.ainvoke(
                 [
                     SystemMessage(content=A3_INTENT_SYSTEM),
@@ -79,4 +79,11 @@ async def intent_analyser(state: dict, *, llm=None) -> dict:
         node_transition_event(lead_id, NODE_ID, "completed", f"{latency_ms}ms")
     )
 
+    state["execution_log"] = [
+        create_log_entry(
+            title="A3 - INTENT & SENTIMENT ANALYSER · COMPLETED",
+            description=f"Summary: {state.get('intent_summary', '')[:50]}... Urgency: {state.get('urgency', 'medium')}. Interest: {state.get('product_interest', 'general')}",
+            badges=["LLM Extractor", "Azure OpenAI"],
+        )
+    ]
     return state

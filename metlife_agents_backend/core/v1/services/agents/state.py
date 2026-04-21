@@ -8,8 +8,19 @@ so the workflow survives server restarts and browser refreshes.
 from __future__ import annotations
 
 from typing import Annotated, Optional
+import operator
+import datetime
 
 from langgraph.graph.message import add_messages
+
+
+def create_log_entry(title: str, description: str, badges: list[str]) -> dict:
+    return {
+        "title": title,
+        "description": description,
+        "badges": badges,
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    }
 
 
 # ── State Definition ─────────────────────────────────────────────────
@@ -83,12 +94,14 @@ class LeadState(dict):
     hitl_status: Optional[str]  # idle | pending | approved | edited | rejected
     hitl_gate: Optional[str]  # G1–G5
     hitl_reviewer_notes: Optional[str]
+    hitl_resume_value: Optional[
+        str
+    ]  # Last human decision: approved | edited | rejected | hold
 
     # ── Workflow state ───────────────────────────────────────────────
     workflow_status: str  # active | paused | completed | failed | suppressed
     current_node: Optional[str]
     is_converted: bool
-    pause_requested: bool
 
     # ── Language ─────────────────────────────────────────────────────
     target_language: str  # EN | JA
@@ -98,6 +111,9 @@ class LeadState(dict):
 
     # ── Messages (LangGraph reducer) ─────────────────────────────────
     messages: Annotated[list, add_messages]
+
+    # ── Execution History (Audit Trail) ──────────────────────────────
+    execution_log: Annotated[list, operator.add]
 
 
 # ── Factory ──────────────────────────────────────────────────────────
@@ -159,15 +175,17 @@ def create_initial_state(
         "hitl_status": "idle",
         "hitl_gate": None,
         "hitl_reviewer_notes": None,
+        "hitl_resume_value": None,
         # Workflow
         "workflow_status": "active",
         "current_node": None,
         "is_converted": False,
-        "pause_requested": False,
         # Language
         "target_language": target_language,
         # Handoff
         "handoff_briefing": None,
+        # Execution History
+        "execution_log": [],
         # Messages
         "messages": [],
     }

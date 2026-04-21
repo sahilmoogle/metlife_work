@@ -85,6 +85,9 @@ class Lead(Base):
 
     # ── Timestamps ──────────────────────────────────────────────────
     commit_time = Column(TIMESTAMP, nullable=True)  # Original Oracle COMMIT_TIME
+    # Updated on every lead-initiated engagement (open/click/consult/etc.).
+    # Used by dormancy scan: if last_active_at < NOW-180d → eligible for S4.
+    last_active_at = Column(TIMESTAMP, nullable=True, index=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
 

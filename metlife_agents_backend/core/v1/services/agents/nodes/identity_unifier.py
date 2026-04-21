@@ -17,6 +17,8 @@ from model.database.v1.leads import Lead
 from model.database.v1.quotes import Quote
 from model.database.v1.consultation import ConsultationRequest
 from core.v1.services.sse.manager import event_manager, node_transition_event
+from core.v1.services.agents.state import create_log_entry
+from utils.v1.db_sync import sync_lead_state
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +58,15 @@ async def identity_unifier(state: dict, *, db: AsyncSession) -> dict:
     state["opt_in"] = bool(lead.opt_in)
     state["email_captured"] = bool(lead.email)
 
+    # Seed the workflow state with the lead's accumulated engagement score
+    # from the DB so the propensity scorer starts from the real baseline
+    # (not 0.0).  Without this, purely email-sent events (+0.05 each) can
+    # never reach the 0.80 handoff threshold across a 5-email sequence.
+    if lead.engagement_score and lead.engagement_score > state.get(
+        "engagement_score", 0.0
+    ):
+        state["engagement_score"] = float(lead.engagement_score)
+
     # ── Fetch quote data ─────────────────────────────────────────────
     quote_result = await db.execute(select(Quote).where(Quote.lead_id == lead_id))
     quote = quote_result.scalar_one_or_none()
@@ -90,10 +101,32 @@ async def identity_unifier(state: dict, *, db: AsyncSession) -> dict:
     state["context_block"] = " | ".join(p for p in parts if p)
     state["current_node"] = NODE_ID
 
+    # Write back thread linkage and status so the leads table stays current
+    if db is not None:
+        await sync_lead_state(
+            db,
+            lead_id,
+            thread_id=state.get("thread_id"),
+            workflow_status="Active",
+            current_agent_node=NODE_ID,
+        )
+
     latency_ms = int((time.perf_counter() - start) * 1000)
     logger.info("A1 completed for lead %s in %dms", lead_id, latency_ms)
     await event_manager.publish(
         node_transition_event(lead_id, NODE_ID, "completed", f"{latency_ms}ms")
     )
+    state["execution_log"] = [
+        create_log_entry(
+            title="⚡ TRIGGER · COMPLETED: Form Submitted",
+            description="T_QUOTE record → FastAPI webhook → lead_created → Workflow init",
+            badges=["Webhook → FastAPI", "T_QUOTE"],
+        ),
+        create_log_entry(
+            title="A1 - IDENTITY & SIGNAL UNIFIER · COMPLETED",
+            description=f"Reads data. Assembled profile for: {state.get('first_name', '')} {state.get('last_name', '')}",
+            badges=["Rule-Based", "Read: DB"],
+        ),
+    ]
 
     return state
