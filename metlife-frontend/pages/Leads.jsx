@@ -45,6 +45,7 @@ const Leads = () => {
   const [activeFilter, setActiveFilter] = useState("All");
   const [query, setQuery] = useState("");
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [page, setPage] = useState(1);
   const [selected, setSelected] = useState(() => new Set());
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -94,10 +95,24 @@ const Leads = () => {
       });
   }, [activeFilter, leads, query]);
 
-  const pagedLeads = useMemo(
-    () => filteredLeads.slice(0, rowsPerPage),
-    [filteredLeads, rowsPerPage]
-  );
+  const totalRows = filteredLeads.length;
+  const totalPages = Math.max(1, Math.ceil(totalRows / rowsPerPage));
+
+  useEffect(() => {
+    // Reset to first page when dataset shape changes.
+    setPage(1);
+    setSelected(new Set());
+  }, [activeFilter, query, rowsPerPage]);
+
+  useEffect(() => {
+    // Clamp page if current page becomes invalid (e.g., after filter changes).
+    setPage((p) => Math.min(Math.max(1, p), totalPages));
+  }, [totalPages]);
+
+  const startIndex = (page - 1) * rowsPerPage;
+  const endIndex = Math.min(totalRows, startIndex + rowsPerPage);
+
+  const pagedLeads = useMemo(() => filteredLeads.slice(startIndex, endIndex), [endIndex, filteredLeads, startIndex]);
 
   const allVisibleSelected =
     pagedLeads.length > 0 && pagedLeads.every((lead) => selected.has(lead.id));
@@ -249,7 +264,7 @@ const Leads = () => {
                           className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-200 dark:border-white/20 dark:bg-slate-950/40"
                         />
                       </td>
-                      <td className="px-3 py-3 text-gray-600 dark:text-slate-300">{index + 1}</td>
+                      <td className="px-3 py-3 text-gray-600 dark:text-slate-300">{startIndex + index + 1}</td>
                       <td className="px-3 py-3">
                         <div className="leading-tight">
                           <p className="font-medium text-gray-800 dark:text-white">{lead.name}</p>
@@ -300,8 +315,63 @@ const Leads = () => {
           </select>
         </div>
 
-        <div className="text-gray-500">
-          Showing 1 to {Math.min(rowsPerPage, filteredLeads.length)} of {filteredLeads.length} Entries
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-gray-500 dark:text-slate-400">
+            Showing {totalRows ? startIndex + 1 : 0} to {endIndex} of {totalRows} Entries
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1 || loading}
+              className="h-8 rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 transition hover:border-indigo-200 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200 dark:hover:border-white/20 dark:hover:text-white"
+            >
+              Prev
+            </button>
+
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter((p) => {
+                // show first, last, current +/- 1
+                if (p === 1 || p === totalPages) return true;
+                return Math.abs(p - page) <= 1;
+              })
+              .reduce((acc, p) => {
+                const last = acc[acc.length - 1];
+                if (last && typeof last === "number" && p - last > 1) acc.push("…");
+                acc.push(p);
+                return acc;
+              }, [])
+              .map((p, idx) =>
+                p === "…" ? (
+                  <span key={`dots-${idx}`} className="px-2 text-gray-400 dark:text-slate-500">
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setPage(p)}
+                    disabled={loading}
+                    className={`h-8 min-w-8 rounded-full border px-3 text-xs font-semibold transition ${
+                      p === page
+                        ? "border-indigo-600 bg-indigo-600 text-white"
+                        : "border-gray-200 bg-white text-gray-700 hover:border-indigo-200 hover:text-indigo-700 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200 dark:hover:border-white/20 dark:hover:text-white"
+                    } disabled:cursor-not-allowed disabled:opacity-60`}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages || loading}
+              className="h-8 rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 transition hover:border-indigo-200 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200 dark:hover:border-white/20 dark:hover:text-white"
+            >
+              Next
+            </button>
+          </div>
         </div>
       </div>
     </section>

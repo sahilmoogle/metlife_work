@@ -17,4 +17,5 @@ export const envConfig = {
   agentsPath: import.meta.env.VITE_AGENTS_PATH || "/agents",
   leadsPath: import.meta.env.VITE_LEADS_PATH || "/leads",
   hitlPath: import.meta.env.VITE_HITL_PATH || "/hitl",
+  adminUsersPath: import.meta.env.VITE_ADMIN_USERS_PATH || "/admin/users",
 };
