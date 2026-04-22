@@ -7,7 +7,7 @@ Maps to Section 2 → ``users`` table in the development plan.
 
 import uuid
 
-from sqlalchemy import Boolean, Column, Index, String, TIMESTAMP
+from sqlalchemy import Boolean, Column, Index, String, TIMESTAMP, Text
 from sqlalchemy.sql import func
 
 from model.database.v1.base import Base, GUID
@@ -28,6 +28,13 @@ class User(Base):
 
     is_active = Column(Boolean, server_default="1", default=True)
     is_verified = Column(Boolean, server_default="0", default=False)
+
+    # Per-user permission overrides (JSON stored as Text).
+    # Stored as a JSON string: {"export_data": true, "hitl_approve": false}
+    # Keys present here override the role-default for that specific user.
+    # Keys absent fall back to ROLE_PERMISSIONS[role].
+    # NULL means no overrides — pure role-based permissions apply.
+    custom_permissions = Column(Text, nullable=True, default=None)
 
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())

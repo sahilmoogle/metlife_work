@@ -20,6 +20,7 @@ from core.v1.services.sse.manager import (
     lead_converted_event,
 )
 from utils.v1.connections import get_db
+from utils.v1.permissions import require_permission
 
 logger = logging.getLogger(__name__)
 
@@ -147,6 +148,7 @@ async def get_hitl_detail(
 async def approve_hitl(
     thread_id: str,
     request: HITLApproveRequest,
+    current_user: dict = Depends(require_permission("hitl_approve")),
     db: AsyncSession = Depends(get_db),
 ):
     """Approve, edit, hold, or reject a HITL review item.
@@ -177,6 +179,7 @@ async def approve_hitl(
         "review_status": request.action.capitalize(),
         "reviewed_at": datetime.now(timezone.utc),
         "reviewer_notes": request.reviewer_notes,
+        "reviewed_by_user_id": current_user.get("user_id"),
     }
     if request.edited_subject:
         update_values["edited_subject"] = request.edited_subject

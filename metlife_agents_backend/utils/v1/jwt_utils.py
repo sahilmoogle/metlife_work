@@ -71,12 +71,30 @@ async def get_current_user(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User no longer exists",
             )
+        if not user_obj.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Account is deactivated. Contact an Admin.",
+            )
+
+        # Load per-user permission overrides (stored as JSON text)
+        import json as _json
+        custom: dict = {}
+        if user_obj.custom_permissions:
+            try:
+                custom = _json.loads(user_obj.custom_permissions)
+            except Exception:
+                custom = {}
 
         return {
             "user_id": str(user_obj.user_id),
             "name": user_obj.name,
             "email": user_obj.email,
             "role": user_obj.role,
+            "is_active": bool(user_obj.is_active),
+            # Per-user overrides carried in the token payload so every
+            # require_permission() check is O(1) dict lookup, no extra DB query.
+            "custom_permissions": custom,
         }
     except ValueError as e:
         raise HTTPException(
