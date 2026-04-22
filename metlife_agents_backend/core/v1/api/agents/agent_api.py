@@ -34,6 +34,7 @@ from core.v1.services.agents.graph import (
 )
 from core.v1.services.sse.manager import event_manager, batch_progress_event
 from utils.v1.connections import get_db
+from utils.v1.permissions import require_permission
 from config.v1.database_config import db_config
 
 logger = logging.getLogger(__name__)
@@ -48,6 +49,7 @@ router = APIRouter()
 )
 async def start_agent_workflow(
     request: StartWorkflowRequest,
+    _: dict = Depends(require_permission("start_agent")),
     db: AsyncSession = Depends(get_db),
 ):
     """Start a new LangGraph workflow for a lead.
@@ -95,6 +97,7 @@ async def start_agent_workflow(
 )
 async def resume_agent_workflow(
     request: ResumeWorkflowRequest,
+    _: dict = Depends(require_permission("start_agent")),
     db: AsyncSession = Depends(get_db),
 ):
     """Resume a paused workflow after HITL approval.
@@ -141,6 +144,7 @@ async def resume_agent_workflow(
 )
 async def retry_resume_workflow(
     thread_id: str,
+    _: dict = Depends(require_permission("start_agent")),
     db: AsyncSession = Depends(get_db),
     resume_value: str = "approved",
 ):
@@ -297,6 +301,7 @@ async def get_workflow_history(
 )
 async def run_batch_orchestrator(
     background_tasks: BackgroundTasks,
+    _: dict = Depends(require_permission("run_workflow")),
     db: AsyncSession = Depends(get_db),
 ):
     """Batch Orchestrator — single entry point for the Work Flow Engine 'Run' button.
@@ -633,6 +638,7 @@ def _batch_to_response(batch: BatchRun) -> "BatchRunResponse":
 )
 async def track_engagement_event(
     request: EventTrackRequest,
+    _: dict = Depends(require_permission("edit_lead")),
     db: AsyncSession = Depends(get_db),
 ):
     """Event Tracking API — simulates customer engagement inputs.

@@ -13,6 +13,11 @@ from utils.v1.jwt_utils import create_access_token
 
 class AuthService:
     @staticmethod
+    def hash_password(plain: str) -> str:
+        """Hash a plain-text password with bcrypt."""
+        return bcrypt.hashpw(plain.encode(), bcrypt.gensalt()).decode()
+
+    @staticmethod
     async def register_user(db: AsyncSession, request: RegisterRequest) -> AuthResponse:
         # Check existing user
         stmt = select(User).where(User.email == request.email)
