@@ -9,6 +9,7 @@ from core.v1.api.agents.hitl_api import router as hitl
 from core.v1.api.agents.sse_api import router as sse
 from core.v1.api.leads.leads_api import router as leads
 from core.v1.api.dashboard.dashboard_api import router as dashboard
+from core.v1.api.rbac.rbac_api import router as rbac
 
 # Auth endpoints are public (register / login).
 connect_router.include_router(authentication, prefix="/auth", tags=["Authentication"])
@@ -31,4 +32,7 @@ connect_router.include_router(
 )
 connect_router.include_router(
     dashboard, prefix="/dashboard", tags=["Dashboard"], dependencies=_auth
+)
+connect_router.include_router(
+    rbac, prefix="/rbac", tags=["RBAC Management"]
 )

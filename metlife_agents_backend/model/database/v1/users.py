@@ -7,11 +7,12 @@ Maps to Section 2 → ``users`` table in the development plan.
 
 import uuid
 
-from sqlalchemy import Boolean, Column, Index, String, TIMESTAMP
+from sqlalchemy import Boolean, Column, ForeignKey, Index, String, TIMESTAMP
 from sqlalchemy.sql import func
 
 from model.database.v1.base import Base, GUID
-
+from model.database.v1.roles import Role
+from sqlalchemy.orm import relationship
 
 class User(Base):
     __tablename__ = "users"
@@ -24,7 +25,11 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)
 
     # Enforces RBAC  –  Admin | Manager | Reviewer | Viewer
-    role = Column(String(50), nullable=False, default="Viewer")
+    role_id = Column(
+        GUID(),
+        ForeignKey("roles.role_id", ondelete="SET NULL"),
+        nullable=True  
+    )
 
     is_active = Column(Boolean, server_default="1", default=True)
     is_verified = Column(Boolean, server_default="0", default=False)
@@ -33,3 +38,6 @@ class User(Base):
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
 
     __table_args__ = (Index("idx_user_email", "email"),)
+
+    # Add the relationship:
+    role = relationship("Role", back_populates="users")
