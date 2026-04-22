@@ -12,4 +12,9 @@ export const envConfig = {
   authRegisterPath: import.meta.env.VITE_AUTH_REGISTER_PATH || "/auth/register",
   authMePath: import.meta.env.VITE_AUTH_ME_PATH || "/auth/me",
   authLogoutPath: import.meta.env.VITE_AUTH_LOGOUT_PATH || "/auth/logout",
+  dashboardStatsPath:
+    import.meta.env.VITE_DASHBOARD_STATS_PATH || "/dashboard/stats",
+  agentsPath: import.meta.env.VITE_AGENTS_PATH || "/agents",
+  leadsPath: import.meta.env.VITE_LEADS_PATH || "/leads",
+  hitlPath: import.meta.env.VITE_HITL_PATH || "/hitl",
 };

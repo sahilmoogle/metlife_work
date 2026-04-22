@@ -1,13 +1,17 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useAuth } from "../context/AuthContext";
+import { fetchLeadsList } from "../src/services/leadsApi";
+import { fetchHitlQueue } from "../src/services/hitlApi";
+import { getBatchStatus, getLatestBatch, runBatch } from "../src/services/agentsApi";
 
 const scenarioCards = [
-  { id: "S1", value: 271, label: "Young Prof", tone: "text-indigo-700 bg-indigo-50 ring-indigo-100" },
-  { id: "S2", value: 153, label: "Married", tone: "text-emerald-700 bg-emerald-50 ring-emerald-100" },
-  { id: "S3", value: 119, label: "Senior", tone: "text-violet-700 bg-violet-50 ring-violet-100" },
-  { id: "S4", value: 85, label: "Dormant", tone: "text-amber-700 bg-amber-50 ring-amber-100" },
-  { id: "S5", value: 127, label: "Buyer", tone: "text-cyan-700 bg-cyan-50 ring-cyan-100" },
-  { id: "S6", value: 51, label: "F2F", tone: "text-teal-700 bg-teal-50 ring-teal-100" },
-  { id: "S7", value: 41, label: "W2C", tone: "text-rose-700 bg-rose-50 ring-rose-100" },
+  { id: "S1", label: "Young Prof", tone: "text-indigo-700 bg-indigo-50 ring-indigo-100" },
+  { id: "S2", label: "Married", tone: "text-emerald-700 bg-emerald-50 ring-emerald-100" },
+  { id: "S3", label: "Senior", tone: "text-violet-700 bg-violet-50 ring-violet-100" },
+  { id: "S4", label: "Dormant", tone: "text-amber-700 bg-amber-50 ring-amber-100" },
+  { id: "S5", label: "Buyer", tone: "text-cyan-700 bg-cyan-50 ring-cyan-100" },
+  { id: "S6", label: "F2F", tone: "text-teal-700 bg-teal-50 ring-teal-100" },
+  { id: "S7", label: "W2C", tone: "text-rose-700 bg-rose-50 ring-rose-100" },
 ];
 
 const pipelineStages = [
@@ -252,32 +256,32 @@ const StageIcon = ({ name }) => {
 const formatInt = (n) => new Intl.NumberFormat().format(n);
 
 const Campaigns = () => {
-  const totalLeads = useMemo(
-    () => scenarioCards.reduce((sum, s) => sum + s.value, 0),
-    []
-  );
-
-  const [status, setStatus] = useState("idle"); // idle | running | complete
-  const [processed, setProcessed] = useState(0);
+  const { token } = useAuth();
+  const [status, setStatus] = useState("idle"); // idle | running | complete | error
+  const [batch, setBatch] = useState(null);
+  const [loadError, setLoadError] = useState("");
+  const [runError, setRunError] = useState("");
+  const [loading, setLoading] = useState(true);
   const [awaitingHitl, setAwaitingHitl] = useState(0);
-  const [processing, setProcessing] = useState(0);
-
-  const [stageCounts, setStageCounts] = useState(() => ({
-    a1: 0,
-    a2: 0,
-    a3: 0,
-    a4: 0,
-    a6: 0,
-    a8: 0,
-    a9: 0,
-    a10: 0,
-    hitl: 0,
-    conv: 0,
+  const [scenarioCounts, setScenarioCounts] = useState(() => ({
+    S1: 0,
+    S2: 0,
+    S3: 0,
+    S4: 0,
+    S5: 0,
+    S6: 0,
+    S7: 0,
+    unknown: 0,
   }));
 
   const timerRef = useRef(null);
 
-  const progressPct = totalLeads === 0 ? 0 : Math.round((processed / totalLeads) * 100);
+  const totalLeads = batch?.total ?? Object.values(scenarioCounts).reduce((a, b) => a + b, 0);
+  const processed = batch?.processed_count ?? 0;
+  const success = batch?.success_count ?? 0;
+  const failed = batch?.failed_count ?? 0;
+  const remaining = Math.max(0, (batch?.total ?? 0) - processed);
+  const progressPct = batch?.pct ?? (totalLeads ? Math.round((processed / totalLeads) * 100) : 0);
 
   const stopTimer = () => {
     if (timerRef.current) {
@@ -292,114 +296,121 @@ const Campaigns = () => {
 
   const reset = () => {
     stopTimer();
+    setRunError("");
+    setLoadError("");
+    setBatch(null);
     setStatus("idle");
-    setProcessed(0);
-    setAwaitingHitl(0);
-    setProcessing(0);
-    setStageCounts({
-      a1: 0,
-      a2: 0,
-      a3: 0,
-      a4: 0,
-      a6: 0,
-      a8: 0,
-      a9: 0,
-      a10: 0,
-      hitl: 0,
-      conv: 0,
-    });
   };
 
-  const runAll = () => {
-    if (status === "running") return;
-    reset();
-    setStatus("running");
+  const refreshHitl = async () => {
+    try {
+      const q = await fetchHitlQueue(token);
+      setAwaitingHitl(Array.isArray(q) ? q.length : 0);
+    } catch {
+      // Queue count is secondary; ignore errors here.
+    }
+  };
 
-    let ticks = 0;
-    timerRef.current = setInterval(() => {
-      ticks += 1;
-
-      setStageCounts((prev) => {
-        const next = { ...prev };
-
-        // During the run we move volume through stages and into Converted.
-        // We also create a small HITL waiting queue near the end.
-        const add = (k, v) => (next[k] = Math.max(0, (next[k] || 0) + v));
-
-        // wave 1
-        if (ticks <= 8) {
-          add("a1", 2);
-          add("a2", 1);
-          add("a3", 3);
-          add("a4", 3);
-          add("a6", 1);
-          add("a8", 3);
-          add("a9", 1);
-        } else if (ticks <= 16) {
-          add("a1", 1);
-          add("a2", 1);
-          add("a3", 2);
-          add("a4", 2);
-          add("a6", 1);
-          add("a8", 2);
-          add("a9", 1);
+  const pollBatch = (batchId) => {
+    stopTimer();
+    timerRef.current = setInterval(async () => {
+      try {
+        const b = await getBatchStatus(token, batchId);
+        setBatch(b);
+        await refreshHitl();
+        if (b?.status && b.status !== "running") {
+          stopTimer();
+          setStatus("complete");
         } else {
-          add("a1", 0);
-          add("a2", 0);
-          add("a3", 1);
-          add("a4", 1);
-          add("a6", 1);
-          add("a8", 1);
-          add("a9", 0);
+          setStatus("running");
         }
-
-        // Create HITL waiting pool late in run.
-        if (ticks >= 14 && ticks <= 18) {
-          add("hitl", 3);
-        }
-
-        // Converted increases steadily; then jumps to completion.
-        add("conv", ticks < 18 ? 35 : 0);
-
-        // Cap converted to total, keep hitl small.
-        next.conv = Math.min(totalLeads - 12, next.conv);
-        next.hitl = Math.min(12, next.hitl);
-
-        // Normalize stage counts to look like processing counts (not cumulative).
-        // Keep within a small range for each stage.
-        next.a1 = Math.min(16, next.a1);
-        next.a2 = Math.min(6, next.a2);
-        next.a3 = Math.min(24, next.a3);
-        next.a4 = Math.min(23, next.a4);
-        next.a6 = Math.min(9, next.a6);
-        next.a8 = Math.min(25, next.a8);
-        next.a9 = Math.min(3, next.a9);
-        next.a10 = Math.min(1, next.a10);
-
-        return next;
-      });
-
-      // Progress numbers
-      const convTarget = ticks < 18 ? Math.min(totalLeads - 12, ticks * 47) : totalLeads - 12;
-      const hitlTarget = ticks >= 14 ? Math.min(12, (ticks - 13) * 3) : 0;
-
-      setAwaitingHitl(hitlTarget);
-      setProcessing(ticks < 18 ? Math.max(0, 8 - Math.floor(ticks / 2)) : 0);
-
-      const nextProcessed = Math.min(totalLeads, convTarget + hitlTarget);
-      setProcessed(nextProcessed);
-
-      // Finish
-      if (ticks >= 18) {
+      } catch (e) {
         stopTimer();
-        setProcessed(totalLeads);
-        setAwaitingHitl(0);
-        setProcessing(0);
-        setStageCounts((prev) => ({ ...prev, hitl: 12, conv: totalLeads - 12 }));
-        setStatus("complete");
+        setStatus("error");
+        setLoadError(e.message || "Failed to refresh batch status.");
       }
-    }, 420);
+    }, 1200);
   };
+
+  const runAll = async () => {
+    if (status === "running") return;
+    setRunError("");
+    setLoadError("");
+    setStatus("running");
+    try {
+      const payload = await runBatch(token);
+      if (!payload?.success) {
+        setStatus("idle");
+        setBatch(payload?.data || null);
+        setRunError(payload?.message || "No leads found to process.");
+        return;
+      }
+      const b = payload?.data;
+      setBatch(b);
+      await refreshHitl();
+      if (b?.batch_id) pollBatch(b.batch_id);
+    } catch (e) {
+      setStatus("error");
+      setRunError(e.message || "Failed to start batch.");
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      setLoading(true);
+      setLoadError("");
+      try {
+        const [leads, latest, hitl] = await Promise.allSettled([
+          fetchLeadsList(token),
+          getLatestBatch(token),
+          fetchHitlQueue(token),
+        ]);
+
+        if (!cancelled) {
+          if (leads.status === "fulfilled") {
+            const rows = Array.isArray(leads.value) ? leads.value : [];
+            const counts = { S1: 0, S2: 0, S3: 0, S4: 0, S5: 0, S6: 0, S7: 0, unknown: 0 };
+            rows.forEach((r) => {
+              const s = r?.scenario_id;
+              if (s && counts[s] != null) counts[s] += 1;
+              else counts.unknown += 1;
+            });
+            setScenarioCounts(counts);
+          }
+
+          if (hitl.status === "fulfilled") {
+            setAwaitingHitl(Array.isArray(hitl.value) ? hitl.value.length : 0);
+          }
+
+          if (latest.status === "fulfilled") {
+            setBatch(latest.value);
+            if (latest.value?.status === "running" && latest.value?.batch_id) {
+              pollBatch(latest.value.batch_id);
+              setStatus("running");
+            } else if (latest.value?.status) {
+              setStatus("complete");
+            }
+          } else if (latest.status === "rejected" && latest.reason?.status !== 404) {
+            setLoadError(latest.reason?.message || "Failed to load latest batch.");
+          }
+        }
+      } catch (e) {
+        if (!cancelled) setLoadError(e.message || "Failed to load campaigns data.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
+  // pollBatch is defined in this component and does not change across renders in practice.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
 
   return (
     <section className="space-y-3">
@@ -418,19 +429,20 @@ const Campaigns = () => {
                 ✓ Complete
               </span>
             ) : (
-              <span className="text-xs font-semibold text-gray-500">Ready</span>
+              <span className="text-xs font-semibold text-gray-500">{loading ? "Loading…" : "Ready"}</span>
             )}
 
             <button
               type="button"
               onClick={status === "complete" ? reset : runAll}
+              disabled={status === "running"}
               className={`inline-flex h-9 items-center gap-2 rounded-full px-4 text-xs font-semibold text-white shadow-[0_10px_25px_rgba(16,185,129,0.20)] transition ${
                 status === "complete"
                   ? "bg-emerald-600 hover:bg-emerald-700"
                   : "bg-emerald-600 hover:bg-emerald-700"
               }`}
             >
-              {status === "complete" ? "Complete" : "Run All Workflows"}
+              {status === "complete" ? "Complete" : status === "running" ? "Running…" : "Run All Workflows"}
               <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/20">
                 ▶
               </span>
@@ -439,19 +451,30 @@ const Campaigns = () => {
         </div>
 
         <div className="mt-4 space-y-3">
+          {runError ? (
+            <div className="rounded-2xl border border-amber-100 bg-amber-50/80 p-4 text-sm text-amber-900">
+              {runError}
+            </div>
+          ) : null}
+          {loadError ? (
+            <div className="rounded-2xl border border-amber-100 bg-amber-50/80 p-4 text-sm text-amber-900">
+              {loadError}
+            </div>
+          ) : null}
+
           <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)]">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-xs font-semibold text-gray-700">
                 Batch Processing{" "}
                 <span className="text-indigo-700">
-                  {formatInt(processed)} / {formatInt(totalLeads)}
+                  {formatInt(processed)} / {formatInt(batch?.total ?? totalLeads)}
                 </span>{" "}
                 leads
               </p>
               <div className="flex flex-wrap items-center gap-3 text-[11px] text-gray-500">
                 <span className="inline-flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  {Math.max(0, processed - awaitingHitl - processing)} completed
+                  {formatInt(success)} succeeded
                 </span>
                 <span className="inline-flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-amber-500" />
@@ -459,7 +482,11 @@ const Campaigns = () => {
                 </span>
                 <span className="inline-flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-blue-500" />
-                  {processing} processing
+                  {formatInt(remaining)} remaining
+                </span>
+                <span className="inline-flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-rose-500" />
+                  {formatInt(failed)} failed
                 </span>
               </div>
             </div>
@@ -487,11 +514,11 @@ const Campaigns = () => {
                   </span>
                 </div>
                 <p className="mt-3 text-xl font-semibold tracking-tight text-[#1e2a52]">
-                  {status === "idle" ? "—" : formatInt(s.value)}
+                  {loading ? "—" : formatInt(scenarioCounts[s.id] || 0)}
                 </p>
                 <p className="mt-1 text-[11px] text-gray-400">{s.label}</p>
                 <p className="mt-2 text-[11px] text-gray-400">
-                  {status === "idle" ? "Pending A2" : "Ready"}
+                  {loading ? "Loading" : "Ready"}
                 </p>
               </div>
             ))}
@@ -507,9 +534,14 @@ const Campaigns = () => {
 
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
               {pipelineStages.map((stage) => {
-                const value = stageCounts[stage.key] ?? 0;
                 const isHitl = stage.key === "hitl";
                 const isConv = stage.key === "conv";
+                const value =
+                  stage.key === "hitl"
+                    ? awaitingHitl
+                    : stage.key === "conv"
+                      ? success
+                      : 0;
                 return (
                   <div
                     key={stage.key}
@@ -520,10 +552,18 @@ const Campaigns = () => {
                     <div className={`text-[11px] font-semibold ${stage.accent}`}>{stage.label}</div>
                     <div className="mt-4 text-center">
                       <p className={`text-3xl font-semibold tracking-tight ${isConv ? "text-emerald-700" : "text-[#1e2a52]"}`}>
-                        {status === "idle" ? 0 : value}
+                        {loading ? 0 : value}
                       </p>
                       <p className="mt-1 text-[11px] text-gray-400">
-                        {status === "idle" ? "Idle" : isHitl ? (awaitingHitl ? `${awaitingHitl} awaiting` : "Idle") : isConv ? "Converted" : "Idle"}
+                        {loading
+                          ? "Idle"
+                          : isHitl
+                            ? awaitingHitl
+                              ? `${awaitingHitl} awaiting`
+                              : "Idle"
+                            : isConv
+                              ? "Succeeded"
+                              : "—"}
                       </p>
                     </div>
                   </div>
