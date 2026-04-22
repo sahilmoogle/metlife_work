@@ -8,6 +8,8 @@ from model.database.v1.base import Base, GUID  # noqa: F401
 # ── Auth & RBAC ─────────────────────────────────────────────────────
 from model.database.v1.users import User  # noqa: F401
 from model.database.v1.tokens import BlacklistedToken  # noqa: F401
+from model.database.v1.roles import Role, RolePermission  # noqa: F401
+from model.database.v1.permissions import Permission  # noqa: F401
 
 # ── Core domain ─────────────────────────────────────────────────────
 from model.database.v1.leads import Lead  # noqa: F401
@@ -36,6 +38,9 @@ __all__ = [
     "GUID",
     "User",
     "BlacklistedToken",
+    "Role",
+    "RolePermission",
+    "Permission",
     "Lead",
     "Quote",
     "ScenarioConfig",

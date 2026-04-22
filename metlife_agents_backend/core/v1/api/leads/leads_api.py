@@ -17,10 +17,13 @@ from model.api.v1.leads import (
 from model.database.v1.leads import Lead
 from model.database.v1.communications import Communication
 from utils.v1.connections import get_db
+from utils.v1.dependencies import require_permission
+from utils.v1.enums import DefaultPermission
 from core.v1.services.agents.graph import build_graph, get_checkpointer
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+_EDIT_LEAD = DefaultPermission.EDIT_LEAD.value
 
 
 @router.get(
@@ -28,7 +31,10 @@ router = APIRouter()
     response_model=APIResponse[list[LeadSummaryResponse]],
     status_code=status.HTTP_200_OK,
 )
-async def get_all_leads(db: AsyncSession = Depends(get_db)):
+async def get_all_leads(
+    _: dict = Depends(require_permission(_EDIT_LEAD)),
+    db: AsyncSession = Depends(get_db),
+):
     """Paginated lead list for the All Leads table view."""
     result = await db.execute(select(Lead).order_by(Lead.updated_at.desc()))
     records = result.scalars().all()
@@ -62,7 +68,11 @@ async def get_all_leads(db: AsyncSession = Depends(get_db)):
     response_model=APIResponse[LeadDetailResponse],
     status_code=status.HTTP_200_OK,
 )
-async def get_lead_detail(lead_id: str, db: AsyncSession = Depends(get_db)):
+async def get_lead_detail(
+    lead_id: str,
+    _: dict = Depends(require_permission(_EDIT_LEAD)),
+    db: AsyncSession = Depends(get_db),
+):
     """Full lead profile — combines DB columns with LangGraph checkpoint state.
 
     Works before and after workflow start:

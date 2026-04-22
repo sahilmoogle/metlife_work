@@ -93,6 +93,7 @@ async def assign_role_to_user(
     response_model=APIResponse[list[UserWithPermissionsView]],
 )
 async def list_all_users_with_permissions(
+    _: dict = Depends(require_permission(_MANAGE_USERS)),
     db: AsyncSession = Depends(get_db),
 ):
     data = await RBACService.list_all_users_with_permissions(db=db)

@@ -8,6 +8,24 @@ from utils.v1.connections import get_db
 from utils.v1.jwt_utils import get_current_user
 
 
+def _format_roles_for_message(roles: list[str]) -> str:
+    if not roles:
+        return "admin"
+    if len(roles) == 1:
+        return roles[0]
+    if len(roles) == 2:
+        return f"{roles[0]} or {roles[1]}"
+    return f"{', '.join(roles[:-1])}, or {roles[-1]}"
+
+
+def _roles_noun(roles: list[str]) -> str:
+    return "role" if len(roles) == 1 else "roles"
+
+
+def _roles_verb(roles: list[str]) -> str:
+    return "is" if len(roles) == 1 else "are"
+
+
 def require_permission(required_permission: str | Enum):
     """Dependency factory enforcing a permission on the authenticated user.
 
@@ -28,9 +46,13 @@ def require_permission(required_permission: str | Enum):
             db, current_user["user_id"], perm_name
         )
         if not allowed:
+            roles = await RBACService.get_roles_for_permission(db, perm_name)
+            roles_text = _format_roles_for_message(roles)
+            roles_word = _roles_noun(roles if roles else ["admin"])
+            roles_verb = _roles_verb(roles if roles else ["admin"])
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Permission denied: {perm_name}",
+                detail=f"Authentication required. Only {roles_text} {roles_word} {roles_verb} allowed.",
             )
         return current_user
 

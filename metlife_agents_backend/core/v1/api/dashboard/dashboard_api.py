@@ -11,9 +11,12 @@ from model.api.v1 import APIResponse
 from model.api.v1.dashboard import DashboardStatsResponse
 from model.database.v1.leads import Lead
 from utils.v1.connections import get_db
+from utils.v1.dependencies import require_permission
+from utils.v1.enums import DefaultPermission
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+_EXPORT_DATA = DefaultPermission.EXPORT_DATA.value
 
 
 @router.get(
@@ -22,6 +25,7 @@ router = APIRouter()
     status_code=status.HTTP_200_OK,
 )
 async def get_dashboard_stats(
+    _: dict = Depends(require_permission(_EXPORT_DATA)),
     db: AsyncSession = Depends(get_db),
 ):
     """Get aggregated metrics for the orchestration dashboard.

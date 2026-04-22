@@ -34,11 +34,16 @@ from core.v1.services.agents.graph import (
 )
 from core.v1.services.sse.manager import event_manager, batch_progress_event
 from utils.v1.connections import get_db
+from utils.v1.dependencies import require_permission
+from utils.v1.enums import DefaultPermission
 from config.v1.database_config import db_config
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+_RUN_WORKFLOW = DefaultPermission.RUN_WORKFLOW.value
+_START_AGENT = DefaultPermission.START_AGENT.value
 
 
 @router.post(
@@ -48,6 +53,7 @@ router = APIRouter()
 )
 async def start_agent_workflow(
     request: StartWorkflowRequest,
+    _: dict = Depends(require_permission(_START_AGENT)),
     db: AsyncSession = Depends(get_db),
 ):
     """Start a new LangGraph workflow for a lead.
@@ -95,6 +101,7 @@ async def start_agent_workflow(
 )
 async def resume_agent_workflow(
     request: ResumeWorkflowRequest,
+    _: dict = Depends(require_permission(_RUN_WORKFLOW)),
     db: AsyncSession = Depends(get_db),
 ):
     """Resume a paused workflow after HITL approval.
@@ -141,6 +148,7 @@ async def resume_agent_workflow(
 )
 async def retry_resume_workflow(
     thread_id: str,
+    _: dict = Depends(require_permission(_RUN_WORKFLOW)),
     db: AsyncSession = Depends(get_db),
     resume_value: str = "approved",
 ):
@@ -194,6 +202,7 @@ async def retry_resume_workflow(
 )
 async def get_workflow_status(
     thread_id: str,
+    _: dict = Depends(require_permission(_RUN_WORKFLOW)),
     db: AsyncSession = Depends(get_db),
 ):
     """Get the current state of an agent workflow.
@@ -248,6 +257,7 @@ async def get_workflow_status(
 )
 async def get_workflow_history(
     thread_id: str,
+    _: dict = Depends(require_permission(_RUN_WORKFLOW)),
     db: AsyncSession = Depends(get_db),
 ):
     """Get the execution history (audit trail) of a workflow.
@@ -297,6 +307,7 @@ async def get_workflow_history(
 )
 async def run_batch_orchestrator(
     background_tasks: BackgroundTasks,
+    _: dict = Depends(require_permission(_RUN_WORKFLOW)),
     db: AsyncSession = Depends(get_db),
 ):
     """Batch Orchestrator — single entry point for the Work Flow Engine 'Run' button.
@@ -544,7 +555,10 @@ async def run_batch_orchestrator(
     response_model=APIResponse[BatchRunResponse],
     status_code=status.HTTP_200_OK,
 )
-async def get_latest_batch(db: AsyncSession = Depends(get_db)):
+async def get_latest_batch(
+    _: dict = Depends(require_permission(_RUN_WORKFLOW)),
+    db: AsyncSession = Depends(get_db),
+):
     """Return the most recent batch run.
 
     Used by the UI on page load / browser refresh to show the last
@@ -574,6 +588,7 @@ async def get_latest_batch(db: AsyncSession = Depends(get_db)):
 )
 async def get_batch_status(
     batch_id: str,
+    _: dict = Depends(require_permission(_RUN_WORKFLOW)),
     db: AsyncSession = Depends(get_db),
 ):
     """Return status + progress for a specific batch run.
@@ -633,6 +648,7 @@ def _batch_to_response(batch: BatchRun) -> "BatchRunResponse":
 )
 async def track_engagement_event(
     request: EventTrackRequest,
+    _: dict = Depends(require_permission(_RUN_WORKFLOW)),
     db: AsyncSession = Depends(get_db),
 ):
     """Event Tracking API — simulates customer engagement inputs.
@@ -821,6 +837,7 @@ async def track_engagement_event(
 )
 async def get_workflow_state(
     thread_id: str,
+    _: dict = Depends(require_permission(_RUN_WORKFLOW)),
     db: AsyncSession = Depends(get_db),
 ):
     """Full LangGraph checkpoint state inspector.

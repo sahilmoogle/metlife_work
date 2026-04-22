@@ -11,18 +11,24 @@ Supports reconnect recovery via the standard ``Last-Event-ID`` header:
 
 import logging
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 
 from core.v1.services.sse.manager import event_manager
+from utils.v1.dependencies import require_permission
+from utils.v1.enums import DefaultPermission
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+_HITL_APPROVE = DefaultPermission.HITL_APPROVE.value
 
 
 @router.get("/stream")
-async def sse_stream(request: Request):
+async def sse_stream(
+    request: Request,
+    _: dict = Depends(require_permission(_HITL_APPROVE)),
+):
     """Server-Sent Events stream for real-time workflow updates.
 
     The frontend connects via the browser ``EventSource`` API and receives

@@ -34,5 +34,5 @@ connect_router.include_router(
     dashboard, prefix="/dashboard", tags=["Dashboard"], dependencies=_auth
 )
 connect_router.include_router(
-    rbac, prefix="/rbac", tags=["RBAC Management"]
+    rbac, prefix="/rbac", tags=["RBAC Management"], dependencies=_auth
 )

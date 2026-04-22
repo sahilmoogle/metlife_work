@@ -3,6 +3,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from config.v1.jwt_config import jwt_config
 from utils.v1.connections import get_db
@@ -63,7 +64,9 @@ async def get_current_user(
 
         from model.database.v1.users import User
 
-        user_result = await db.execute(select(User).where(User.user_id == user_id))
+        user_result = await db.execute(
+            select(User).options(selectinload(User.role)).where(User.user_id == user_id)
+        )
         user_obj = user_result.scalars().first()
 
         if not user_obj:
@@ -76,7 +79,8 @@ async def get_current_user(
             "user_id": str(user_obj.user_id),
             "name": user_obj.name,
             "email": user_obj.email,
-            "role": user_obj.role,
+            "role": user_obj.role.name if user_obj.role else None,
+            "role_id": str(user_obj.role_id) if user_obj.role_id else None,
         }
     except ValueError as e:
         raise HTTPException(

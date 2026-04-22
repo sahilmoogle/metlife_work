@@ -16,17 +16,25 @@ Dormant leads (S4 eligible) are seeded with:
   - last_active_at = 200+ days ago
 
 Usage:
+    uv run python -m utils.v1.seed_data
     uv run python utils/v1/seed_data.py
 """
 
 import asyncio
 import logging
 import random
+import sys
 import uuid
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+
+# Ensure project root is importable when this file is executed directly.
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from model.database.v1.leads import Lead
 from model.database.v1.quotes import Quote

@@ -83,6 +83,23 @@ class RBACService:
         return permission_name in permissions
 
     @staticmethod
+    async def get_roles_for_permission(db: AsyncSession, permission_name: str) -> list[str]:
+        stmt = (
+            select(Role.name)
+            .join(RolePermission, RolePermission.role_id == Role.role_id)
+            .join(Permission, Permission.permission_id == RolePermission.permission_id)
+            .where(
+                Permission.name == permission_name,
+                Role.is_active.is_(True),
+                Permission.is_active.is_(True),
+            )
+            .distinct()
+            .order_by(Role.name.asc())
+        )
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
+
+    @staticmethod
     async def count_roles_with_permission(db: AsyncSession, permission_name: str) -> int:
         stmt = (
             select(func.count())
@@ -180,14 +197,16 @@ class RBACService:
                 detail="Cannot assign an inactive role",
             )
 
+        assigned_role_id = str(role.role_id)
+        assigned_role_name = role.name
         user.role_id = role.role_id
         await db.commit()
         await db.refresh(user)
 
         return {
             "user_id": str(user.user_id),
-            "role_id": str(role.role_id),
-            "role_name": role.name,
+            "role_id": assigned_role_id,
+            "role_name": assigned_role_name,
         }
 
     @staticmethod
@@ -206,6 +225,7 @@ class RBACService:
                     permission_id=str(permission.permission_id),
                     name=permission.name,
                     description=permission.description,
+                    is_active=permission.is_active,
                 )
             )
 

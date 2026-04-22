@@ -20,10 +20,13 @@ from core.v1.services.sse.manager import (
     lead_converted_event,
 )
 from utils.v1.connections import get_db
+from utils.v1.dependencies import require_permission
+from utils.v1.enums import DefaultPermission
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+_HITL_APPROVE = DefaultPermission.HITL_APPROVE.value
 
 
 @router.get(
@@ -33,6 +36,7 @@ router = APIRouter()
 )
 async def get_hitl_queue(
     gate_type: str | None = None,
+    _: dict = Depends(require_permission(_HITL_APPROVE)),
     db: AsyncSession = Depends(get_db),
 ):
     """Fetch all pending HITL review items.
@@ -89,6 +93,7 @@ async def get_hitl_queue(
 )
 async def get_hitl_detail(
     thread_id: str,
+    _: dict = Depends(require_permission(_HITL_APPROVE)),
     db: AsyncSession = Depends(get_db),
 ):
     """Get the full detail for a single HITL review item.
@@ -147,6 +152,7 @@ async def get_hitl_detail(
 async def approve_hitl(
     thread_id: str,
     request: HITLApproveRequest,
+    _: dict = Depends(require_permission(_HITL_APPROVE)),
     db: AsyncSession = Depends(get_db),
 ):
     """Approve, edit, hold, or reject a HITL review item.
