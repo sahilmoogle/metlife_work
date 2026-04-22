@@ -63,5 +63,7 @@ class EmailEvent(Base):
     # Metadata
     email_number = Column(Integer, nullable=True)  # 1–5 within sequence
     user_agent = Column(String(300), nullable=True)
+    campaign_id = Column(String(100), nullable=True, index=True)
 
     created_at = Column(TIMESTAMP, server_default=func.now())
+    updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())

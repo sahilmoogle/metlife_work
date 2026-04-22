@@ -47,6 +47,9 @@ class LeadState(dict):
     banner_code: Optional[str]
     product_code: Optional[str]
     registration_source: Optional[str]
+    plan_code: Optional[str]
+    accept_mail_error: Optional[str]
+    session_id: Optional[str]  # upstream / analytics session (not LangGraph thread_id)
 
     # ── Survey answers ───────────────────────────────────────────────
     ans3: Optional[str]
@@ -69,6 +72,12 @@ class LeadState(dict):
     # ── S6/S7 Consultation ───────────────────────────────────────────
     email_captured: bool
     memo: Optional[str]  # T_CONSULT_REQ MEMO field
+    consult_request_id: Optional[str]
+    prefecture: Optional[str]
+    zip_code: Optional[str]
+    consult_campaign_code: Optional[str]  # CAMPAIGN_CODE on consultation form
+    contract_status: Optional[str]
+    latest_event_campaign_id: Optional[str]  # last Adobe/email_events campaign_id
 
     # ── Context block (assembled by A1) ──────────────────────────────
     context_block: Optional[str]
@@ -137,6 +146,9 @@ def create_initial_state(
         "banner_code": None,
         "product_code": None,
         "registration_source": None,
+        "plan_code": None,
+        "accept_mail_error": None,
+        "session_id": None,
         # Survey
         "ans3": None,
         "ans4": None,
@@ -155,6 +167,12 @@ def create_initial_state(
         # S6/S7
         "email_captured": False,
         "memo": None,
+        "consult_request_id": None,
+        "prefecture": None,
+        "zip_code": None,
+        "consult_campaign_code": None,
+        "contract_status": None,
+        "latest_event_campaign_id": None,
         # Context
         "context_block": None,
         # Intent

@@ -22,7 +22,7 @@ class Communication(Base):
 
     # Internal message reference (assigned by send_engine, used for deduplication)
     internal_message_ref = Column(String(200), nullable=True, index=True)
-    channel = Column(String(10), default="email")  # always "email" in mock mode
+    channel = Column(String(30), default="email")  # matches DB / Alembic
 
     # Content
     subject = Column(String(500), nullable=True)
@@ -43,5 +43,7 @@ class Communication(Base):
     clicked_cta_label = Column(
         String(100), nullable=True
     )  # Medical Insurance / Life / Asset Formation
+    campaign_id = Column(String(100), nullable=True)
 
     created_at = Column(TIMESTAMP, server_default=func.now())
+    updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())

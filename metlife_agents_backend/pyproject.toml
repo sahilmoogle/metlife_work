@@ -22,4 +22,11 @@ dependencies = [
     "langgraph-checkpoint-postgres==3.0.5",
     "langgraph-checkpoint-sqlite==3.0.3",
     "psycopg-pool==3.3.0",
+    "pandas>=3.0.2",
+    "openpyxl>=3.1.5",
 ]
+
+[tool.ruff.lint.per-file-ignores]
+# Runnable scripts bootstrap sys.path before backend imports.
+"scripts/seed_database.py" = ["E402"]
+"scripts/seed_users.py" = ["E402"]

@@ -47,12 +47,17 @@ class Lead(Base):
     device_type = Column(String(50), nullable=True)  # MOBILE_SITE / PC
     banner_code = Column(String(100), nullable=True)  # Campaign source
     product_code = Column(String(50), nullable=True)  # PRODUCT_CODE
+    plan_code = Column(String(50), nullable=True)  # PLAN_CODE (T_YEC_QUOTE_MST)
     registration_source = Column(
         String(50), nullable=True
     )  # newsletter / f2f_form / web_callback
     opt_in = Column(
         Boolean, default=False
     )  # OPT_IN flag  (True = opted out → suppress)
+    accept_mail_error = Column(String(255), nullable=True)  # ACCEPT_MAIL_ERROR (feed)
+    session_id = Column(
+        String(200), nullable=True, index=True
+    )  # upstream session / analytics id (not LangGraph thread_id)
 
     # ── Scenario & persona assignment (set by Agent A2) ─────────────
     scenario_id = Column(String(5), nullable=True, index=True)  # S1–S7

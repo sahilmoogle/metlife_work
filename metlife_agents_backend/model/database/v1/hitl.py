@@ -56,4 +56,5 @@ class HITLQueue(Base):
     edited_body = Column(Text, nullable=True)
 
     created_at = Column(TIMESTAMP, server_default=func.now())
+    updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
     reviewed_at = Column(TIMESTAMP, nullable=True)

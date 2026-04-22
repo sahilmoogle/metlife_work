@@ -26,3 +26,4 @@ class Quote(Base):
     raw_quote_ref = Column(String(200), nullable=True)
 
     created_at = Column(TIMESTAMP, server_default=func.now())
+    updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())

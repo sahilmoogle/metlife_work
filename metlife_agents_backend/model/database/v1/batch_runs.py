@@ -43,3 +43,4 @@ class BatchRun(Base):
 
     started_at = Column(TIMESTAMP, server_default=func.now())
     completed_at = Column(TIMESTAMP, nullable=True)
+    updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())

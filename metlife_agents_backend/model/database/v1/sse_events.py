@@ -34,3 +34,4 @@ class SSEEvent(Base):
     payload = Column(Text, nullable=False)
 
     created_at = Column(TIMESTAMP, server_default=func.now(), index=True)
+    updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())

@@ -7,7 +7,11 @@ const normalizeBaseUrl = (url) => {
 };
 
 export const envConfig = {
-  apiBaseUrl: normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL),
+  // Default matches .env.example so fetch hits Vite's `/api` proxy → backend `/api/v1/*`.
+  // Without this, requests go to `/auth/login` on :5173 and return 404.
+  apiBaseUrl: normalizeBaseUrl(
+    import.meta.env.VITE_API_BASE_URL ?? "/api/v1"
+  ),
   authLoginPath: import.meta.env.VITE_AUTH_LOGIN_PATH || "/auth/login",
   authRegisterPath: import.meta.env.VITE_AUTH_REGISTER_PATH || "/auth/register",
   authMePath: import.meta.env.VITE_AUTH_ME_PATH || "/auth/me",

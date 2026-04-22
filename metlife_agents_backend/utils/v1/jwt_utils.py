@@ -79,6 +79,7 @@ async def get_current_user(
 
         # Load per-user permission overrides (stored as JSON text)
         import json as _json
+
         custom: dict = {}
         if user_obj.custom_permissions:
             try:

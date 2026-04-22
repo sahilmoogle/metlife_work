@@ -29,10 +29,10 @@ from utils.v1.jwt_utils import get_current_user
 # ── Permission → roles that hold it ──────────────────────────────────
 ROLE_PERMISSIONS: dict[str, set[str]] = {
     "run_workflow": {"Admin", "Manager"},
-    "start_agent":  {"Admin", "Manager"},
+    "start_agent": {"Admin", "Manager"},
     "hitl_approve": {"Admin", "Manager", "Reviewer"},
-    "edit_lead":    {"Admin", "Manager", "Reviewer"},
-    "export_data":  {"Admin"},
+    "edit_lead": {"Admin", "Manager", "Reviewer"},
+    "export_data": {"Admin"},
     "manage_users": {"Admin"},
 }
 

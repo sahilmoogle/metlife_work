@@ -30,3 +30,4 @@ class AuditLog(Base):
     ip_address = Column(String(50), nullable=True)
 
     created_at = Column(TIMESTAMP, server_default=func.now())
+    updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())

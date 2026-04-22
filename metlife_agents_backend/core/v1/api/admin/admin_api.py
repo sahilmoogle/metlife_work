@@ -86,6 +86,7 @@ def _user_to_row(user: User) -> UserPermissionRow:
 
 # ── Routes ───────────────────────────────────────────────────────────
 
+
 @router.get(
     "",
     response_model=APIResponse[UserListResponse],
@@ -156,7 +157,9 @@ async def create_user(
     await db.commit()
     await db.refresh(user)
 
-    logger.info("Admin created user %s (%s) with role %s", user.email, user.user_id, user.role)
+    logger.info(
+        "Admin created user %s (%s) with role %s", user.email, user.user_id, user.role
+    )
     return APIResponse(
         success=True,
         status_code=status.HTTP_201_CREATED,
@@ -365,10 +368,7 @@ async def update_user_permissions(
         {"export_data": false}
     """
     # Prevent self-revocation of manage_users
-    if (
-        str(user_id) == current_user.get("user_id")
-        and request.manage_users is False
-    ):
+    if str(user_id) == current_user.get("user_id") and request.manage_users is False:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="You cannot revoke your own manage_users permission.",

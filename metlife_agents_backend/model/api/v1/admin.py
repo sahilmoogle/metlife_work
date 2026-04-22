@@ -11,12 +11,17 @@ from pydantic import BaseModel, EmailStr, field_validator
 
 VALID_ROLES = {"Admin", "Manager", "Reviewer", "Viewer"}
 VALID_PERMISSIONS = {
-    "run_workflow", "start_agent", "hitl_approve",
-    "edit_lead", "export_data", "manage_users",
+    "run_workflow",
+    "start_agent",
+    "hitl_approve",
+    "edit_lead",
+    "export_data",
+    "manage_users",
 }
 
 
 # ── REQUEST MODELS ───────────────────────────────────────────────────
+
 
 class CreateUserRequest(BaseModel):
     """Body for POST /admin/users (+Add User button)."""
@@ -50,6 +55,7 @@ class UpdateUserRequest(BaseModel):
 
 
 # ── RESPONSE MODELS ──────────────────────────────────────────────────
+
 
 class UserPermissionRow(BaseModel):
     """Single row in the Access Control permissions table.
@@ -119,10 +125,10 @@ class UpdateUserPermissionsRequest(BaseModel):
     """
 
     run_workflow: bool | None = None
-    start_agent:  bool | None = None
+    start_agent: bool | None = None
     hitl_approve: bool | None = None
-    edit_lead:    bool | None = None
-    export_data:  bool | None = None
+    edit_lead: bool | None = None
+    export_data: bool | None = None
     manage_users: bool | None = None
 
 

@@ -16,3 +16,5 @@ class BlacklistedToken(Base):
     id = Column(GUID(), primary_key=True, default=uuid.uuid4)
     token = Column(String(512), unique=True, nullable=False, index=True)
     blacklisted_at = Column(TIMESTAMP, server_default=func.now())
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())

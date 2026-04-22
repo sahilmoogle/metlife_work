@@ -1,36 +1,31 @@
 """
-Seed 15 MetLife operational staff users covering all RBAC roles.
+Seed 15 MetLife operational staff users (Admin / Manager / Reviewer / Viewer).
 
-Roles seeded:
-  Admin    – 3 users  (full access)
-  Manager  – 4 users  (run workflows, approve HITL, edit leads)
-  Reviewer – 4 users  (approve HITL, edit leads)
-  Viewer   – 4 users  (read-only)
+Idempotent: skips any user whose email already exists.
 
-Idempotent: skips any user whose e-mail already exists.
+Run::
 
-Usage:
     cd metlife_agents_backend
-    python utils/v1/seed_users.py
+    uv run python scripts/seed_users.py
 """
+
+from __future__ import annotations
 
 import asyncio
 import sys
-import os
+from pathlib import Path
 
-# Allow running from project root without installing the package.
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+_BACKEND = Path(__file__).resolve().parents[1]
+if str(_BACKEND) not in sys.path:
+    sys.path.insert(0, str(_BACKEND))
 
 from sqlalchemy import select
 
-from utils.v1.connections import SessionLocal
-from model.database.v1.users import User
 from core.v1.services.authentication.authentication import AuthService
-
-# ── Seed data ────────────────────────────────────────────────────────────────
+from model.database.v1.users import User
+from utils.v1.connections import SessionLocal
 
 SEED_USERS = [
-    # ── Admins ──────────────────────────────────────────────────────────────
     {
         "name": "Takashi Yamamoto",
         "email": "takashi.yamamoto@metlife.co.jp",
@@ -49,7 +44,6 @@ SEED_USERS = [
         "password": "Admin@1234",
         "role": "Admin",
     },
-    # ── Managers ────────────────────────────────────────────────────────────
     {
         "name": "Hiroshi Tanaka",
         "email": "hiroshi.tanaka@metlife.co.jp",
@@ -74,7 +68,6 @@ SEED_USERS = [
         "password": "Manager@1234",
         "role": "Manager",
     },
-    # ── Reviewers ───────────────────────────────────────────────────────────
     {
         "name": "Emi Sato",
         "email": "emi.sato@metlife.co.jp",
@@ -99,7 +92,6 @@ SEED_USERS = [
         "password": "Reviewer@1234",
         "role": "Reviewer",
     },
-    # ── Viewers ─────────────────────────────────────────────────────────────
     {
         "name": "Hana Matsumoto",
         "email": "hana.matsumoto@metlife.co.jp",
@@ -126,8 +118,6 @@ SEED_USERS = [
     },
 ]
 
-
-# ── Runner ───────────────────────────────────────────────────────────────────
 
 async def seed_users() -> None:
     async with SessionLocal() as db:
@@ -160,5 +150,9 @@ async def seed_users() -> None:
         print(f"\nDone — created: {created}  skipped (already exist): {skipped}")
 
 
-if __name__ == "__main__":
+def main() -> None:
     asyncio.run(seed_users())
+
+
+if __name__ == "__main__":
+    main()

@@ -24,6 +24,9 @@ class ConsultationRequest(Base):
 
     # Form identification
     form_id = Column(String(20), nullable=True)  # W011 / W022 / W033
+    request_id = Column(
+        String(100), nullable=True, index=True
+    )  # REQUEST_ID (T_CONSULT_REQ)
     request_type = Column(
         String(30), nullable=False
     )  # face_to_face | web_to_call | seminar
@@ -33,6 +36,8 @@ class ConsultationRequest(Base):
     phone = Column(String(50), nullable=True)
     gender = Column(String(5), nullable=True)  # M / F (not 0/1)
     date_of_birth = Column(String(20), nullable=True)
+    prefecture = Column(String(100), nullable=True)
+    zip_code = Column(String(20), nullable=True)
 
     # Free-text memo field  (up to 4000 chars per spec)
     memo = Column(Text, nullable=True)
@@ -41,10 +46,14 @@ class ConsultationRequest(Base):
     face_to_face = Column(Boolean, default=False)
     email_captured = Column(Boolean, default=False)
 
+    campaign_code = Column(String(100), nullable=True)
+    contract_status = Column(String(100), nullable=True)
+
     # Processing state
     status = Column(String(30), default="new")  # new | assigned | scheduled | completed
     assigned_advisor = Column(String(100), nullable=True)
 
     created_at = Column(TIMESTAMP, server_default=func.now())
+    updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
     scheduled_at = Column(TIMESTAMP, nullable=True)
     completed_at = Column(TIMESTAMP, nullable=True)
