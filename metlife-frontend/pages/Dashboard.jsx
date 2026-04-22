@@ -262,7 +262,7 @@ const Dashboard = () => {
         {kpiCards.map((item) => (
           <article
             key={item.title}
-            className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)]"
+            className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
@@ -270,8 +270,8 @@ const Dashboard = () => {
                   <MetricIcon variant={item.icon} />
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-gray-500">{item.title}</p>
-                  <p className="mt-1 text-2xl font-semibold tracking-tight text-[#1e2a52]">{item.value}</p>
+                  <p className="text-xs font-medium text-gray-500 dark:text-slate-400">{item.title}</p>
+                  <p className="mt-1 text-2xl font-semibold tracking-tight text-[#1e2a52] dark:text-white">{item.value}</p>
                 </div>
               </div>
               <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ring-1 ${item.chip}`}>
@@ -283,13 +283,13 @@ const Dashboard = () => {
       </section>
 
       <section className="mt-4 grid gap-3 xl:grid-cols-2">
-        <article className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)]">
-          <h3 className="text-sm font-semibold text-[#1e2a52]">Conversion Funnel</h3>
-          <p className="mb-4 text-[11px] text-gray-400">Lead journey from database aggregates</p>
+        <article className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
+          <h3 className="text-sm font-semibold text-[#1e2a52] dark:text-white">Conversion Funnel</h3>
+          <p className="mb-4 text-[11px] text-gray-400 dark:text-slate-400">Lead journey from database aggregates</p>
           <div className="space-y-3">
             {funnelBars.map((bar) => (
               <div key={bar.label}>
-                <div className="mb-1 flex justify-between text-[11px] text-gray-500">
+                <div className="mb-1 flex justify-between text-[11px] text-gray-500 dark:text-slate-400">
                   <span>{bar.label}</span>
                   <span>{bar.value}%</span>
                 </div>
@@ -304,21 +304,21 @@ const Dashboard = () => {
           </div>
         </article>
 
-        <article className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)]">
-          <h3 className="text-sm font-semibold text-[#1e2a52]">Scenario Distribution</h3>
-          <p className="mb-4 text-[11px] text-gray-400">All leads by scenario_id</p>
+        <article className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
+          <h3 className="text-sm font-semibold text-[#1e2a52] dark:text-white">Scenario Distribution</h3>
+          <p className="mb-4 text-[11px] text-gray-400 dark:text-slate-400">All leads by scenario_id</p>
           <div className="grid gap-2 sm:grid-cols-2">
             {scenarioRows.map((scenario) => (
               <div
                 key={scenario.id}
-                className="flex items-center gap-3 rounded-xl border border-gray-100 bg-white p-3 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)]"
+                className="flex items-center gap-3 rounded-xl border border-gray-100 bg-white p-3 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-white/10 dark:bg-slate-950/40 dark:shadow-none"
               >
                 <span className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-50 text-xs font-semibold text-indigo-700 ring-1 ring-indigo-100">
                   {scenario.id}
                 </span>
                 <div>
-                  <p className="text-sm font-semibold text-gray-800">{scenario.value}</p>
-                  <p className="text-xs text-gray-400">{scenario.label}</p>
+                  <p className="text-sm font-semibold text-gray-800 dark:text-white">{scenario.value}</p>
+                  <p className="text-xs text-gray-400 dark:text-slate-400">{scenario.label}</p>
                 </div>
               </div>
             ))}
@@ -326,10 +326,10 @@ const Dashboard = () => {
         </article>
       </section>
 
-      <section className="mt-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)]">
+      <section className="mt-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-[#1e2a52]">Live Activity Feed</h3>
-          <span className="inline-flex items-center gap-2 text-xs text-gray-400">
+          <h3 className="text-sm font-semibold text-[#1e2a52] dark:text-white">Live Activity Feed</h3>
+          <span className="inline-flex items-center gap-2 text-xs text-gray-400 dark:text-slate-400">
             <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
             From active agent nodes
           </span>
@@ -339,17 +339,17 @@ const Dashboard = () => {
             feedItems.map((item) => (
               <div
                 key={item.title}
-                className="flex items-start gap-3 border-b border-gray-100 pb-3 text-sm text-gray-600 last:border-none last:pb-0"
+                className="flex items-start gap-3 border-b border-gray-100 pb-3 text-sm text-gray-600 last:border-none last:pb-0 dark:border-white/10 dark:text-slate-300"
               >
                 <span className="mt-1.5 h-2 w-2 flex-none rounded-full bg-violet-500" />
                 <div className="min-w-0">
-                  <p className="truncate text-sm text-gray-700">{item.title}</p>
-                  <p className="mt-0.5 text-[11px] text-gray-400">{item.meta}</p>
+                  <p className="truncate text-sm text-gray-700 dark:text-slate-200">{item.title}</p>
+                  <p className="mt-0.5 text-[11px] text-gray-400 dark:text-slate-400">{item.meta}</p>
                 </div>
               </div>
             ))
           ) : (
-            <p className="text-sm text-gray-500">No active pipeline nodes with counts yet.</p>
+            <p className="text-sm text-gray-500 dark:text-slate-400">No active pipeline nodes with counts yet.</p>
           )}
         </div>
       </section>

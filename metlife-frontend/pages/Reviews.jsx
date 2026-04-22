@@ -75,15 +75,15 @@ const Reviews = () => {
   }, [activeTab, items]);
 
   return (
-    <section className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm sm:p-4">
+    <section className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm sm:p-4 dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
       <div className="mb-3">
-        <h3 className="text-sm font-semibold text-[#1e2a52]">HITL Review Queue</h3>
-        <p className="mt-0.5 text-xs text-gray-500">
+        <h3 className="text-sm font-semibold text-[#1e2a52] dark:text-white">HITL Review Queue</h3>
+        <p className="mt-0.5 text-xs text-gray-500 dark:text-slate-400">
           Human-in-the-loop gates awaiting review
         </p>
       </div>
 
-      <div className="mb-3 rounded-lg bg-gray-50 p-2">
+      <div className="mb-3 rounded-lg bg-gray-50 p-2 dark:bg-white/5">
         <div className="flex flex-wrap items-center gap-2">
           {queueTabs.map((tab) => {
             const isActive = activeTab === tab.key;
@@ -94,7 +94,7 @@ const Reviews = () => {
                 type="button"
                 onClick={() => setActiveTab(tab.key)}
                 className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                  isActive ? "bg-white shadow-sm" : "hover:bg-white/60"
+                  isActive ? "bg-white shadow-sm dark:bg-slate-950/40 dark:shadow-none" : "hover:bg-white/60 dark:hover:bg-white/10"
                 }`}
               >
                 <span
@@ -104,7 +104,7 @@ const Reviews = () => {
                 >
                   {count} {tab.label.toLowerCase()}
                 </span>
-                <span className={`${isActive ? "text-gray-900" : "text-gray-600"}`}>
+                <span className={`${isActive ? "text-gray-900 dark:text-white" : "text-gray-600 dark:text-slate-300"}`}>
                   {tab.label}
                 </span>
               </button>
@@ -115,8 +115,8 @@ const Reviews = () => {
 
       <div className="space-y-3">
         {loadError ? (
-          <div className="rounded-xl border border-amber-100 bg-amber-50/80 p-4">
-            <p className="text-sm text-amber-900">{loadError}</p>
+          <div className="rounded-xl border border-amber-100 bg-amber-50/80 p-4 dark:border-amber-500/30 dark:bg-amber-500/10">
+            <p className="text-sm text-amber-900 dark:text-amber-100">{loadError}</p>
             <button
               type="button"
               className="mt-2 text-sm font-semibold text-indigo-700 underline"
@@ -128,8 +128,8 @@ const Reviews = () => {
         ) : null}
 
         {loading ? (
-          <div className="rounded-xl border border-gray-100 bg-white p-4">
-            <p className="text-sm text-gray-600">Loading queue…</p>
+          <div className="rounded-xl border border-gray-100 bg-white p-4 dark:border-white/10 dark:bg-slate-950/40">
+            <p className="text-sm text-gray-600 dark:text-slate-300">Loading queue…</p>
           </div>
         ) : null}
 
@@ -144,16 +144,16 @@ const Reviews = () => {
             return (
           <article
             key={item.thread_id}
-            className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-[0_1px_0_rgba(0,0,0,0.02)] hover:bg-gray-50/60"
+            className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-[0_1px_0_rgba(0,0,0,0.02)] hover:bg-gray-50/60 dark:border-white/10 dark:bg-slate-950/40 dark:shadow-none dark:hover:bg-white/5"
             onClick={() => navigate(`/reviews/${item.thread_id}`)}
           >
             <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-10 w-10 flex-none items-center justify-center rounded-lg bg-amber-50">
+              <div className="flex h-10 w-10 flex-none items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-500/15">
                 <div className="h-4 w-1.5 rounded-full bg-amber-400" />
               </div>
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-gray-800">{name}</p>
-                <p className="truncate text-xs text-gray-400">
+                <p className="truncate text-sm font-semibold text-gray-800 dark:text-white">{name}</p>
+                <p className="truncate text-xs text-gray-400 dark:text-slate-400">
                   {item.scenario_id || "—"} • Score: {(item.engagement_score ?? 0).toFixed(2)}
                 </p>
               </div>
@@ -163,16 +163,16 @@ const Reviews = () => {
               <span className="hidden rounded-full bg-indigo-50 px-3 py-1 text-[11px] font-semibold text-indigo-700 sm:inline-flex">
                 {step}
               </span>
-              <span className="text-xs text-gray-400">{formatAge(item.created_at)}</span>
+              <span className="text-xs text-gray-400 dark:text-slate-400">{formatAge(item.created_at)}</span>
             </div>
           </article>
             );
           })}
 
         {!loading && !loadError && visible.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-8 text-center">
-            <p className="text-sm font-medium text-gray-700">No items</p>
-            <p className="mt-1 text-xs text-gray-500">
+          <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-8 text-center dark:border-white/10 dark:bg-white/5">
+            <p className="text-sm font-medium text-gray-700 dark:text-slate-200">No items</p>
+            <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
               {activeTab === "resolved"
                 ? "Resolved queue is not exposed by the backend yet."
                 : "Nothing in this queue right now."}

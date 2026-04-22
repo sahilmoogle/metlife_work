@@ -176,7 +176,7 @@ const Toggle = ({ checked, onChange, ariaLabel }) => {
       className={`relative inline-flex h-5 w-9 items-center rounded-full border transition ${
         checked
           ? "border-emerald-200 bg-emerald-500"
-          : "border-gray-200 bg-gray-100"
+          : "border-gray-200 bg-gray-100 dark:border-white/15 dark:bg-white/10"
       }`}
     >
       <span
@@ -240,11 +240,11 @@ const Settings = () => {
 
   return (
     <section className="space-y-3">
-      <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)]">
+      <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-base font-semibold text-[#1e2a52]">Admin - Access Control</h2>
-            <p className="mt-1 text-xs text-gray-500">
+            <h2 className="text-base font-semibold text-[#1e2a52] dark:text-white">Admin - Access Control</h2>
+            <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
               RBAC permissions for workflow execution, HITL approvals, and lead management
             </p>
           </div>
@@ -261,13 +261,13 @@ const Settings = () => {
           {roles.map((r) => (
             <div
               key={r.key}
-              className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)]"
+              className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-white/10 dark:bg-slate-950/40 dark:shadow-none"
             >
               <div className={`absolute left-0 top-0 h-1 w-full ${r.topBar}`} />
-              <p className="text-2xl font-semibold tracking-tight text-[#1e2a52]">
+              <p className="text-2xl font-semibold tracking-tight text-[#1e2a52] dark:text-white">
                 {roleCounts[r.key]}
               </p>
-              <p className="mt-1 text-xs font-medium text-gray-600">{r.label}</p>
+              <p className="mt-1 text-xs font-medium text-gray-600 dark:text-slate-300">{r.label}</p>
               <span className={`mt-3 inline-flex rounded-full px-3 py-1 text-[11px] font-semibold ring-1 ${r.tone}`}>
                 {r.subtitle}
               </span>
@@ -276,15 +276,15 @@ const Settings = () => {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)]">
+      <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-amber-50 text-amber-700 ring-1 ring-amber-100">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-amber-50 text-amber-700 ring-1 ring-amber-100 dark:bg-amber-500/15 dark:text-amber-200 dark:ring-amber-500/20">
               🔐
             </span>
-            <p className="text-sm font-semibold text-[#1e2a52]">User Permissions Matrix</p>
+            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">User Permissions Matrix</p>
           </div>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-gray-400 dark:text-slate-400">
             {totals.totalUsers} users • {totals.totalRoles} roles
           </p>
         </div>
@@ -292,7 +292,7 @@ const Settings = () => {
         <div className="overflow-x-auto">
           <table className="min-w-[980px] w-full border-separate border-spacing-0">
             <thead>
-              <tr className="text-left text-[11px] font-semibold text-gray-500">
+              <tr className="text-left text-[11px] font-semibold text-gray-500 dark:text-slate-400">
                 <th className="px-3 py-3">User</th>
                 <th className="px-3 py-3">Role</th>
                 {permissionCols.map((c) => (
@@ -305,7 +305,7 @@ const Settings = () => {
             </thead>
             <tbody>
               {users.map((u) => (
-                <tr key={u.id} className="border-t border-gray-100 text-xs text-gray-700 hover:bg-gray-50/60">
+                <tr key={u.id} className="border-t border-gray-100 text-xs text-gray-700 hover:bg-gray-50/60 dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/5">
                   <td className="px-3 py-3">
                     <div className="flex items-center gap-3">
                       <div className={`flex h-8 w-8 items-center justify-center rounded-lg text-[11px] font-bold text-white ${avatarTone[u.role]}`}>
@@ -316,8 +316,8 @@ const Settings = () => {
                           .join("")}
                       </div>
                       <div className="leading-tight">
-                        <p className="text-sm font-semibold text-gray-800">{u.name}</p>
-                        <p className="text-[11px] text-gray-400">{u.email}</p>
+                        <p className="text-sm font-semibold text-gray-800 dark:text-white">{u.name}</p>
+                        <p className="text-[11px] text-gray-400 dark:text-slate-400">{u.email}</p>
                       </div>
                     </div>
                   </td>
@@ -346,69 +346,69 @@ const Settings = () => {
       </div>
 
       <div className="grid gap-3 lg:grid-cols-2">
-        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)]">
+        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
           <div className="mb-3 flex items-center justify-between">
-            <p className="text-sm font-semibold text-[#1e2a52]">Role Definitions</p>
+            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">Role Definitions</p>
           </div>
 
           <div className="space-y-3">
-            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 dark:border-white/10 dark:bg-white/5">
               <div className="flex items-center gap-3">
                 <span className="inline-flex rounded-full bg-rose-50 px-3 py-1 text-[11px] font-semibold text-rose-700 ring-1 ring-rose-100">
                   ADMIN
                 </span>
-                <p className="text-xs font-semibold text-gray-700">Full platform access</p>
+                <p className="text-xs font-semibold text-gray-700 dark:text-slate-200">Full platform access</p>
               </div>
-              <p className="mt-2 text-xs text-gray-500">
+              <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">
                 Run/stop workflows, start any agent, approve all HITL gates, manage users, export data,
                 configure scenarios. Can modify RBAC roles.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 dark:border-white/10 dark:bg-white/5">
               <div className="flex items-center gap-3">
                 <span className="inline-flex rounded-full bg-violet-50 px-3 py-1 text-[11px] font-semibold text-violet-700 ring-1 ring-violet-100">
                   MANAGER
                 </span>
-                <p className="text-xs font-semibold text-gray-700">Workflow + HITL</p>
+                <p className="text-xs font-semibold text-gray-700 dark:text-slate-200">Workflow + HITL</p>
               </div>
-              <p className="mt-2 text-xs text-gray-500">
+              <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">
                 Start/pause/resume workflows, click “Run from here” on agents, approve G1–G5 gates,
                 edit leads. Cannot manage users.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 dark:border-white/10 dark:bg-white/5">
               <div className="flex items-center gap-3">
                 <span className="inline-flex rounded-full bg-amber-50 px-3 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-100">
                   REVIEWER
                 </span>
-                <p className="text-xs font-semibold text-gray-700">HITL only</p>
+                <p className="text-xs font-semibold text-gray-700 dark:text-slate-200">HITL only</p>
               </div>
-              <p className="mt-2 text-xs text-gray-500">
+              <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">
                 Review and approve/reject HITL gates (G1–G5). Can view lead details and edit content.
                 Cannot start workflows or agents.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 dark:border-white/10 dark:bg-white/5">
               <div className="flex items-center gap-3">
                 <span className="inline-flex rounded-full bg-gray-100 px-3 py-1 text-[11px] font-semibold text-gray-700 ring-1 ring-gray-200">
                   VIEWER
                 </span>
-                <p className="text-xs font-semibold text-gray-700">Read-only</p>
+                <p className="text-xs font-semibold text-gray-700 dark:text-slate-200">Read-only</p>
               </div>
-              <p className="mt-2 text-xs text-gray-500">
+              <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">
                 View dashboard, lead list, workflow status, analytics. No edit or action permissions.
               </p>
             </div>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)]">
+        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
           <div className="mb-3 flex items-center justify-between">
-            <p className="text-sm font-semibold text-[#1e2a52]">Access Audit Log</p>
-            <span className="text-xs text-gray-400">Last 24h</span>
+            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">Access Audit Log</p>
+            <span className="text-xs text-gray-400 dark:text-slate-400">Last 24h</span>
           </div>
 
           <div className="space-y-2">
@@ -446,12 +446,12 @@ const Settings = () => {
             ].map((item) => (
               <div
                 key={item.text}
-                className="flex items-start gap-3 rounded-2xl border border-gray-100 bg-white px-3 py-3 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)]"
+                className="flex items-start gap-3 rounded-2xl border border-gray-100 bg-white px-3 py-3 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-white/10 dark:bg-slate-950/40 dark:shadow-none"
               >
                 <span className={`mt-1.5 h-2 w-2 flex-none rounded-full ${item.dot}`} />
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold text-gray-800">{item.text}</p>
-                  <p className="mt-1 text-[11px] text-gray-400">{item.meta}</p>
+                  <p className="text-xs font-semibold text-gray-800 dark:text-white">{item.text}</p>
+                  <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">{item.meta}</p>
                 </div>
               </div>
             ))}

@@ -414,11 +414,11 @@ const Campaigns = () => {
 
   return (
     <section className="space-y-3">
-      <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)]">
+      <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-base font-semibold text-[#1e2a52]">Workflow Orchestration</h2>
-            <p className="mt-1 text-xs text-gray-500">
+            <h2 className="text-base font-semibold text-[#1e2a52] dark:text-white">Workflow Orchestration</h2>
+            <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
               LangGraph batch execution • Auto-runs all agents • Pauses only at HITL gates
             </p>
           </div>
@@ -429,7 +429,7 @@ const Campaigns = () => {
                 ✓ Complete
               </span>
             ) : (
-              <span className="text-xs font-semibold text-gray-500">{loading ? "Loading…" : "Ready"}</span>
+              <span className="text-xs font-semibold text-gray-500 dark:text-slate-400">{loading ? "Loading…" : "Ready"}</span>
             )}
 
             <button
@@ -452,26 +452,26 @@ const Campaigns = () => {
 
         <div className="mt-4 space-y-3">
           {runError ? (
-            <div className="rounded-2xl border border-amber-100 bg-amber-50/80 p-4 text-sm text-amber-900">
+            <div className="rounded-2xl border border-amber-100 bg-amber-50/80 p-4 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
               {runError}
             </div>
           ) : null}
           {loadError ? (
-            <div className="rounded-2xl border border-amber-100 bg-amber-50/80 p-4 text-sm text-amber-900">
+            <div className="rounded-2xl border border-amber-100 bg-amber-50/80 p-4 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
               {loadError}
             </div>
           ) : null}
 
-          <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)]">
+          <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-white/10 dark:bg-slate-950/40 dark:shadow-none">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xs font-semibold text-gray-700">
+              <p className="text-xs font-semibold text-gray-700 dark:text-slate-200">
                 Batch Processing{" "}
                 <span className="text-indigo-700">
                   {formatInt(processed)} / {formatInt(batch?.total ?? totalLeads)}
                 </span>{" "}
                 leads
               </p>
-              <div className="flex flex-wrap items-center gap-3 text-[11px] text-gray-500">
+              <div className="flex flex-wrap items-center gap-3 text-[11px] text-gray-500 dark:text-slate-400">
                 <span className="inline-flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-emerald-500" />
                   {formatInt(success)} succeeded
@@ -491,7 +491,7 @@ const Campaigns = () => {
               </div>
             </div>
 
-            <div className="mt-3 h-2 rounded-full bg-gray-100">
+            <div className="mt-3 h-2 rounded-full bg-gray-100 dark:bg-white/10">
               <div
                 className="h-2 rounded-full bg-gradient-to-r from-emerald-500 via-cyan-500 to-indigo-500 transition-[width] duration-300"
                 style={{ width: `${Math.min(100, progressPct)}%` }}
@@ -503,7 +503,7 @@ const Campaigns = () => {
             {scenarioCards.map((s) => (
               <div
                 key={s.id}
-                className="rounded-2xl border border-gray-100 bg-white p-3 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)]"
+                className="rounded-2xl border border-gray-100 bg-white p-3 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-white/10 dark:bg-slate-950/40 dark:shadow-none"
               >
                 <div className="flex items-center justify-between">
                   <span className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ring-1 ${s.tone}`}>
@@ -513,21 +513,21 @@ const Campaigns = () => {
                     {status === "idle" ? "—" : ""}
                   </span>
                 </div>
-                <p className="mt-3 text-xl font-semibold tracking-tight text-[#1e2a52]">
+                <p className="mt-3 text-xl font-semibold tracking-tight text-[#1e2a52] dark:text-white">
                   {loading ? "—" : formatInt(scenarioCounts[s.id] || 0)}
                 </p>
-                <p className="mt-1 text-[11px] text-gray-400">{s.label}</p>
-                <p className="mt-2 text-[11px] text-gray-400">
+                <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">{s.label}</p>
+                <p className="mt-2 text-[11px] text-gray-400 dark:text-slate-400">
                   {loading ? "Loading" : "Ready"}
                 </p>
               </div>
             ))}
           </div>
 
-          <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)]">
+          <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
             <div className="mb-3">
-              <p className="text-sm font-semibold text-[#1e2a52]">Agent Execution Pipeline</p>
-              <p className="mt-1 text-[11px] text-gray-400">
+              <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">Agent Execution Pipeline</p>
+              <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">
                 Live processing counts • Leads flow through agents automatically • Click any node to inspect
               </p>
             </div>
@@ -545,16 +545,16 @@ const Campaigns = () => {
                 return (
                   <div
                     key={stage.key}
-                    className={`rounded-2xl border border-gray-100 bg-white p-4 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] ${
+                    className={`rounded-2xl border border-gray-100 bg-white p-4 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-white/10 dark:bg-slate-950/40 dark:shadow-none ${
                       isHitl && awaitingHitl > 0 ? "ring-1 ring-amber-200" : ""
                     }`}
                   >
                     <div className={`text-[11px] font-semibold ${stage.accent}`}>{stage.label}</div>
                     <div className="mt-4 text-center">
-                      <p className={`text-3xl font-semibold tracking-tight ${isConv ? "text-emerald-700" : "text-[#1e2a52]"}`}>
+                      <p className={`text-3xl font-semibold tracking-tight ${isConv ? "text-emerald-700" : "text-[#1e2a52] dark:text-white"}`}>
                         {loading ? 0 : value}
                       </p>
-                      <p className="mt-1 text-[11px] text-gray-400">
+                      <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">
                         {loading
                           ? "Idle"
                           : isHitl

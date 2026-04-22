@@ -135,9 +135,9 @@ const Leads = () => {
   };
 
   return (
-    <section className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm sm:p-4">
+    <section className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm sm:p-4 dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
       {loadError ? (
-        <div className="mb-3 rounded-lg border border-rose-100 bg-rose-50 px-3 py-2 text-sm text-rose-800">
+        <div className="mb-3 rounded-lg border border-rose-100 bg-rose-50 px-3 py-2 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
           {loadError}{" "}
           <button type="button" className="font-semibold underline" onClick={() => setRefreshKey((k) => k + 1)}>
             Retry
@@ -157,7 +157,7 @@ const Leads = () => {
                 className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
                   isActive
                     ? "bg-indigo-600 text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
                 }`}
               >
                 {filter}
@@ -167,14 +167,14 @@ const Leads = () => {
         </div>
 
         <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
-          <div className="flex h-9 w-full items-center gap-2 rounded-full border border-gray-200 bg-white px-3 text-sm text-gray-400 sm:w-[320px]">
-            <span className="select-none text-gray-400">Q</span>
+          <div className="flex h-9 w-full items-center gap-2 rounded-full border border-gray-200 bg-white px-3 text-sm text-gray-400 sm:w-[320px] dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-400">
+            <span className="select-none text-gray-400 dark:text-slate-400">Q</span>
             <input
               type="text"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search"
-              className="w-full bg-transparent text-sm text-gray-700 outline-none"
+              className="w-full bg-transparent text-sm text-gray-700 outline-none dark:text-slate-200"
             />
           </div>
           <button
@@ -196,14 +196,14 @@ const Leads = () => {
       <div className="overflow-x-auto">
         <table className="min-w-[980px] w-full border-separate border-spacing-0">
           <thead>
-            <tr className="text-left text-xs font-semibold text-gray-500">
+            <tr className="text-left text-xs font-semibold text-gray-500 dark:text-slate-400">
               <th className="w-10 px-3 py-3">
                 <input
                   type="checkbox"
                   checked={allVisibleSelected}
                   onChange={toggleAllVisible}
                   disabled={!pagedLeads.length}
-                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-200"
+                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-200 dark:border-white/20 dark:bg-slate-950/40"
                 />
               </th>
               <th className="w-16 px-3 py-3">Sr. No</th>
@@ -219,14 +219,14 @@ const Leads = () => {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={9} className="px-3 py-8 text-center text-sm text-gray-500">
+                <td colSpan={9} className="px-3 py-8 text-center text-sm text-gray-500 dark:text-slate-400">
                   Loading leads…
                 </td>
               </tr>
             ) : null}
             {!loading && !pagedLeads.length ? (
               <tr>
-                <td colSpan={9} className="px-3 py-8 text-center text-sm text-gray-500">
+                <td colSpan={9} className="px-3 py-8 text-center text-sm text-gray-500 dark:text-slate-400">
                   No leads match your filters.
                 </td>
               </tr>
@@ -238,7 +238,7 @@ const Leads = () => {
                   return (
                     <tr
                       key={lead.id}
-                      className="cursor-pointer border-t border-gray-100 text-sm text-gray-700 hover:bg-gray-50/60"
+                      className="cursor-pointer border-t border-gray-100 text-sm text-gray-700 hover:bg-gray-50/60 dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/5"
                       onClick={() => navigate(`/leads/${lead.id}`)}
                     >
                       <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
@@ -246,14 +246,14 @@ const Leads = () => {
                           type="checkbox"
                           checked={selected.has(lead.id)}
                           onChange={() => toggleOne(lead.id)}
-                          className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-200"
+                          className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-200 dark:border-white/20 dark:bg-slate-950/40"
                         />
                       </td>
-                      <td className="px-3 py-3 text-gray-600">{index + 1}</td>
+                      <td className="px-3 py-3 text-gray-600 dark:text-slate-300">{index + 1}</td>
                       <td className="px-3 py-3">
                         <div className="leading-tight">
-                          <p className="font-medium text-gray-800">{lead.name}</p>
-                          <p className="text-xs text-gray-400">{lead.email}</p>
+                          <p className="font-medium text-gray-800 dark:text-white">{lead.name}</p>
+                          <p className="text-xs text-gray-400 dark:text-slate-400">{lead.email}</p>
                         </div>
                       </td>
                       <td className="px-3 py-3">
@@ -263,9 +263,9 @@ const Leads = () => {
                           {scenario}
                         </span>
                       </td>
-                      <td className="px-3 py-3 text-gray-700">{lead.persona_code || "—"}</td>
-                      <td className="px-3 py-3 text-gray-700">{lead.current_agent_node || "—"}</td>
-                      <td className="px-3 py-3 font-medium text-gray-800">
+                      <td className="px-3 py-3 text-gray-700 dark:text-slate-200">{lead.persona_code || "—"}</td>
+                      <td className="px-3 py-3 text-gray-700 dark:text-slate-200">{lead.current_agent_node || "—"}</td>
+                      <td className="px-3 py-3 font-medium text-gray-800 dark:text-white">
                         {(lead.engagement_score ?? 0).toFixed(2)}
                       </td>
                       <td className="px-3 py-3">
@@ -277,7 +277,7 @@ const Leads = () => {
                           {status}
                         </span>
                       </td>
-                      <td className="px-3 py-3 text-gray-500">{lead.last_activity || "—"}</td>
+                      <td className="px-3 py-3 text-gray-500 dark:text-slate-400">{lead.last_activity || "—"}</td>
                     </tr>
                   );
                 })
@@ -286,13 +286,13 @@ const Leads = () => {
         </table>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500 dark:text-slate-400">
         <div className="flex items-center gap-2">
           <span>Rows per page</span>
           <select
             value={rowsPerPage}
             onChange={(event) => setRowsPerPage(Number(event.target.value))}
-            className="h-8 rounded-full border border-gray-200 bg-white px-3 text-xs text-gray-700 outline-none"
+            className="h-8 rounded-full border border-gray-200 bg-white px-3 text-xs text-gray-700 outline-none dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200"
           >
             <option value={5}>5</option>
             <option value={10}>10</option>

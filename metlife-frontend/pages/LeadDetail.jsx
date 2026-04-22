@@ -137,16 +137,16 @@ const LeadDetail = () => {
 
   if (loading) {
     return (
-      <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
-        <p className="text-sm text-gray-600">Loading lead…</p>
+      <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
+        <p className="text-sm text-gray-600 dark:text-slate-300">Loading lead…</p>
       </section>
     );
   }
 
   if (loadError) {
     return (
-      <section className="rounded-xl border border-amber-100 bg-amber-50/80 p-4 shadow-sm">
-        <p className="text-sm text-amber-900">{loadError}</p>
+      <section className="rounded-xl border border-amber-100 bg-amber-50/80 p-4 shadow-sm dark:border-amber-500/30 dark:bg-amber-500/10 dark:shadow-none">
+        <p className="text-sm text-amber-900 dark:text-amber-100">{loadError}</p>
         <button
           type="button"
           className="mt-2 text-sm font-semibold text-indigo-700 underline"
@@ -155,7 +155,7 @@ const LeadDetail = () => {
           Retry
         </button>
         <div className="mt-3">
-          <Link to="/leads" className="text-xs font-semibold text-gray-600 hover:underline">
+          <Link to="/leads" className="text-xs font-semibold text-gray-600 hover:underline dark:text-slate-300">
             ← Back to leads
           </Link>
         </div>
@@ -180,7 +180,7 @@ const LeadDetail = () => {
   const urgencyChip = lead.urgency && chip[lead.urgency] ? chip[lead.urgency] : chip.Medium;
 
   return (
-    <section className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm sm:p-4">
+    <section className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm sm:p-4 dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
@@ -188,16 +188,16 @@ const LeadDetail = () => {
               ← Back
             </Link>
             <span className="text-[11px] font-semibold text-gray-400">/</span>
-            <span className="text-xs font-semibold text-gray-500">Lead Details</span>
+            <span className="text-xs font-semibold text-gray-500 dark:text-slate-400">Lead Details</span>
           </div>
-          <p className="mt-1 text-[11px] text-gray-500">Profile, workflow state, and communications</p>
+          <p className="mt-1 text-[11px] text-gray-500 dark:text-slate-400">Profile, workflow state, and communications</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={handleExport}
-            className="rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-700 shadow-sm hover:border-indigo-300 hover:text-indigo-700"
+            className="rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-700 shadow-sm hover:border-indigo-300 hover:text-indigo-700 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200 dark:shadow-none dark:hover:border-white/20 dark:hover:text-white"
           >
             Export JSON
           </button>
@@ -208,7 +208,7 @@ const LeadDetail = () => {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[340px_1fr_320px]">
-        <div className="rounded-xl border border-gray-100 bg-white p-4">
+        <div className="rounded-xl border border-gray-100 bg-white p-4 dark:border-white/10 dark:bg-slate-950/40">
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold text-indigo-700">Profile</p>
             <span className="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700">
@@ -221,69 +221,69 @@ const LeadDetail = () => {
               {initials || "?"}
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-gray-800">{displayName}</p>
-              <p className="truncate text-xs text-gray-400">
+              <p className="truncate text-sm font-semibold text-gray-800 dark:text-white">{displayName}</p>
+              <p className="truncate text-xs text-gray-400 dark:text-slate-400">
                 {lead.persona_code || "—"} • age {lead.age ?? "—"}
               </p>
-              <p className="truncate text-xs text-gray-400">
+              <p className="truncate text-xs text-gray-400 dark:text-slate-400">
                 {lead.scenario_id || "No scenario"} • {lead.workflow_status || "New"}
               </p>
             </div>
           </div>
 
-          <div className="mt-4 rounded-xl bg-gray-50 p-3">
+          <div className="mt-4 rounded-xl bg-gray-50 p-3 dark:bg-slate-950/40">
             <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-              <p className="text-gray-400">Email</p>
-              <p className="text-right font-medium text-gray-700">{lead.email || "—"}</p>
-              <p className="text-gray-400">Device</p>
-              <p className="text-right font-medium text-gray-700">{lead.device_type || "—"}</p>
-              <p className="text-gray-400">Scenario</p>
-              <p className="text-right font-medium text-gray-700">{lead.scenario_id || "—"}</p>
-              <p className="text-gray-400">Persona</p>
-              <p className="text-right font-medium text-gray-700">{lead.persona_code || "—"}</p>
-              <p className="text-gray-400">Persona confidence</p>
-              <p className="text-right font-medium text-gray-700">
+              <p className="text-gray-400 dark:text-slate-400">Email</p>
+              <p className="text-right font-medium text-gray-700 dark:text-slate-200">{lead.email || "—"}</p>
+              <p className="text-gray-400 dark:text-slate-400">Device</p>
+              <p className="text-right font-medium text-gray-700 dark:text-slate-200">{lead.device_type || "—"}</p>
+              <p className="text-gray-400 dark:text-slate-400">Scenario</p>
+              <p className="text-right font-medium text-gray-700 dark:text-slate-200">{lead.scenario_id || "—"}</p>
+              <p className="text-gray-400 dark:text-slate-400">Persona</p>
+              <p className="text-right font-medium text-gray-700 dark:text-slate-200">{lead.persona_code || "—"}</p>
+              <p className="text-gray-400 dark:text-slate-400">Persona confidence</p>
+              <p className="text-right font-medium text-gray-700 dark:text-slate-200">
                 {lead.persona_confidence != null ? lead.persona_confidence.toFixed(2) : "—"}
               </p>
-              <p className="text-gray-400">Keigo</p>
-              <p className="text-right font-medium text-gray-700">{lead.keigo_level || "—"}</p>
-              <p className="text-gray-400">Emails sent</p>
-              <p className="text-right font-medium text-gray-700">{lead.emails_sent_count ?? 0}</p>
-              <p className="text-gray-400">Thread</p>
-              <p className="truncate text-right font-medium text-gray-700" title={lead.thread_id || ""}>
+              <p className="text-gray-400 dark:text-slate-400">Keigo</p>
+              <p className="text-right font-medium text-gray-700 dark:text-slate-200">{lead.keigo_level || "—"}</p>
+              <p className="text-gray-400 dark:text-slate-400">Emails sent</p>
+              <p className="text-right font-medium text-gray-700 dark:text-slate-200">{lead.emails_sent_count ?? 0}</p>
+              <p className="text-gray-400 dark:text-slate-400">Thread</p>
+              <p className="truncate text-right font-medium text-gray-700 dark:text-slate-200" title={lead.thread_id || ""}>
                 {lead.thread_id ? `${lead.thread_id.slice(0, 8)}…` : "—"}
               </p>
             </div>
           </div>
 
           {(lead.ans3 || lead.ans4 || lead.ans5) && (
-            <div className="mt-3 rounded-xl border border-gray-100 p-3">
-              <p className="text-xs font-semibold text-gray-600">Survey answers</p>
+            <div className="mt-3 rounded-xl border border-gray-100 p-3 dark:border-white/10">
+              <p className="text-xs font-semibold text-gray-600 dark:text-slate-300">Survey answers</p>
               {lead.ans3 ? (
-                <p className="mt-1 text-[11px] text-gray-500">
-                  <span className="font-semibold text-gray-700">Q3:</span> {lead.ans3}
+                <p className="mt-1 text-[11px] text-gray-500 dark:text-slate-400">
+                  <span className="font-semibold text-gray-700 dark:text-slate-200">Q3:</span> {lead.ans3}
                 </p>
               ) : null}
               {lead.ans4 ? (
-                <p className="mt-1 text-[11px] text-gray-500">
-                  <span className="font-semibold text-gray-700">Q4:</span> {lead.ans4}
+                <p className="mt-1 text-[11px] text-gray-500 dark:text-slate-400">
+                  <span className="font-semibold text-gray-700 dark:text-slate-200">Q4:</span> {lead.ans4}
                 </p>
               ) : null}
               {lead.ans5 ? (
-                <p className="mt-1 text-[11px] text-gray-500">
-                  <span className="font-semibold text-gray-700">Q5:</span> {lead.ans5}
+                <p className="mt-1 text-[11px] text-gray-500 dark:text-slate-400">
+                  <span className="font-semibold text-gray-700 dark:text-slate-200">Q5:</span> {lead.ans5}
                 </p>
               ) : null}
             </div>
           )}
         </div>
 
-        <div className="rounded-xl border border-gray-100 bg-white p-4">
+        <div className="rounded-xl border border-gray-100 bg-white p-4 dark:border-white/10 dark:bg-slate-950/40">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-xs font-semibold text-indigo-700">
-              Agent workflow — <span className="text-gray-500">{lead.scenario_id || "—"}</span>
+              Agent workflow — <span className="text-gray-500 dark:text-slate-400">{lead.scenario_id || "—"}</span>
             </p>
-            <div className="inline-flex items-center gap-2 rounded-full bg-gray-50 px-3 py-1 text-[11px] font-semibold text-gray-600">
+            <div className="inline-flex items-center gap-2 rounded-full bg-gray-50 px-3 py-1 text-[11px] font-semibold text-gray-600 dark:bg-white/5 dark:text-slate-300">
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
               {lead.workflow_status || "New"}
             </div>
@@ -291,12 +291,12 @@ const LeadDetail = () => {
 
           <div className="max-h-[640px] space-y-3 overflow-auto pr-1">
             {workflowSteps.map((step) => (
-              <div key={step.id} className="rounded-xl border border-gray-100 bg-white p-3">
+              <div key={step.id} className="rounded-xl border border-gray-100 bg-white p-3 dark:border-white/10 dark:bg-slate-900">
                 <div className="flex items-start gap-3">
                   <StepStateIcon state={step.state} />
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-semibold text-gray-700">{step.title}</p>
-                    <div className="mt-2 space-y-1 text-xs text-gray-500">
+                    <p className="text-xs font-semibold text-gray-700 dark:text-slate-200">{step.title}</p>
+                    <div className="mt-2 space-y-1 text-xs text-gray-500 dark:text-slate-400">
                       {step.lines.map((line, idx) => (
                         <p key={`${step.id}-l-${idx}`}>{line}</p>
                       ))}
@@ -322,29 +322,29 @@ const LeadDetail = () => {
         </div>
 
         <aside className="space-y-3">
-          <div className="rounded-xl border border-gray-100 bg-white p-4">
+          <div className="rounded-xl border border-gray-100 bg-white p-4 dark:border-white/10 dark:bg-slate-950/40">
             <p className="text-xs font-semibold text-indigo-700">Urgency</p>
             <div className="mt-2 flex items-center justify-between gap-2">
               <span className={`rounded-full px-3 py-1 text-xs font-semibold ${urgencyChip}`}>
                 {lead.urgency || "—"}
               </span>
-              <span className="text-right text-[11px] text-gray-400">From workflow state when available</span>
+              <span className="text-right text-[11px] text-gray-400 dark:text-slate-400">From workflow state when available</span>
             </div>
           </div>
 
-          <div className="rounded-xl border border-gray-100 bg-white p-4">
+          <div className="rounded-xl border border-gray-100 bg-white p-4 dark:border-white/10 dark:bg-slate-950/40">
             <p className="text-xs font-semibold text-indigo-700">Engagement</p>
             <div className="mt-2 flex items-center justify-between">
               <span className={`rounded-full px-3 py-1 text-xs font-semibold ${chip.Rising}`}>
                 Score {(lead.engagement_score ?? 0).toFixed(2)}
               </span>
-              <span className="text-[11px] text-gray-400">Stored engagement metric</span>
+              <span className="text-[11px] text-gray-400 dark:text-slate-400">Stored engagement metric</span>
             </div>
           </div>
 
-          <div className="rounded-xl border border-gray-100 bg-white p-4">
+          <div className="rounded-xl border border-gray-100 bg-white p-4 dark:border-white/10 dark:bg-slate-950/40">
             <p className="text-xs font-semibold text-indigo-700">AI summary</p>
-            <p className="mt-2 text-xs text-gray-600">
+            <p className="mt-2 text-xs text-gray-600 dark:text-slate-300">
               {lead.intent_summary || "No intent summary until the workflow produces checkpoint data."}
             </p>
             {lead.product_interest ? (
@@ -352,12 +352,12 @@ const LeadDetail = () => {
             ) : null}
           </div>
 
-          <div className="rounded-xl border border-gray-100 bg-white p-4">
+          <div className="rounded-xl border border-gray-100 bg-white p-4 dark:border-white/10 dark:bg-slate-950/40">
             <p className="text-xs font-semibold text-indigo-700">Decision</p>
             <div className="mt-2">
-              <p className="text-[11px] text-gray-400">UI only (not wired to backend)</p>
+              <p className="text-[11px] text-gray-400 dark:text-slate-400">UI only (not wired to backend)</p>
               <p className="mt-0.5 text-xs font-semibold text-indigo-700">Review actions</p>
-              <p className="mt-0.5 text-[11px] text-gray-500">Score {(lead.engagement_score ?? 0).toFixed(2)}</p>
+              <p className="mt-0.5 text-[11px] text-gray-500 dark:text-slate-400">Score {(lead.engagement_score ?? 0).toFixed(2)}</p>
             </div>
 
             <div className="mt-3 flex items-center gap-2">
@@ -367,7 +367,7 @@ const LeadDetail = () => {
                 className={`h-9 flex-1 rounded-full border px-3 text-xs font-semibold transition ${
                   decision === "continue"
                     ? "border-indigo-600 bg-indigo-600 text-white"
-                    : "border-gray-200 bg-white text-gray-600 hover:border-indigo-300 hover:text-indigo-700"
+                    : "border-gray-200 bg-white text-gray-600 hover:border-indigo-300 hover:text-indigo-700 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:border-white/20 dark:hover:text-white"
                 }`}
               >
                 Force Handoff
@@ -378,7 +378,7 @@ const LeadDetail = () => {
                 className={`h-9 flex-1 rounded-full border px-3 text-xs font-semibold transition ${
                   decision === "hold"
                     ? "border-indigo-600 bg-indigo-600 text-white"
-                    : "border-gray-200 bg-white text-gray-600 hover:border-indigo-300 hover:text-indigo-700"
+                    : "border-gray-200 bg-white text-gray-600 hover:border-indigo-300 hover:text-indigo-700 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:border-white/20 dark:hover:text-white"
                 }`}
               >
                 Hold
@@ -386,15 +386,15 @@ const LeadDetail = () => {
             </div>
           </div>
 
-          <div className="rounded-xl border border-gray-100 bg-white p-4">
+          <div className="rounded-xl border border-gray-100 bg-white p-4 dark:border-white/10 dark:bg-slate-950/40">
             <p className="text-xs font-semibold text-indigo-700">Communications</p>
             <div className="mt-3 max-h-[280px] space-y-3 overflow-auto pr-1">
               {lead.communications?.length ? (
                 lead.communications.map((c) => (
-                  <div key={c.id} className="rounded-lg bg-gray-50 p-3">
-                    <p className="text-xs font-semibold text-gray-800">{c.subject || `Email #${c.email_number ?? "?"}`}</p>
-                    {c.body_preview ? <p className="mt-1 text-[11px] text-gray-600">{c.body_preview}</p> : null}
-                    <p className="mt-1 text-[11px] text-gray-500">
+                  <div key={c.id} className="rounded-lg bg-gray-50 p-3 dark:bg-slate-950/40">
+                    <p className="text-xs font-semibold text-gray-800 dark:text-white">{c.subject || `Email #${c.email_number ?? "?"}`}</p>
+                    {c.body_preview ? <p className="mt-1 text-[11px] text-gray-600 dark:text-slate-300">{c.body_preview}</p> : null}
+                    <p className="mt-1 text-[11px] text-gray-500 dark:text-slate-400">
                       Sent: {c.sent_at || "—"}
                       {c.opened_at ? ` · Opened: ${c.opened_at}` : ""}
                       {c.clicked_at ? ` · Clicked: ${c.clicked_at}` : ""}
@@ -402,7 +402,7 @@ const LeadDetail = () => {
                   </div>
                 ))
               ) : (
-                <p className="text-[11px] text-gray-500">No communications recorded yet.</p>
+                <p className="text-[11px] text-gray-500 dark:text-slate-400">No communications recorded yet.</p>
               )}
             </div>
           </div>
