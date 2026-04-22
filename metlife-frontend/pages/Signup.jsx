@@ -109,15 +109,15 @@ const Signup = () => {
     }
   };
 
-  const inputClass = (hasError) =>
-    `h-11 w-full rounded-full border bg-white pl-11 pr-4 text-sm text-gray-700 outline-none transition focus:ring-2 ${
+const inputClass = (hasError) =>
+  `h-11 w-full rounded-full border bg-white pl-11 pr-4 text-sm text-gray-700 outline-none transition focus:ring-2 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200 dark:focus:ring-indigo-500/20 ${
       hasError
         ? "border-rose-300 focus:border-rose-400 focus:ring-rose-100"
         : "border-gray-200 focus:border-indigo-500 focus:ring-indigo-100"
     }`;
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-slate-950">
       <div className="mx-auto flex min-h-screen max-w-[1600px]">
         <section className="relative hidden w-1/2 overflow-hidden bg-gradient-to-b from-[#2f21c7] via-[#2a1bb3] to-[#21179a] text-white lg:flex lg:flex-col">
           <div className="absolute inset-0 opacity-30">
@@ -148,25 +148,25 @@ const Signup = () => {
           </div>
         </section>
 
-        <section className="flex w-full flex-col bg-white px-6 py-8 sm:px-10 lg:w-1/2 lg:px-16">
+        <section className="flex w-full flex-col bg-white px-6 py-8 sm:px-10 lg:w-1/2 lg:px-16 dark:bg-slate-950">
           <header className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 text-lg font-bold text-indigo-700">
               LN
             </div>
             <div>
               <h1 className="text-base font-bold text-indigo-700">Lead Nurturing</h1>
-              <p className="text-xs text-gray-500">Your Intelligence Platform</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400">Your Intelligence Platform</p>
             </div>
           </header>
 
           <div className="mx-auto flex w-full max-w-[460px] flex-1 flex-col justify-center">
-            <h3 className="text-sm font-medium text-gray-600">Sign up for</h3>
-            <p className="mt-1 text-2xl font-semibold text-gray-900">
+            <h3 className="text-sm font-medium text-gray-600 dark:text-slate-300">Sign up for</h3>
+            <p className="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">
               <span className="text-indigo-700">Lead Nurturing</span>
             </p>
 
             <form onSubmit={onSubmit} className="mt-8">
-              <label className="mb-2 block text-xs font-medium text-gray-600">Full name</label>
+              <label className="mb-2 block text-xs font-medium text-gray-600 dark:text-slate-300">Full name</label>
               <div className="relative mb-1">
                 <UserIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-indigo-500/70" />
                 <input
@@ -184,7 +184,7 @@ const Signup = () => {
                 <div className="mb-3" />
               )}
 
-              <label className="mb-2 block text-xs font-medium text-gray-600">Email</label>
+              <label className="mb-2 block text-xs font-medium text-gray-600 dark:text-slate-300">Email</label>
               <div className="relative mb-1">
                 <MailIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-indigo-500/70" />
                 <input
@@ -202,7 +202,7 @@ const Signup = () => {
                 <div className="mb-3" />
               )}
 
-              <label className="mb-2 block text-xs font-medium text-gray-600">Password</label>
+              <label className="mb-2 block text-xs font-medium text-gray-600 dark:text-slate-300">Password</label>
               <div className="relative mb-1">
                 <LockIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-indigo-500/70" />
                 <input
@@ -217,10 +217,10 @@ const Signup = () => {
               {fieldErrors.password ? (
                 <p className="mb-3 ml-4 text-xs text-rose-600">{fieldErrors.password}</p>
               ) : (
-                <p className="mb-3 ml-4 text-[11px] text-gray-400">Must be at least 8 characters.</p>
+                <p className="mb-3 ml-4 text-[11px] text-gray-400 dark:text-slate-400">Must be at least 8 characters.</p>
               )}
 
-              <label className="mb-2 block text-xs font-medium text-gray-600">Confirm password</label>
+              <label className="mb-2 block text-xs font-medium text-gray-600 dark:text-slate-300">Confirm password</label>
               <div className="relative mb-1">
                 <LockIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-indigo-500/70" />
                 <input
@@ -249,7 +249,7 @@ const Signup = () => {
               </button>
             </form>
 
-            <p className="mt-10 text-center text-xs text-gray-500">
+            <p className="mt-10 text-center text-xs text-gray-500 dark:text-slate-400">
               Already have an account?{" "}
               <Link to="/login" className="font-semibold text-indigo-700 hover:underline">
                 Log in

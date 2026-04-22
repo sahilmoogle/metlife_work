@@ -1,3 +1,7 @@
+import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "../context/AuthContext";
+import { fetchDashboardStats } from "../src/services/dashboardApi";
+
 const MetricIcon = ({ variant }) => {
   const common = "h-4 w-4";
   if (variant === "leads") {
@@ -83,75 +87,182 @@ const MetricIcon = ({ variant }) => {
   );
 };
 
-const stats = [
-  {
-    title: "Total Leads",
-    value: "2,847",
-    change: "+12.4%",
-    icon: "leads",
-    chip: "bg-violet-50 text-violet-700 ring-violet-100",
-    iconWrap: "bg-violet-50 text-violet-700",
-  },
-  {
-    title: "Active Workflows",
-    value: "847",
-    change: "+12.4%",
-    icon: "workflows",
-    chip: "bg-emerald-50 text-emerald-700 ring-emerald-100",
-    iconWrap: "bg-emerald-50 text-emerald-700",
-  },
-  {
-    title: "Converted",
-    value: "247",
-    change: "+15.6%",
-    icon: "converted",
-    chip: "bg-amber-50 text-amber-700 ring-amber-100",
-    iconWrap: "bg-amber-50 text-amber-700",
-  },
-  {
-    title: "Pending HITL",
-    value: "11",
-    change: "-2%",
-    icon: "pending",
-    chip: "bg-rose-50 text-rose-700 ring-rose-100",
-    iconWrap: "bg-rose-50 text-rose-700",
-  },
-];
+const formatInt = (n) => new Intl.NumberFormat().format(n ?? 0);
 
-const scenarios = [
-  { id: "S1", value: "271", label: "Young Prof" },
-  { id: "S2", value: "153", label: "Married" },
-  { id: "S3", value: "119", label: "Senior" },
-  { id: "S4", value: "85", label: "Dormant" },
-  { id: "S5", value: "127", label: "Buyer" },
-  { id: "S6", value: "51", label: "F2F" },
-  { id: "S7", value: "41", label: "W2C" },
-];
+const pct = (num, den) => {
+  if (!den || den <= 0) return 0;
+  return Math.round((num / den) * 1000) / 10;
+};
 
-const feed = [
-  "Mei Fujita - Consultation booked - Score 0.90+",
-  "AB - Hana Kimura - Score improved 0.72 -> 0.81",
-  "G1 - Ryo Matsuda - New HLTL review assigned",
-  "A6 - Koji Tanaka - Email #2 successfully delivered",
-  "Mei Fujita - Consultation booked - Score 0.90+",
-];
-
-const progressBars = [
-  { label: "Total Leads 2,847", value: 100, color: "bg-violet-600", track: "bg-violet-50" },
-  { label: "Email Sent 2,050", value: 75, color: "bg-emerald-600", track: "bg-emerald-50" },
-  { label: "Engaged 1,368", value: 60, color: "bg-amber-500", track: "bg-amber-50" },
-  { label: "High Score 798", value: 38, color: "bg-blue-600", track: "bg-blue-50" },
-  { label: "Converted 342", value: 25, color: "bg-fuchsia-600", track: "bg-fuchsia-50" },
-];
+const scenarioMeta = {
+  S1: { label: "Young Prof" },
+  S2: { label: "Married" },
+  S3: { label: "Senior" },
+  S4: { label: "Dormant" },
+  S5: { label: "Buyer" },
+  S6: { label: "F2F" },
+  S7: { label: "W2C" },
+};
 
 const Dashboard = () => {
+  const { token } = useAuth();
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const run = async () => {
+      setError("");
+      setLoading(true);
+      try {
+        const data = await fetchDashboardStats(token);
+        if (!cancelled) setStats(data);
+      } catch (e) {
+        if (!cancelled) {
+          setStats(null);
+          setError(e.message || "Failed to load dashboard.");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, refreshKey]);
+
+  const refresh = () => setRefreshKey((k) => k + 1);
+
+  const total = stats?.total_leads ?? 0;
+  const active = stats?.active_leads ?? 0;
+  const hitl = stats?.hitl_leads ?? 0;
+  const converted = stats?.converted_leads ?? 0;
+  const dormant = stats?.dormant_leads ?? 0;
+  const suppressed = stats?.suppressed_leads ?? 0;
+
+  const scenarioRows = useMemo(() => {
+    const breakdown = stats?.scenario_breakdown || {};
+    return ["S1", "S2", "S3", "S4", "S5", "S6", "S7"].map((id) => ({
+      id,
+      value: formatInt(breakdown[id] ?? 0),
+      label: scenarioMeta[id]?.label || "—",
+    }));
+  }, [stats]);
+
+  const funnelBars = useMemo(() => {
+    const t = total || 0;
+    return [
+      {
+        label: `Total Leads ${formatInt(t)}`,
+        value: t ? 100 : 0,
+        color: "bg-violet-600",
+        track: "bg-violet-50",
+      },
+      {
+        label: `Active / Processing ${formatInt(active)}`,
+        value: pct(active, t),
+        color: "bg-emerald-600",
+        track: "bg-emerald-50",
+      },
+      {
+        label: `HITL queue ${formatInt(hitl)}`,
+        value: pct(hitl, t),
+        color: "bg-amber-500",
+        track: "bg-amber-50",
+      },
+      {
+        label: `Converted ${formatInt(converted)}`,
+        value: pct(converted, t),
+        color: "bg-fuchsia-600",
+        track: "bg-fuchsia-50",
+      },
+      {
+        label: `Dormant ${formatInt(dormant)}`,
+        value: pct(dormant, t),
+        color: "bg-blue-600",
+        track: "bg-blue-50",
+      },
+    ];
+  }, [active, converted, dormant, hitl, total]);
+
+  const kpiCards = useMemo(
+    () => [
+      {
+        title: "Total Leads",
+        value: formatInt(total),
+        change: suppressed ? `${formatInt(suppressed)} suppressed` : "All records",
+        icon: "leads",
+        chip: "bg-violet-50 text-violet-700 ring-violet-100",
+        iconWrap: "bg-violet-50 text-violet-700",
+      },
+      {
+        title: "Active Workflows",
+        value: formatInt(active),
+        change: total ? `${pct(active, total)}% of total` : "—",
+        icon: "workflows",
+        chip: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+        iconWrap: "bg-emerald-50 text-emerald-700",
+      },
+      {
+        title: "Converted",
+        value: formatInt(converted),
+        change: total ? `${pct(converted, total)}% of total` : "—",
+        icon: "converted",
+        chip: "bg-amber-50 text-amber-700 ring-amber-100",
+        iconWrap: "bg-amber-50 text-amber-700",
+      },
+      {
+        title: "Pending HITL",
+        value: formatInt(hitl),
+        change: total ? `${pct(hitl, total)}% of total` : "—",
+        icon: "pending",
+        chip: "bg-rose-50 text-rose-700 ring-rose-100",
+        iconWrap: "bg-rose-50 text-rose-700",
+      },
+    ],
+    [active, converted, hitl, suppressed, total]
+  );
+
+  const feedItems = useMemo(() => {
+    const nodes = stats?.node_counts || {};
+    return Object.entries(nodes)
+      .filter(([k]) => k)
+      .sort((a, b) => (b[1] || 0) - (a[1] || 0))
+      .slice(0, 6)
+      .map(([node, count]) => ({
+        title: `${node} — ${formatInt(count)} active leads`,
+        meta: "Active pipeline",
+      }));
+  }, [stats]);
+
   return (
     <>
+      {error ? (
+        <div className="mb-3 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+          {error}{" "}
+          <button type="button" className="ml-2 font-semibold underline" onClick={refresh}>
+            Retry
+          </button>
+        </div>
+      ) : null}
+
+      {loading ? (
+        <div className="mb-3 rounded-2xl border border-gray-100 bg-white px-4 py-3 text-sm text-gray-500">
+          Loading dashboard…
+        </div>
+      ) : null}
+
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map((item) => (
+        {kpiCards.map((item) => (
           <article
             key={item.title}
-            className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)]"
+            className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
@@ -159,8 +270,8 @@ const Dashboard = () => {
                   <MetricIcon variant={item.icon} />
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-gray-500">{item.title}</p>
-                  <p className="mt-1 text-2xl font-semibold tracking-tight text-[#1e2a52]">{item.value}</p>
+                  <p className="text-xs font-medium text-gray-500 dark:text-slate-400">{item.title}</p>
+                  <p className="mt-1 text-2xl font-semibold tracking-tight text-[#1e2a52] dark:text-white">{item.value}</p>
                 </div>
               </div>
               <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ring-1 ${item.chip}`}>
@@ -172,20 +283,20 @@ const Dashboard = () => {
       </section>
 
       <section className="mt-4 grid gap-3 xl:grid-cols-2">
-        <article className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)]">
-          <h3 className="text-sm font-semibold text-[#1e2a52]">Conversion Funnel</h3>
-          <p className="mb-4 text-[11px] text-gray-400">Lead Journey Progression</p>
+        <article className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
+          <h3 className="text-sm font-semibold text-[#1e2a52] dark:text-white">Conversion Funnel</h3>
+          <p className="mb-4 text-[11px] text-gray-400 dark:text-slate-400">Lead journey from database aggregates</p>
           <div className="space-y-3">
-            {progressBars.map((bar) => (
+            {funnelBars.map((bar) => (
               <div key={bar.label}>
-                <div className="mb-1 flex justify-between text-[11px] text-gray-500">
+                <div className="mb-1 flex justify-between text-[11px] text-gray-500 dark:text-slate-400">
                   <span>{bar.label}</span>
                   <span>{bar.value}%</span>
                 </div>
                 <div className={`h-2 rounded-full ${bar.track}`}>
                   <div
                     className={`h-full rounded-full ${bar.color}`}
-                    style={{ width: `${bar.value}%` }}
+                    style={{ width: `${Math.min(100, bar.value)}%` }}
                   />
                 </div>
               </div>
@@ -193,21 +304,21 @@ const Dashboard = () => {
           </div>
         </article>
 
-        <article className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)]">
-          <h3 className="text-sm font-semibold text-[#1e2a52]">Scenario Distribution</h3>
-          <p className="mb-4 text-[11px] text-gray-400">Active Leads by Scenario</p>
+        <article className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
+          <h3 className="text-sm font-semibold text-[#1e2a52] dark:text-white">Scenario Distribution</h3>
+          <p className="mb-4 text-[11px] text-gray-400 dark:text-slate-400">All leads by scenario_id</p>
           <div className="grid gap-2 sm:grid-cols-2">
-            {scenarios.map((scenario) => (
+            {scenarioRows.map((scenario) => (
               <div
                 key={scenario.id}
-                className="flex items-center gap-3 rounded-xl border border-gray-100 bg-white p-3 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)]"
+                className="flex items-center gap-3 rounded-xl border border-gray-100 bg-white p-3 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-white/10 dark:bg-slate-950/40 dark:shadow-none"
               >
                 <span className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-50 text-xs font-semibold text-indigo-700 ring-1 ring-indigo-100">
                   {scenario.id}
                 </span>
                 <div>
-                  <p className="text-sm font-semibold text-gray-800">{scenario.value}</p>
-                  <p className="text-xs text-gray-400">{scenario.label}</p>
+                  <p className="text-sm font-semibold text-gray-800 dark:text-white">{scenario.value}</p>
+                  <p className="text-xs text-gray-400 dark:text-slate-400">{scenario.label}</p>
                 </div>
               </div>
             ))}
@@ -215,27 +326,31 @@ const Dashboard = () => {
         </article>
       </section>
 
-      <section className="mt-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)]">
+      <section className="mt-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-[#1e2a52]">Live Activity Feed</h3>
-          <span className="text-xs text-gray-400 inline-flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-[#1e2a52] dark:text-white">Live Activity Feed</h3>
+          <span className="inline-flex items-center gap-2 text-xs text-gray-400 dark:text-slate-400">
             <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
-            Real-time
+            From active agent nodes
           </span>
         </div>
         <div className="space-y-3">
-          {feed.map((item) => (
-            <div
-              key={item}
-              className="flex items-start gap-3 border-b border-gray-100 pb-3 text-sm text-gray-600 last:border-none last:pb-0"
-            >
-              <span className="mt-1.5 h-2 w-2 rounded-full bg-violet-500" />
-              <div className="min-w-0">
-                <p className="truncate text-sm text-gray-700">{item}</p>
-                <p className="mt-0.5 text-[11px] text-gray-400">S3 • Just now</p>
+          {feedItems.length ? (
+            feedItems.map((item) => (
+              <div
+                key={item.title}
+                className="flex items-start gap-3 border-b border-gray-100 pb-3 text-sm text-gray-600 last:border-none last:pb-0 dark:border-white/10 dark:text-slate-300"
+              >
+                <span className="mt-1.5 h-2 w-2 flex-none rounded-full bg-violet-500" />
+                <div className="min-w-0">
+                  <p className="truncate text-sm text-gray-700 dark:text-slate-200">{item.title}</p>
+                  <p className="mt-0.5 text-[11px] text-gray-400 dark:text-slate-400">{item.meta}</p>
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            <p className="text-sm text-gray-500 dark:text-slate-400">No active pipeline nodes with counts yet.</p>
+          )}
         </div>
       </section>
     </>
