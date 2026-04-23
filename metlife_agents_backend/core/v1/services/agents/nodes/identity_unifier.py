@@ -29,7 +29,11 @@ NODE_ID = "A1_Identity"
 async def identity_unifier(state: dict, *, db: AsyncSession) -> dict:
     """Assemble a unified lead profile from DB tables into state."""
     lead_id = state["lead_id"]
-    await event_manager.publish(node_transition_event(lead_id, NODE_ID, "started"))
+    await event_manager.publish(
+        node_transition_event(
+            lead_id, NODE_ID, "started", batch_id=state.get("batch_id")
+        )
+    )
     start = time.perf_counter()
 
     # ── Fetch lead record ────────────────────────────────────────────
@@ -38,7 +42,13 @@ async def identity_unifier(state: dict, *, db: AsyncSession) -> dict:
 
     if lead is None:
         await event_manager.publish(
-            node_transition_event(lead_id, NODE_ID, "failed", "Lead not found")
+            node_transition_event(
+                lead_id,
+                NODE_ID,
+                "failed",
+                "Lead not found",
+                batch_id=state.get("batch_id"),
+            )
         )
         return {**state, "workflow_status": "failed", "current_node": NODE_ID}
 
@@ -162,7 +172,13 @@ async def identity_unifier(state: dict, *, db: AsyncSession) -> dict:
     latency_ms = int((time.perf_counter() - start) * 1000)
     logger.info("A1 completed for lead %s in %dms", lead_id, latency_ms)
     await event_manager.publish(
-        node_transition_event(lead_id, NODE_ID, "completed", f"{latency_ms}ms")
+        node_transition_event(
+            lead_id,
+            NODE_ID,
+            "completed",
+            f"{latency_ms}ms",
+            batch_id=state.get("batch_id"),
+        )
     )
     state["execution_log"] = [
         create_log_entry(

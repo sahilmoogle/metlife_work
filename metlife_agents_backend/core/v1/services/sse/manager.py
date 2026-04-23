@@ -246,15 +246,19 @@ def node_transition_event(
     node: str,
     status: str,
     detail: str = "",
+    batch_id: str | None = None,
 ) -> dict:
     """Create a node_transition event payload."""
-    return {
+    event = {
         "event_type": "node_transition",
         "lead_id": lead_id,
         "node": node,
         "status": status,
         "detail": detail,
     }
+    if batch_id:
+        event["batch_id"] = batch_id
+    return event
 
 
 def hitl_required_event(

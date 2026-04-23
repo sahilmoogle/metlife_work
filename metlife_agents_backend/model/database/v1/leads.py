@@ -83,6 +83,11 @@ class Lead(Base):
     cooldown_flag = Column(Boolean, default=False)
     is_converted = Column(Boolean, default=False)
 
+    # ── Completion bookkeeping ───────────────────────────────────────
+    # Used by UI to show per-lead completion regardless of status label.
+    workflow_completed = Column(Boolean, default=False, index=True)
+    completed_at = Column(TIMESTAMP, nullable=True)
+
     # ── LangGraph thread linkage ────────────────────────────────────
     thread_id = Column(
         String(100), nullable=True, index=True

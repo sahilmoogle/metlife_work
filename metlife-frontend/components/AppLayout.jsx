@@ -19,7 +19,7 @@ const navItems = [
   { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
   { label: "Leads", path: "/leads", icon: Users },
   { label: "Work Flow Engine", path: "/campaigns", icon: Workflow },
-  { label: "HLTL Reviews", path: "/reviews", icon: ClipboardCheck },
+  { label: "HITL Reviews", path: "/reviews", icon: ClipboardCheck },
   { label: "Analytics", path: "/analytics", icon: BarChart3 },
   { label: "Admin - RBAC", path: "/settings", icon: Settings },
 ];

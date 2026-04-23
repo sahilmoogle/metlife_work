@@ -5,6 +5,8 @@ Pydantic models for the Leads API.
 from typing import Optional
 from pydantic import BaseModel
 
+from model.api.v1.agents import ExecutionLogEntry
+
 
 class CommunicationEntry(BaseModel):
     id: str
@@ -25,6 +27,8 @@ class LeadSummaryResponse(BaseModel):
     persona_code: Optional[str] = None
     engagement_score: float = 0.0
     workflow_status: str = "New"
+    workflow_completed: bool = False
+    completed_at: Optional[str] = None
     current_agent_node: Optional[str] = None
     thread_id: Optional[str] = None  # None until workflow starts
     last_activity: str = ""
@@ -46,11 +50,15 @@ class LeadDetailResponse(BaseModel):
     keigo_level: Optional[str]
     engagement_score: float
     workflow_status: str
+    workflow_completed: bool = False
+    completed_at: Optional[str] = None
     thread_id: Optional[str]
     emails_sent_count: int = 0
     # AI Insights from State
     intent_summary: Optional[str] = None
     urgency: Optional[str] = None
     product_interest: Optional[str] = None
+    current_node: Optional[str] = None
+    execution_log: list[ExecutionLogEntry] = []
     # Communication history
     communications: list[CommunicationEntry] = []

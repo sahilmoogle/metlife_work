@@ -17,6 +17,7 @@ import time
 
 from core.v1.services.sse.manager import event_manager, node_transition_event
 from core.v1.services.agents.state import create_log_entry
+from utils.v1.db_sync import sync_lead_state
 
 logger = logging.getLogger(__name__)
 
@@ -26,10 +27,12 @@ NODE_ID = "A4_ContentStrategy"
 LLM_FIRST_EMAIL_SCENARIOS = ("S6", "S7")
 
 
-async def content_strategist(state: dict) -> dict:
+async def content_strategist(state: dict, *, db=None) -> dict:
     """Decide the email content strategy for the current sequence step."""
     lead_id = state["lead_id"]
-    await event_manager.publish(node_transition_event(lead_id, NODE_ID, "started"))
+    await event_manager.publish(
+        node_transition_event(lead_id, NODE_ID, "started", batch_id=state.get("batch_id"))
+    )
     start = time.perf_counter()
 
     email_number = state.get("email_number", 0) + 1
@@ -47,6 +50,8 @@ async def content_strategist(state: dict) -> dict:
         await event_manager.publish(
             node_transition_event(
                 lead_id, NODE_ID, "completed", f"email#{email_number} rejected→LLM"
+                ,
+                batch_id=state.get("batch_id"),
             )
         )
         return state
@@ -92,6 +97,8 @@ async def content_strategist(state: dict) -> dict:
         state["draft_email_body"] = None
 
     state["current_node"] = NODE_ID
+    if db is not None:
+        await sync_lead_state(db, lead_id, current_agent_node=NODE_ID, workflow_status="Active")
 
     latency_ms = int((time.perf_counter() - start) * 1000)
     logger.info(
@@ -107,6 +114,7 @@ async def content_strategist(state: dict) -> dict:
             NODE_ID,
             "completed",
             f"email#{email_number} {state['content_type']} {latency_ms}ms",
+            batch_id=state.get("batch_id"),
         )
     )
 

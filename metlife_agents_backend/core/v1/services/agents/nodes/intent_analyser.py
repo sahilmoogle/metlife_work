@@ -15,13 +15,14 @@ from prompts.intent import A3_INTENT_SYSTEM, A3_INTENT_USER
 from core.v1.services.sse.manager import event_manager, node_transition_event
 from core.v1.services.agents.state import create_log_entry
 from langchain_core.messages import SystemMessage, HumanMessage
+from utils.v1.db_sync import sync_lead_state
 
 logger = logging.getLogger(__name__)
 
 NODE_ID = "A3_Intent"
 
 
-async def intent_analyser(state: dict, *, llm=None) -> dict:
+async def intent_analyser(state: dict, *, llm=None, db=None) -> dict:
     """Analyse lead intent from engagement signals.
 
     Args:
@@ -29,7 +30,9 @@ async def intent_analyser(state: dict, *, llm=None) -> dict:
         llm: LangChain-compatible chat model (injected at graph build).
     """
     lead_id = state["lead_id"]
-    await event_manager.publish(node_transition_event(lead_id, NODE_ID, "started"))
+    await event_manager.publish(
+        node_transition_event(lead_id, NODE_ID, "started", batch_id=state.get("batch_id"))
+    )
     start = time.perf_counter()
 
     # ── Build the prompt ─────────────────────────────────────────────
@@ -72,11 +75,15 @@ async def intent_analyser(state: dict, *, llm=None) -> dict:
         state["product_interest"] = state.get("product_code") or "general"
 
     state["current_node"] = NODE_ID
+    if db is not None:
+        await sync_lead_state(db, lead_id, current_agent_node=NODE_ID, workflow_status="Active")
 
     latency_ms = int((time.perf_counter() - start) * 1000)
     logger.info("A3 completed for lead %s in %dms", lead_id, latency_ms)
     await event_manager.publish(
-        node_transition_event(lead_id, NODE_ID, "completed", f"{latency_ms}ms")
+        node_transition_event(
+            lead_id, NODE_ID, "completed", f"{latency_ms}ms", batch_id=state.get("batch_id")
+        )
     )
 
     state["execution_log"] = [

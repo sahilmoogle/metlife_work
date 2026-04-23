@@ -14,6 +14,7 @@ from model.api.v1.leads import (
     LeadDetailResponse,
     CommunicationEntry,
 )
+from model.api.v1.agents import ExecutionLogEntry
 from model.database.v1.leads import Lead
 from model.database.v1.communications import Communication
 from utils.v1.connections import get_db
@@ -42,6 +43,10 @@ async def get_all_leads(db: AsyncSession = Depends(get_db)):
             persona_code=r.persona_code,
             engagement_score=r.engagement_score or 0.0,
             workflow_status=r.workflow_status or "New",
+            workflow_completed=bool(getattr(r, "workflow_completed", False)),
+            completed_at=str(getattr(r, "completed_at", None))
+            if getattr(r, "completed_at", None)
+            else None,
             current_agent_node=r.current_agent_node,
             thread_id=r.thread_id,
             last_activity=str(r.updated_at) if r.updated_at else "",
@@ -78,7 +83,8 @@ async def get_lead_detail(lead_id: str, db: AsyncSession = Depends(get_db)):
         )
 
     # AI insights — only available after workflow has started
-    intent_summary = urgency = product_interest = None
+    intent_summary = urgency = product_interest = current_node = None
+    execution_log: list[ExecutionLogEntry] = []
     if lead.thread_id:
         try:
             config = {"configurable": {"thread_id": lead.thread_id}}
@@ -90,6 +96,15 @@ async def get_lead_detail(lead_id: str, db: AsyncSession = Depends(get_db)):
                     intent_summary = s.get("intent_summary")
                     urgency = s.get("urgency")
                     product_interest = s.get("product_interest")
+                    current_node = s.get("current_node")
+                    raw_log = s.get("execution_log", [])
+                    parsed_log: list[ExecutionLogEntry] = []
+                    for entry in raw_log:
+                        try:
+                            parsed_log.append(ExecutionLogEntry(**entry))
+                        except Exception:
+                            pass
+                    execution_log = parsed_log
         except Exception as exc:
             logger.warning(
                 "Could not load LangGraph state for lead %s: %s", lead_id, exc
@@ -134,11 +149,17 @@ async def get_lead_detail(lead_id: str, db: AsyncSession = Depends(get_db)):
             keigo_level=lead.keigo_level,
             engagement_score=lead.engagement_score or 0.0,
             workflow_status=lead.workflow_status or "New",
+            workflow_completed=bool(getattr(lead, "workflow_completed", False)),
+            completed_at=str(getattr(lead, "completed_at", None))
+            if getattr(lead, "completed_at", None)
+            else None,
             thread_id=lead.thread_id,
             emails_sent_count=lead.emails_sent_count or 0,
             intent_summary=intent_summary,
             urgency=urgency,
             product_interest=product_interest,
+            current_node=current_node,
+            execution_log=execution_log,
             communications=communications,
         ),
         message="Lead detail retrieved.",

@@ -4,6 +4,7 @@ HITL Queue API — manage human-in-the-loop review items.
 
 import logging
 from datetime import datetime, timezone
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, update as sa_update
@@ -52,17 +53,23 @@ def _g1_checkpoint_patch(request: HITLApproveRequest) -> dict | None:
 )
 async def get_hitl_queue(
     gate_type: str | None = None,
+    queue: Literal["pending", "resolved"] = "pending",
     db: AsyncSession = Depends(get_db),
 ):
-    """Fetch all pending HITL review items.
+    """Fetch HITL queue rows joined with lead profile.
+
+    * ``queue=pending`` (default): ``review_status == Awaiting``.
+    * ``queue=resolved``: terminal review outcomes (Approved / Edited / Rejected).
 
     Optional ``gate_type`` filter: G1, G2, G3, G4, G5.
     """
-    query = (
-        select(HITLQueue, Lead)
-        .join(Lead, HITLQueue.lead_id == Lead.id)
-        .where(HITLQueue.review_status == "Awaiting")
-    )
+    query = select(HITLQueue, Lead).join(Lead, HITLQueue.lead_id == Lead.id)
+    if queue == "resolved":
+        query = query.where(
+            HITLQueue.review_status.in_(["Approved", "Edited", "Rejected"])
+        )
+    else:
+        query = query.where(HITLQueue.review_status == "Awaiting")
     if gate_type:
         query = query.where(HITLQueue.gate_type == gate_type)
     query = query.order_by(HITLQueue.created_at.desc())
@@ -99,7 +106,7 @@ async def get_hitl_queue(
         success=True,
         status_code=status.HTTP_200_OK,
         data=items,
-        message=f"{len(items)} pending review items",
+        message=f"{len(items)} {'resolved' if queue == 'resolved' else 'pending'} review items",
     )
 
 
@@ -233,6 +240,9 @@ async def approve_hitl(
         lead_status = "Active"
 
     lead_update_values: dict = {"workflow_status": lead_status}
+    if lead_status in ("Converted", "Dormant", "Suppressed"):
+        lead_update_values["workflow_completed"] = True
+        lead_update_values["completed_at"] = datetime.now(timezone.utc)
     if gate_type == "G4" and request.action in ("approved", "edited"):
         lead_update_values["is_converted"] = True
 

@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { fetchLeadsList } from "../src/services/leadsApi";
 import { fetchHitlQueue } from "../src/services/hitlApi";
 import { fetchDashboardStats } from "../src/services/dashboardApi";
 import { getBatchStatus, getLatestBatch, runBatch } from "../src/services/agentsApi";
+import { buildSseStreamUrl } from "../src/services/sseStream";
 
 const scenarioCards = [
   { id: "S1", label: "Young Prof", tone: "text-indigo-700 bg-indigo-50 ring-indigo-100" },
@@ -58,6 +59,12 @@ const pipelineStages = [
   { key: "hitl", label: "HITL Gates", accent: "text-amber-700", icon: "shield" },
   { key: "conv", label: "✓ Converted", accent: "text-emerald-700", icon: "check" },
 ];
+
+const emptyExecutedCounts = () =>
+  pipelineStages.reduce((acc, s) => {
+    if (!["hitl", "conv"].includes(s.key)) acc[s.key] = 0;
+    return acc;
+  }, {});
 
 const StageIcon = ({ name }) => {
   const common = "h-5 w-5";
@@ -297,6 +304,8 @@ const Campaigns = () => {
   const [awaitingHitl, setAwaitingHitl] = useState(0);
   /** Per-stage counts from GET /dashboard/stats → ``node_counts`` (Active/Processing leads). */
   const [pipelineCounts, setPipelineCounts] = useState(() => aggregatePipelineCounts(null));
+  /** Per-stage executed counts from SSE node_transition events (per active batch). */
+  const [executedCounts, setExecutedCounts] = useState(() => emptyExecutedCounts());
   const [scenarioCounts, setScenarioCounts] = useState(() => ({
     S1: 0,
     S2: 0,
@@ -309,6 +318,8 @@ const Campaigns = () => {
   }));
 
   const timerRef = useRef(null);
+  /** Batch row currently shown — used to ignore other users' ``batch_progress`` events on shared SSE. */
+  const activeBatchIdRef = useRef(null);
 
   const totalLeads = batch?.total ?? Object.values(scenarioCounts).reduce((a, b) => a + b, 0);
   const processed = batch?.processed_count ?? 0;
@@ -317,12 +328,12 @@ const Campaigns = () => {
   const remaining = Math.max(0, (batch?.total ?? 0) - processed);
   const progressPct = batch?.pct ?? (totalLeads ? Math.round((processed / totalLeads) * 100) : 0);
 
-  const stopTimer = () => {
+  const stopTimer = useCallback(() => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
-  };
+  }, []);
 
   useEffect(() => {
     return () => stopTimer();
@@ -336,23 +347,23 @@ const Campaigns = () => {
     setStatus("idle");
   };
 
-  const refreshHitl = async () => {
+  const refreshHitl = useCallback(async () => {
     try {
       const q = await fetchHitlQueue(token);
       setAwaitingHitl(Array.isArray(q) ? q.length : 0);
     } catch {
       // Queue count is secondary; ignore errors here.
     }
-  };
+  }, [token]);
 
-  const refreshPipelineFromDashboard = async () => {
+  const refreshPipelineFromDashboard = useCallback(async () => {
     try {
       const stats = await fetchDashboardStats(token);
       setPipelineCounts(aggregatePipelineCounts(stats?.node_counts));
     } catch {
       // Keep previous pipeline counts on failure.
     }
-  };
+  }, [token]);
 
   const pollBatch = (batchId) => {
     stopTimer();
@@ -461,6 +472,104 @@ const Campaigns = () => {
   // pollBatch is defined in this component and does not change across renders in practice.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  useEffect(() => {
+    activeBatchIdRef.current = batch?.batch_id ?? null;
+    // When a new batch is set (or cleared), reset executed counters for "this run".
+    setExecutedCounts(emptyExecutedCounts());
+  }, [batch?.batch_id]);
+
+  // Live SSE: ``batch_progress`` matches backend agent_api emissions; HITL / workflow hints refresh stats.
+  useEffect(() => {
+    if (!token || typeof EventSource === "undefined") return;
+
+    let es;
+    try {
+      es = new EventSource(buildSseStreamUrl(token));
+    } catch {
+      return;
+    }
+
+    const liveStatTypes = [
+      "hitl_required",
+      "hitl_approved",
+      "hitl_edited",
+      "hitl_rejected",
+      "lead_converted",
+      "workflow_state",
+      "node_transition",
+    ];
+
+    const onBatchProgress = (ev) => {
+      let d;
+      try {
+        d = JSON.parse(ev.data);
+      } catch {
+        return;
+      }
+      if (d.event_type !== "batch_progress" || !d.batch_id) return;
+      if (d.batch_id !== activeBatchIdRef.current) return;
+
+      setBatch((prev) => {
+        if (!prev || prev.batch_id !== d.batch_id) return prev;
+        const pct =
+          d.pct != null
+            ? d.pct
+            : d.total
+              ? Math.round((d.processed / d.total) * 100)
+              : prev.pct ?? 0;
+        return {
+          ...prev,
+          processed_count: d.processed,
+          total: d.total,
+          success_count: d.success,
+          failed_count: d.failed,
+          status: d.status,
+          pct,
+        };
+      });
+
+      if (d.status && d.status !== "running") {
+        setStatus("complete");
+        stopTimer();
+      } else {
+        setStatus("running");
+      }
+    };
+
+    const onNodeTransition = (ev) => {
+      let d;
+      try {
+        d = JSON.parse(ev.data);
+      } catch {
+        return;
+      }
+      if (d.event_type !== "node_transition") return;
+      if (d.status !== "completed") return;
+      if (!d.batch_id || d.batch_id !== activeBatchIdRef.current) return;
+
+      const stageKey = BACKEND_NODE_TO_STAGE_KEY[d.node];
+      if (!stageKey) return;
+      setExecutedCounts((prev) => ({ ...prev, [stageKey]: (prev[stageKey] || 0) + 1 }));
+    };
+
+    let lastLiveRefresh = 0;
+    const onLiveStatHint = () => {
+      const t = Date.now();
+      if (t - lastLiveRefresh < 2000) return;
+      lastLiveRefresh = t;
+      void refreshHitl();
+      void refreshPipelineFromDashboard();
+    };
+
+    es.addEventListener("batch_progress", onBatchProgress);
+    es.addEventListener("node_transition", onNodeTransition);
+    for (const t of liveStatTypes) es.addEventListener(t, onLiveStatHint);
+
+    return () => {
+      es.close();
+    };
+  }, [token, refreshHitl, refreshPipelineFromDashboard, stopTimer]);
 
   // When a batch finishes, the 1.2s poller stops — HITL approvals would not update the top
   // “awaiting HITL” number. Keep HITL + pipeline stats fresh even with no running batch.
@@ -614,7 +723,7 @@ const Campaigns = () => {
             <div className="mb-3">
               <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">Agent Execution Pipeline</p>
               <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">
-                Agent counts = active leads whose last persisted step matches that agent (dashboard API). Refreshes with batch polling — not live SSE. HITL / converted use batch + queue.
+                Batch bar uses live SSE batch_progress events plus a 1.2s poll backup. Pipeline and HITL counts refresh from the dashboard API on a timer and when SSE reports workflow or HITL activity.
               </p>
             </div>
 
@@ -622,12 +731,14 @@ const Campaigns = () => {
               {pipelineStages.map((stage) => {
                 const isHitl = stage.key === "hitl";
                 const isConv = stage.key === "conv";
+                const isAgentStage = !isHitl && !isConv;
                 const value =
                   stage.key === "hitl"
                     ? awaitingHitl
                     : stage.key === "conv"
                       ? success
                       : pipelineCounts[stage.key] ?? 0;
+                const executed = isAgentStage ? executedCounts[stage.key] ?? 0 : 0;
                 return (
                   <div
                     key={stage.key}
@@ -638,7 +749,7 @@ const Campaigns = () => {
                     <div className={`text-[11px] font-semibold ${stage.accent}`}>{stage.label}</div>
                     <div className="mt-4 text-center">
                       <p className={`text-3xl font-semibold tracking-tight ${isConv ? "text-emerald-700" : "text-[#1e2a52] dark:text-white"}`}>
-                        {loading ? 0 : value}
+                        {loading ? 0 : isAgentStage ? executed : value}
                       </p>
                       <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">
                         {loading
@@ -649,9 +760,11 @@ const Campaigns = () => {
                               : "Idle"
                             : isConv
                               ? "Succeeded"
-                              : value
-                                ? "Last synced step"
-                                : "—"}
+                              : executed
+                                ? `Executed · current ${value}`
+                                : value
+                                  ? `Current ${value}`
+                                  : "—"}
                       </p>
                     </div>
                   </div>

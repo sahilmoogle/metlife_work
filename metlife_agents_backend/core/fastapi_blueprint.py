@@ -26,9 +26,8 @@ connect_router.include_router(
 connect_router.include_router(
     hitl, prefix="/hitl", tags=["HITL Queue"], dependencies=_auth
 )
-connect_router.include_router(
-    sse, prefix="/sse", tags=["SSE Events"], dependencies=_auth
-)
+# SSE uses per-route auth: EventSource cannot send ``Authorization``; see ``get_current_user_for_sse``.
+connect_router.include_router(sse, prefix="/sse", tags=["SSE Events"])
 connect_router.include_router(
     leads, prefix="/leads", tags=["Leads"], dependencies=_auth
 )

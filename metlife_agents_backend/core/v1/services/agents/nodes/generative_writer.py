@@ -30,7 +30,11 @@ async def generative_writer(
 ) -> dict:
     """Generate or pass through email content."""
     lead_id = state["lead_id"]
-    await event_manager.publish(node_transition_event(lead_id, NODE_ID, "started"))
+    await event_manager.publish(
+        node_transition_event(
+            lead_id, NODE_ID, "started", batch_id=state.get("batch_id")
+        )
+    )
     start = time.perf_counter()
 
     content_type = state.get("content_type", "existing_asset")
@@ -109,7 +113,9 @@ async def generative_writer(
     latency_ms = int((time.perf_counter() - start) * 1000)
     logger.info("A5 completed for lead %s in %dms", lead_id, latency_ms)
     await event_manager.publish(
-        node_transition_event(lead_id, NODE_ID, "completed", f"{latency_ms}ms")
+        node_transition_event(
+            lead_id, NODE_ID, "completed", f"{latency_ms}ms", batch_id=state.get("batch_id")
+        )
     )
 
     content_label = (

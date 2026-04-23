@@ -1,5 +1,5 @@
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Query, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,6 +9,8 @@ from utils.v1.connections import get_db
 
 
 oauth2_scheme = HTTPBearer()
+# Browser EventSource cannot set Authorization; SSE may pass the same JWT as ``access_token``.
+sse_optional_bearer = HTTPBearer(auto_error=False)
 
 
 def create_access_token(data: dict) -> str:
@@ -34,12 +36,8 @@ def verify_token(token: str) -> dict:
         raise ValueError("Invalid token")
 
 
-async def get_current_user(
-    auth: HTTPAuthorizationCredentials = Depends(oauth2_scheme),
-    db: AsyncSession = Depends(get_db),
-) -> dict:
-    """Retrieve the current user payload, rejecting any blacklisted tokens."""
-    token = auth.credentials
+async def load_authenticated_user(token: str, db: AsyncSession) -> dict:
+    """Resolve a JWT string to the same user dict as ``get_current_user``."""
     from model.database.v1.tokens import BlacklistedToken
 
     result = await db.execute(
@@ -77,7 +75,6 @@ async def get_current_user(
                 detail="Account is deactivated. Contact an Admin.",
             )
 
-        # Load per-user permission overrides (stored as JSON text)
         import json as _json
 
         custom: dict = {}
@@ -93,8 +90,6 @@ async def get_current_user(
             "email": user_obj.email,
             "role": user_obj.role,
             "is_active": bool(user_obj.is_active),
-            # Per-user overrides carried in the token payload so every
-            # require_permission() check is O(1) dict lookup, no extra DB query.
             "custom_permissions": custom,
         }
     except ValueError as e:
@@ -103,3 +98,30 @@ async def get_current_user(
             detail=str(e),
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+
+async def get_current_user(
+    auth: HTTPAuthorizationCredentials = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Retrieve the current user payload, rejecting any blacklisted tokens."""
+    return await load_authenticated_user(auth.credentials, db)
+
+
+async def get_current_user_for_sse(
+    db: AsyncSession = Depends(get_db),
+    credentials: HTTPAuthorizationCredentials | None = Depends(sse_optional_bearer),
+    access_token: str | None = Query(
+        None,
+        description="JWT for browser EventSource (cannot send Authorization).",
+    ),
+) -> dict:
+    """Authenticate SSE the same as Bearer, with optional ``access_token`` query param."""
+    token = (credentials.credentials if credentials else None) or access_token
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return await load_authenticated_user(token, db)

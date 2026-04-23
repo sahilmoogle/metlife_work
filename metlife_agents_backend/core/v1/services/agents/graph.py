@@ -18,6 +18,7 @@ from __future__ import annotations
 import logging
 import uuid
 from functools import partial
+from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 
 from sqlalchemy import update as sa_update
@@ -206,7 +207,11 @@ async def mark_dormant(state: dict, *, db=None) -> dict:
     lead_id = state["lead_id"]
     state["workflow_status"] = "dormant"
 
-    updates: dict = {"workflow_status": "Dormant"}
+    updates: dict = {
+        "workflow_status": "Dormant",
+        "workflow_completed": True,
+        "completed_at": datetime.now(timezone.utc),
+    }
     if state.get("scenario") == "S4":
         updates["cooldown_flag"] = True
         state["cooldown_flag"] = True
@@ -380,11 +385,11 @@ def build_graph(*, db_session=None, checkpointer=None):
     # Bind DB session and LLM into nodes that need them
     bound_a1 = partial(identity_unifier, db=db_session)
     bound_a2 = partial(persona_classifier, db=db_session)
-    bound_a3 = partial(intent_analyser, llm=llm)
+    bound_a3 = partial(intent_analyser, llm=llm, db=db_session)
     bound_a5 = partial(generative_writer, llm=llm, db=db_session)
     bound_a6 = partial(send_engine, db=db_session)
     bound_a8 = partial(propensity_scorer, db=db_session)
-    bound_a9 = partial(sales_handoff, llm=llm)
+    bound_a9 = partial(sales_handoff, llm=llm, db=db_session)
     bound_mark_dormant = partial(mark_dormant, db=db_session)
 
     bound_prep_g1 = partial(prep_g1, db=db_session)
@@ -399,12 +404,12 @@ def build_graph(*, db_session=None, checkpointer=None):
     graph.add_node("identity_unifier", bound_a1)
     graph.add_node("persona_classifier", bound_a2)
     graph.add_node("intent_analyser", bound_a3)
-    graph.add_node("content_strategist", content_strategist)
+    graph.add_node("content_strategist", partial(content_strategist, db=db_session))
     graph.add_node("generative_writer", bound_a5)
     graph.add_node("send_engine", bound_a6)
     graph.add_node("propensity_scorer", bound_a8)
     graph.add_node("sales_handoff", bound_a9)
-    graph.add_node("dormancy_agent", dormancy_agent)
+    graph.add_node("dormancy_agent", partial(dormancy_agent, db=db_session))
     graph.add_node("mark_dormant", bound_mark_dormant)
 
     # ── HITL prep nodes ─────────────────────────────────────────────
@@ -565,6 +570,7 @@ async def start_workflow(
     db_session: AsyncSession | None = None,
     target_language: str = "JA",
     scenario: str | None = None,
+    batch_id: str | None = None,
 ) -> dict:
     """Create a new workflow thread and run until first HITL interrupt.
 
@@ -580,6 +586,8 @@ async def start_workflow(
         thread_id=thread_id,
         target_language=target_language,
     )
+    if batch_id:
+        initial_state["batch_id"] = batch_id
     # Pre-set scenario so the START router can direct dormant leads to A10
     if scenario:
         initial_state["scenario"] = scenario

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { fetchHitlQueue } from "../src/services/hitlApi";
+import { buildSseStreamUrl } from "../src/services/sseStream";
 
 const queueTabs = [
   { key: "pending", label: "Pending" },
@@ -31,7 +32,8 @@ const Reviews = () => {
   const navigate = useNavigate();
   const { token } = useAuth();
   const [activeTab, setActiveTab] = useState("pending");
-  const [items, setItems] = useState([]);
+  const [pendingItems, setPendingItems] = useState([]);
+  const [resolvedItems, setResolvedItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
@@ -43,11 +45,18 @@ const Reviews = () => {
       setLoadError("");
       setLoading(true);
       try {
-        const data = await fetchHitlQueue(token);
-        if (!cancelled) setItems(Array.isArray(data) ? data : []);
+        const [pending, resolved] = await Promise.all([
+          fetchHitlQueue(token, { queue: "pending" }),
+          fetchHitlQueue(token, { queue: "resolved" }),
+        ]);
+        if (!cancelled) {
+          setPendingItems(Array.isArray(pending) ? pending : []);
+          setResolvedItems(Array.isArray(resolved) ? resolved : []);
+        }
       } catch (e) {
         if (!cancelled) {
-          setItems([]);
+          setPendingItems([]);
+          setResolvedItems([]);
           setLoadError(e.message || "Failed to load HITL queue.");
         }
       } finally {
@@ -62,17 +71,42 @@ const Reviews = () => {
     };
   }, [token, refreshKey]);
 
-  const counts = useMemo(() => {
-    // Backend exposes only Awaiting items in /hitl/queue currently.
-    const pending = items.length;
-    const resolved = 0;
-    return { pending, resolved };
-  }, [items.length]);
+  useEffect(() => {
+    if (!token || typeof EventSource === "undefined") return;
+
+    let es;
+    try {
+      es = new EventSource(buildSseStreamUrl(token));
+    } catch {
+      return;
+    }
+
+    const relevant = ["hitl_required", "hitl_approved", "hitl_edited", "hitl_rejected"];
+    let last = 0;
+    const refreshSoon = () => {
+      const t = Date.now();
+      if (t - last < 800) return;
+      last = t;
+      setRefreshKey((k) => k + 1);
+    };
+
+    for (const t of relevant) es.addEventListener(t, refreshSoon);
+    return () => {
+      es.close();
+    };
+  }, [token]);
+
+  const counts = useMemo(
+    () => ({
+      pending: pendingItems.length,
+      resolved: resolvedItems.length,
+    }),
+    [pendingItems.length, resolvedItems.length]
+  );
 
   const visible = useMemo(() => {
-    if (activeTab === "resolved") return [];
-    return items;
-  }, [activeTab, items]);
+    return activeTab === "resolved" ? resolvedItems : pendingItems;
+  }, [activeTab, pendingItems, resolvedItems]);
 
   return (
     <section className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm sm:p-4 dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
@@ -143,7 +177,7 @@ const Reviews = () => {
 
             return (
           <article
-            key={item.thread_id}
+            key={item.id || item.thread_id}
             className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-[0_1px_0_rgba(0,0,0,0.02)] hover:bg-gray-50/60 dark:border-white/10 dark:bg-slate-950/40 dark:shadow-none dark:hover:bg-white/5"
             onClick={() => navigate(`/reviews/${item.thread_id}`)}
           >
@@ -174,7 +208,7 @@ const Reviews = () => {
             <p className="text-sm font-medium text-gray-700 dark:text-slate-200">No items</p>
             <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
               {activeTab === "resolved"
-                ? "Resolved queue is not exposed by the backend yet."
+                ? "No resolved reviews in the selected window."
                 : "Nothing in this queue right now."}
             </p>
           </div>
