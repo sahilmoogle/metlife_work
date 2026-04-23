@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { useTranslation } from "react-i18next";
 import {
   createAdminUser,
   deactivateAdminUser,
@@ -93,6 +94,7 @@ const Toggle = ({ checked, onChange, ariaLabel }) => {
       aria-label={ariaLabel}
       aria-pressed={checked}
       onClick={onChange}
+      title={ "Deactivate user" }
       className={`relative inline-flex h-5 w-9 items-center rounded-full border transition ${
         checked
           ? "border-emerald-200 bg-emerald-500"
@@ -137,11 +139,14 @@ const Dash = () => (
 
 const Settings = () => {
   const { token, user: currentUser } = useAuth();
+  const { t } = useTranslation();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [actionError, setActionError] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [newName, setNewName] = useState("");
@@ -185,6 +190,7 @@ const Settings = () => {
   }, [token]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void refresh();
   }, [refresh]);
 
@@ -202,6 +208,26 @@ const Settings = () => {
     const totalRoles = new Set(users.map((u) => u.role).filter(Boolean)).size;
     return { totalUsers, totalRoles };
   }, [users]);
+
+  const totalRows = users.length;
+  const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const startIndex = (safePage - 1) * pageSize;
+  const endIndex = Math.min(totalRows, startIndex + pageSize);
+
+  const pagedUsers = useMemo(() => users.slice(startIndex, endIndex), [endIndex, startIndex, users]);
+
+  useEffect(() => {
+    // Reset to first page when page size changes or dataset changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPage(1);
+  }, [pageSize, totalRows]);
+
+  useEffect(() => {
+    // Clamp page when dataset changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPage((p) => Math.min(Math.max(1, p), totalPages));
+  }, [totalPages]);
 
   const toggleUserActive = async (row) => {
     if (!token) return;
@@ -406,7 +432,7 @@ const Settings = () => {
         <div className="rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
           {loadError}{" "}
           <button type="button" className="ml-2 font-semibold underline" onClick={refresh}>
-            Retry
+            {t("common.retry")}
           </button>
         </div>
       ) : null}
@@ -419,9 +445,9 @@ const Settings = () => {
       <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-base font-semibold text-[#1e2a52] dark:text-white">Admin - Access Control</h2>
+            <h2 className="text-base font-semibold text-[#1e2a52] dark:text-white">{t("settings.accessControlTitle")}</h2>
             <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
-              RBAC permissions for workflow execution, HITL approvals, and lead management
+              {t("settings.accessControlSubtitle")}
             </p>
           </div>
 
@@ -432,7 +458,7 @@ const Settings = () => {
             className="inline-flex h-9 items-center gap-2 rounded-full bg-indigo-600 px-4 text-xs font-semibold text-white shadow-[0_10px_25px_rgba(79,70,229,0.18)] transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
             title={canManage ? "Add user" : "You do not have permission to manage users"}
           >
-            + Add User
+            {t("settings.addUser")}
           </button>
         </div>
 
@@ -461,7 +487,7 @@ const Settings = () => {
             <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-amber-50 text-amber-700 ring-1 ring-amber-100 dark:bg-amber-500/15 dark:text-amber-200 dark:ring-amber-500/20">
               🔐
             </span>
-            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">User Permissions Matrix</p>
+            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("settings.permissionsMatrixTitle")}</p>
           </div>
           <p className="text-xs text-gray-400 dark:text-slate-400">
             {totals.totalUsers} users • {totals.totalRoles} roles
@@ -487,7 +513,7 @@ const Settings = () => {
               {loading ? (
                 <tr>
                   <td colSpan={permissionCols.length + 4} className="px-3 py-8 text-center text-sm text-gray-500 dark:text-slate-400">
-                    Loading users…
+                    {t("common.loading")}
                   </td>
                 </tr>
               ) : null}
@@ -495,12 +521,12 @@ const Settings = () => {
               {!loading && users.length === 0 ? (
                 <tr>
                   <td colSpan={permissionCols.length + 4} className="px-3 py-8 text-center text-sm text-gray-500 dark:text-slate-400">
-                    No users found.
+                    {t("common.noItems")}
                   </td>
                 </tr>
               ) : null}
 
-              {!loading ? users.map((u) => (
+              {!loading ? pagedUsers.map((u) => (
                 <tr key={u.user_id} className="border-t border-gray-100 text-xs text-gray-700 hover:bg-gray-50/60 dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/5">
                   <td className="px-3 py-3">
                     <div className="flex items-center gap-3">
@@ -535,38 +561,56 @@ const Settings = () => {
                     />
                   </td>
                   <td className="px-3 py-3 text-right">
-                    <div className="flex flex-wrap justify-end gap-2">
+                    <div className="flex items-center justify-end gap-1">
+                      {/* View */}
                       <button
                         type="button"
                         onClick={() => openView(u)}
-                        className="rounded-full border border-gray-200 bg-white px-3 py-1 text-[11px] font-semibold text-gray-600 hover:border-indigo-200 hover:text-indigo-700 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-300"
+                        title="View user"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-400 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
                       >
-                        View
+                        <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
+                          <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                          <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
                       </button>
+                      {/* Permissions */}
                       <button
                         type="button"
                         onClick={() => openPermissions(u)}
-                        className="rounded-full border border-gray-200 bg-white px-3 py-1 text-[11px] font-semibold text-gray-600 hover:border-indigo-200 hover:text-indigo-700 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-300"
+                        title="Manage permissions"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-600 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-400 dark:hover:border-violet-500/40 dark:hover:bg-violet-500/10 dark:hover:text-violet-300"
                       >
-                        Permissions
+                        <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
+                          <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6l-8-4Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                          <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
                       </button>
+                      {/* Edit */}
                       <button
                         type="button"
                         disabled={!canManage || actionLoading}
                         onClick={() => openEdit(u)}
-                        className="rounded-full border border-gray-200 bg-white px-3 py-1 text-[11px] font-semibold text-gray-600 hover:border-indigo-200 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-300"
                         title={canManage ? "Edit user" : "You do not have permission to manage users"}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition hover:border-amber-200 hover:bg-amber-50 hover:text-amber-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-400 dark:hover:border-amber-500/40 dark:hover:bg-amber-500/10 dark:hover:text-amber-300"
                       >
-                        Edit
+                        <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
                       </button>
+                      {/* Deactivate */}
                       <button
                         type="button"
                         disabled={!canManage || actionLoading || !u.is_active}
                         onClick={() => confirmDeactivate(u)}
-                        className="rounded-full border border-rose-200 bg-white px-3 py-1 text-[11px] font-semibold text-rose-700 hover:border-rose-300 hover:text-rose-800 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-500/30 dark:bg-slate-950/40 dark:text-rose-200"
-                        title={canManage ? "Deactivate user" : "You do not have permission to manage users"}
+                        title={canManage ? "Delete user" : "You do not have permission to manage users"}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-500 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-500/30 dark:bg-slate-950/40 dark:text-rose-400 dark:hover:border-rose-400/50 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
                       >
-                        Deactivate
+                        <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
+                          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                          <path d="M4.93 4.93l14.14 14.14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
                       </button>
                     </div>
                   </td>
@@ -575,6 +619,56 @@ const Settings = () => {
             </tbody>
           </table>
         </div>
+
+        {!loading && users.length > 0 ? (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500 dark:text-slate-400">
+            <div className="flex items-center gap-2">
+              <span>{t("common.perPage")}</span>
+              <select
+                value={pageSize}
+                onChange={(e) => setPageSize(Number(e.target.value))}
+                className="h-8 rounded-full border border-gray-200 bg-white px-3 text-xs text-gray-700 outline-none dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-gray-500 dark:text-slate-400">
+                {t("reviews.showing", {
+                  from: totalRows ? startIndex + 1 : 0,
+                  to: endIndex,
+                  total: totalRows,
+                })}
+              </span>
+
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  disabled={safePage === 1}
+                  onClick={() => setPage((p) => p - 1)}
+                  className="inline-flex h-8 items-center justify-center rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition hover:border-indigo-200 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-300"
+                >
+                  {t("common.prev")}
+                </button>
+                <span className="px-2 text-xs text-gray-500 dark:text-slate-400">
+                  {safePage} / {totalPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={safePage === totalPages}
+                  onClick={() => setPage((p) => p + 1)}
+                  className="inline-flex h-8 items-center justify-center rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition hover:border-indigo-200 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-300"
+                >
+                  {t("common.next")}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {isViewOpen ? (
@@ -582,7 +676,7 @@ const Settings = () => {
           <div className="w-full max-w-[560px] rounded-2xl border border-gray-100 bg-white p-4 shadow-xl dark:border-white/10 dark:bg-slate-900">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">User detail</p>
+                <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("settings.userDetail")}</p>
                 <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">User ID: {viewUserId}</p>
               </div>
               <button
@@ -590,7 +684,7 @@ const Settings = () => {
                 onClick={() => setIsViewOpen(false)}
                 className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-600 hover:border-indigo-200 hover:text-indigo-700 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-300"
               >
-                Close
+                {t("common.close")}
               </button>
             </div>
 
@@ -617,7 +711,7 @@ const Settings = () => {
           <div className="w-full max-w-[560px] rounded-2xl border border-gray-100 bg-white p-4 shadow-xl dark:border-white/10 dark:bg-slate-900">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">Edit user</p>
+                <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("settings.editUser")}</p>
                 <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">User ID: {editUserId}</p>
               </div>
               <button
@@ -625,7 +719,7 @@ const Settings = () => {
                 onClick={() => setIsEditOpen(false)}
                 className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-600 hover:border-indigo-200 hover:text-indigo-700 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-300"
               >
-                Close
+                {t("common.close")}
               </button>
             </div>
 
@@ -662,7 +756,7 @@ const Settings = () => {
                 onClick={() => setIsEditOpen(false)}
                 className="inline-flex h-9 items-center justify-center rounded-full border border-gray-200 bg-white px-4 text-xs font-semibold text-gray-700 hover:border-indigo-200 hover:text-indigo-700 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 type="button"
@@ -682,7 +776,7 @@ const Settings = () => {
           <div className="w-full max-w-[760px] rounded-2xl border border-gray-100 bg-white p-4 shadow-xl dark:border-white/10 dark:bg-slate-900">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">User permissions</p>
+                <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("settings.userPermissions")}</p>
                 <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">User ID: {permUserId}</p>
               </div>
               <button
@@ -690,7 +784,7 @@ const Settings = () => {
                 onClick={() => setIsPermOpen(false)}
                 className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-600 hover:border-indigo-200 hover:text-indigo-700 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-300"
               >
-                Close
+                {t("common.close")}
               </button>
             </div>
 

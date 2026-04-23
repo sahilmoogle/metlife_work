@@ -200,7 +200,7 @@ const LeadDetail = () => {
       return ta - tb;
     });
     return items;
-  }, [lead?.execution_log]);
+  }, [lead]);
 
   const handleExport = () => {
     if (!lead) return;
