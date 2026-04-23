@@ -344,7 +344,7 @@ const Leads = () => {
               disabled={page <= 1 || loading}
               className="h-8 rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 transition hover:border-indigo-200 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200 dark:hover:border-white/20 dark:hover:text-white"
             >
-              Prev
+              {t("common.prev")}
             </button>
 
             {Array.from({ length: totalPages }, (_, i) => i + 1)
@@ -387,7 +387,7 @@ const Leads = () => {
               disabled={page >= totalPages || loading}
               className="h-8 rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 transition hover:border-indigo-200 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200 dark:hover:border-white/20 dark:hover:text-white"
             >
-              Next
+              {t("common.next")}
             </button>
           </div>
         </div>

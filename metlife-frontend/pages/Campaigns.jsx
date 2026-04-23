@@ -5,6 +5,7 @@ import { fetchHitlQueue } from "../src/services/hitlApi";
 import { fetchDashboardStats } from "../src/services/dashboardApi";
 import { getBatchStatus, getLatestBatch, runBatch } from "../src/services/agentsApi";
 import { buildSseStreamUrl } from "../src/services/sseStream";
+import { useTranslation } from "react-i18next";
 
 const scenarioCards = [
   { id: "S1", label: "Young Prof", tone: "text-indigo-700 bg-indigo-50 ring-indigo-100" },
@@ -296,6 +297,7 @@ const formatInt = (n) => new Intl.NumberFormat().format(n);
 
 const Campaigns = () => {
   const { token } = useAuth();
+  const { t } = useTranslation();
   const [status, setStatus] = useState("idle"); // idle | running | complete | error
   const [batch, setBatch] = useState(null);
   const [loadError, setLoadError] = useState("");
@@ -601,9 +603,9 @@ const Campaigns = () => {
       <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-base font-semibold text-[#1e2a52] dark:text-white">Workflow Orchestration</h2>
+            <h2 className="text-base font-semibold text-[#1e2a52] dark:text-white">{t("campaigns.title")}</h2>
             <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
-              LangGraph batch execution • Auto-runs all agents • Pauses only at HITL gates
+              {t("campaigns.subtitle")}
             </p>
           </div>
 
@@ -614,10 +616,10 @@ const Campaigns = () => {
               </span>
             ) : status === "running" ? (
               <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 ring-1 ring-amber-100">
-                Batch running
+                {t("campaigns.status.batchRunning")}
               </span>
             ) : (
-              <span className="text-xs font-semibold text-gray-500 dark:text-slate-400">{loading ? "Loading…" : "Ready"}</span>
+              <span className="text-xs font-semibold text-gray-500 dark:text-slate-400">{loading ? t("common.loading") : t("common.ready")}</span>
             )}
 
             <button
@@ -626,7 +628,7 @@ const Campaigns = () => {
               disabled={status === "running"}
               title={
                 status === "running"
-                  ? "Server batch job is in progress. Pausing mid-batch is not supported — graphs pause only at HITL gates."
+                  ? t("campaigns.runButton.runningTitle")
                   : undefined
               }
               className={`inline-flex h-9 items-center gap-2 rounded-full px-4 text-xs font-semibold text-white shadow-[0_10px_25px_rgba(16,185,129,0.20)] transition disabled:cursor-not-allowed disabled:opacity-90 ${
@@ -635,7 +637,7 @@ const Campaigns = () => {
                   : "bg-emerald-600 hover:bg-emerald-700"
               }`}
             >
-              {status === "complete" ? "Complete" : status === "running" ? "Running…" : "Run All Workflows"}
+              {status === "complete" ? t("common.complete") : status === "running" ? t("common.running") : t("campaigns.runButton.runAll")}
               <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/20" aria-hidden>
                 {status === "running" ? (
                   <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -662,28 +664,28 @@ const Campaigns = () => {
           <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-white/10 dark:bg-slate-950/40 dark:shadow-none">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-xs font-semibold text-gray-700 dark:text-slate-200">
-                Batch Processing{" "}
+                {t("campaigns.batch.processing")}{" "}
                 <span className="text-indigo-700">
                   {formatInt(processed)} / {formatInt(batch?.total ?? totalLeads)}
                 </span>{" "}
-                leads
+                {t("campaigns.batch.leads")}
               </p>
               <div className="flex flex-wrap items-center gap-3 text-[11px] text-gray-500 dark:text-slate-400">
                 <span className="inline-flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  {formatInt(success)} succeeded
+                  {formatInt(success)} {t("campaigns.batch.succeeded")}
                 </span>
                 <span className="inline-flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-amber-500" />
-                  {awaitingHitl} awaiting HITL
+                  {awaitingHitl} {t("campaigns.batch.awaitingHitl")}
                 </span>
                 <span className="inline-flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-blue-500" />
-                  {formatInt(remaining)} remaining
+                  {formatInt(remaining)} {t("campaigns.batch.remaining")}
                 </span>
                 <span className="inline-flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-rose-500" />
-                  {formatInt(failed)} failed
+                  {formatInt(failed)} {t("campaigns.batch.failed")}
                 </span>
               </div>
             </div>
@@ -723,9 +725,9 @@ const Campaigns = () => {
 
           <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
             <div className="mb-3">
-              <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">Agent Execution Pipeline</p>
+              <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("campaigns.pipeline.title")}</p>
               <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">
-                Batch bar uses live SSE batch_progress events plus a 1.2s poll backup. Pipeline and HITL counts refresh from the dashboard API on a timer and when SSE reports workflow or HITL activity.
+                {t("campaigns.pipeline.subtitle")}
               </p>
             </div>
 

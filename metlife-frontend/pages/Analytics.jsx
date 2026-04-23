@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { fetchAnalyticsOverview } from "../src/services/analyticsApi";
+import { useTranslation } from "react-i18next";
 
 const ranges = [
-  { key: "30d", label: "30 Days" },
-  { key: "90d", label: "90 Days" },
-  { key: "all", label: "All Time" },
+  { key: "30d", labelKey: "analytics.ranges.d30" },
+  { key: "90d", labelKey: "analytics.ranges.d90" },
+  { key: "all", labelKey: "analytics.ranges.all" },
 ];
 
 /** Visual tokens for KPI cards (API returns data only; styling stays in UI). */
@@ -58,6 +59,7 @@ const formatInt = (n) => new Intl.NumberFormat().format(Number(n) || 0);
 
 const Analytics = () => {
   const { token } = useAuth();
+  const { t } = useTranslation();
   const [range, setRange] = useState("30d");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -122,7 +124,7 @@ const Analytics = () => {
         <div className="rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-100">
           {error}{" "}
           <button type="button" className="ml-2 font-semibold underline" onClick={() => void load()}>
-            Retry
+            {t("common.retry")}
           </button>
         </div>
       ) : null}
@@ -130,9 +132,9 @@ const Analytics = () => {
       <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-base font-semibold text-[#1e2a52] dark:text-white">Analytics</h2>
+            <h2 className="text-base font-semibold text-[#1e2a52] dark:text-white">{t("analytics.title")}</h2>
             <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
-              Performance metrics across all 7 scenarios • {loading ? "Loading…" : rangeLabel}
+              {t("analytics.subtitle", { range: loading ? t("common.loading") : rangeLabel })}
             </p>
           </div>
 
@@ -152,7 +154,7 @@ const Analytics = () => {
                         : "text-gray-600 hover:text-gray-800 dark:text-slate-300 dark:hover:text-white"
                     }`}
                   >
-                    {r.label}
+                    {t(r.labelKey)}
                   </button>
                 );
               })}
@@ -164,7 +166,7 @@ const Analytics = () => {
               disabled={!data}
               className="inline-flex h-9 items-center gap-2 rounded-full border border-gray-200 bg-white px-4 text-xs font-semibold text-gray-700 hover:border-indigo-200 hover:text-indigo-700 disabled:opacity-50 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200 dark:hover:border-white/20 dark:hover:text-white"
             >
-              Export
+              {t("common.export")}
               <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
                 <path d="M12 4v12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
                 <path
@@ -205,8 +207,8 @@ const Analytics = () => {
       <div className="grid gap-3 xl:grid-cols-[2fr_1fr]">
         <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
           <div className="mb-3">
-            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">Weekly Lead Progression</p>
-            <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">New leads, engaged, and converted per week</p>
+            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("analytics.weekly.title")}</p>
+            <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">{t("analytics.weekly.subtitle")}</p>
           </div>
 
           <div className="flex items-end justify-between gap-3">
@@ -229,27 +231,27 @@ const Analytics = () => {
               );
             })}
             {!loading && weeklyBars.length === 0 ? (
-              <p className="w-full py-8 text-center text-sm text-gray-400">No weekly data yet.</p>
+              <p className="w-full py-8 text-center text-sm text-gray-400">{t("analytics.noWeeklyData")}</p>
             ) : null}
           </div>
 
           <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-[11px] text-gray-500 dark:text-slate-400">
             <span className="inline-flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-blue-500" /> New Leads
+              <span className="h-2 w-2 rounded-full bg-blue-500" /> {t("analytics.weekly.newLeads")}
             </span>
             <span className="inline-flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-violet-500" /> Engaged
+              <span className="h-2 w-2 rounded-full bg-violet-500" /> {t("analytics.weekly.engaged")}
             </span>
             <span className="inline-flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" /> Converted
+              <span className="h-2 w-2 rounded-full bg-emerald-500" /> {t("analytics.weekly.converted")}
             </span>
           </div>
         </div>
 
         <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
           <div className="mb-3">
-            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">Conversion by Scenario</p>
-            <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">% of leads converted per scenario (cohort in range)</p>
+            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("analytics.scenarioConversion.title")}</p>
+            <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">{t("analytics.scenarioConversion.subtitle")}</p>
           </div>
 
           <div className="space-y-3">
@@ -277,7 +279,7 @@ const Analytics = () => {
               </div>
             ))}
             {!loading && !(data?.scenario_conversion?.length) ? (
-              <p className="text-sm text-gray-400">No scenario data.</p>
+              <p className="text-sm text-gray-400">{t("analytics.scenarioConversion.empty")}</p>
             ) : null}
           </div>
         </div>
@@ -286,9 +288,9 @@ const Analytics = () => {
       <div className="grid gap-3 xl:grid-cols-3">
         <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
           <div className="mb-3">
-            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">Agent Performance</p>
+            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("analytics.agentPerf.title")}</p>
             <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">
-              Throughput (approximate counts from DB). Latency/success when instrumented.
+              {t("analytics.agentPerf.subtitle")}
             </p>
           </div>
 
@@ -296,10 +298,10 @@ const Analytics = () => {
             <table className="min-w-[640px] w-full border-separate border-spacing-0">
               <thead>
                 <tr className="text-left text-[11px] font-semibold text-gray-500 dark:text-slate-400">
-                  <th className="px-3 py-2">Agent</th>
-                  <th className="px-3 py-2">Processed</th>
-                  <th className="px-3 py-2">Avg Latency</th>
-                  <th className="px-3 py-2">Success</th>
+                  <th className="px-3 py-2">{t("analytics.agentPerf.agent")}</th>
+                  <th className="px-3 py-2">{t("analytics.agentPerf.processed")}</th>
+                  <th className="px-3 py-2">{t("analytics.agentPerf.avgLatency")}</th>
+                  <th className="px-3 py-2">{t("analytics.agentPerf.success")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -323,15 +325,15 @@ const Analytics = () => {
               </tbody>
             </table>
             {!loading && !(data?.agent_performance?.length) ? (
-              <p className="py-4 text-center text-sm text-gray-400">No agent rows.</p>
+              <p className="py-4 text-center text-sm text-gray-400">{t("analytics.agentPerf.empty")}</p>
             ) : null}
           </div>
         </div>
 
         <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
           <div className="mb-3">
-            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">Email Performance</p>
-            <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">Across all campaigns (selected window)</p>
+            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("analytics.emailPerf.title")}</p>
+            <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">{t("analytics.emailPerf.subtitle")}</p>
           </div>
 
           <div className="space-y-3">
@@ -353,7 +355,7 @@ const Analytics = () => {
           </div>
 
           <div className="mt-4 rounded-2xl border border-gray-100 bg-gray-50 p-3 dark:border-white/10 dark:bg-white/5">
-            <p className="text-[11px] font-semibold text-gray-500 dark:text-slate-400">Top performing (by scenario)</p>
+            <p className="text-[11px] font-semibold text-gray-500 dark:text-slate-400">{t("analytics.emailPerf.topPerforming")}</p>
             <div className="mt-2 space-y-2">
               {(data?.email_top_performing ?? []).map((t, idx) => (
                 <div
@@ -362,19 +364,19 @@ const Analytics = () => {
                 >
                   <p className="text-xs font-semibold text-gray-800 dark:text-white">
                     {t.scenario_id}
-                    {t.rank_type === "best_open" ? " · best open" : " · best click"}
+                    {t.rank_type === "best_open" ? ` ${t("analytics.emailPerf.bestOpen")}` : ` ${t("analytics.emailPerf.bestClick")}`}
                   </p>
                   <p className={`text-xs font-semibold ${t.rank_type === "best_open" ? "text-emerald-700" : "text-amber-700"}`}>
                     {t.rank_type === "best_open" && t.open_rate_pct != null
-                      ? `${t.open_rate_pct.toFixed(1)}% open`
+                      ? `${t.open_rate_pct.toFixed(1)}${t("analytics.emailPerf.openSuffix")}`
                       : t.click_rate_pct != null
-                        ? `${t.click_rate_pct.toFixed(1)}% click`
+                        ? `${t.click_rate_pct.toFixed(1)}${t("analytics.emailPerf.clickSuffix")}`
                         : "—"}
                   </p>
                 </div>
               ))}
               {!data?.email_top_performing?.length && !loading ? (
-                <p className="text-xs text-gray-400">Not enough email data to rank scenarios.</p>
+                <p className="text-xs text-gray-400">{t("analytics.emailPerf.notEnough")}</p>
               ) : null}
             </div>
           </div>
@@ -382,16 +384,19 @@ const Analytics = () => {
 
         <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
           <div className="mb-3">
-            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">HITL Gate Stats</p>
-            <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">Approval metrics by gate</p>
+            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("analytics.hitlGate.title")}</p>
+            <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">{t("analytics.hitlGate.subtitle")}</p>
           </div>
 
           <div className="space-y-2">
             {(data?.hitl_gate_stats ?? []).map((g) => {
               const meta =
                 g.reviewed_count === 0
-                  ? "No reviews in window"
-                  : `${g.reviewed_count} reviewed · ${g.avg_review_minutes != null ? `${g.avg_review_minutes.toFixed(1)}m avg` : "—"}`;
+                  ? t("analytics.hitlGate.noReviews")
+                  : t("analytics.hitlGate.reviewedAvg", {
+                      count: g.reviewed_count,
+                      mins: g.avg_review_minutes != null ? g.avg_review_minutes.toFixed(1) : "—",
+                    });
               const pct =
                 g.approval_rate_pct != null ? `${g.approval_rate_pct.toFixed(0)}%` : "—";
               const pctTone =
@@ -424,7 +429,7 @@ const Analytics = () => {
           </div>
 
           <div className="mt-3 rounded-2xl bg-teal-900 p-4 text-center text-white">
-            <p className="text-[11px] font-semibold tracking-wide text-teal-100">AUTO-APPROVED (G1 · existing_asset)</p>
+            <p className="text-[11px] font-semibold tracking-wide text-teal-100">{t("analytics.hitlGate.autoApproved")}</p>
             <p className="mt-2 text-3xl font-semibold text-emerald-300">{formatInt(data?.hitl_auto_approved_estimate ?? 0)}</p>
           </div>
         </div>
@@ -433,8 +438,8 @@ const Analytics = () => {
       <div className="grid gap-3 lg:grid-cols-2">
         <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
           <div className="mb-3">
-            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">Lead Score Distribution</p>
-            <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">Non–opt-out leads · engagement_score</p>
+            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("analytics.scoreDist.title")}</p>
+            <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">{t("analytics.scoreDist.subtitle")}</p>
           </div>
 
           <div className="flex h-44 items-end justify-between gap-2 rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-100 dark:bg-white/5 dark:ring-white/10">
@@ -447,22 +452,22 @@ const Analytics = () => {
               </div>
             ))}
             {!loading && scoreBars.length === 0 ? (
-              <p className="w-full py-6 text-center text-sm text-gray-400">No scores.</p>
+              <p className="w-full py-6 text-center text-sm text-gray-400">{t("analytics.scoreDist.empty")}</p>
             ) : null}
           </div>
 
           <div className="mt-3 flex items-center justify-between text-[11px] text-gray-500 dark:text-slate-400">
-            <span>{formatInt(data?.score_insights?.below_0_40 ?? 0)} leads below 0.40</span>
+            <span>{t("analytics.scoreDist.below", { count: formatInt(data?.score_insights?.below_0_40 ?? 0) })}</span>
             <span className="font-semibold text-emerald-700">
-              {formatInt(data?.score_insights?.above_0_70 ?? 0)} leads above 0.70
+              {t("analytics.scoreDist.above", { count: formatInt(data?.score_insights?.above_0_70 ?? 0) })}
             </span>
           </div>
         </div>
 
         <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
           <div className="mb-3">
-            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">LLM Token Usage</p>
-            <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">When billing hooks persist usage, values appear here</p>
+            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("analytics.llm.title")}</p>
+            <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">{t("analytics.llm.subtitle")}</p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
@@ -478,7 +483,7 @@ const Analytics = () => {
                   {row.tokens_millions != null ? `${row.tokens_millions.toFixed(2)}M` : "—"}
                 </p>
                 <p className={`mt-1 text-[11px] ${i === 0 ? "text-amber-800/80" : "text-blue-800/80"}`}>
-                  tokens
+                  {t("analytics.llm.tokens")}
                   {row.cost_jpy != null ? ` · ¥${formatInt(Math.round(row.cost_jpy))}` : ""}
                 </p>
                 <p className={`mt-2 text-[11px] ${i === 0 ? "text-amber-900/70" : "text-blue-900/70"}`}>{row.note}</p>
@@ -488,13 +493,13 @@ const Analytics = () => {
 
           <div className="mt-3 rounded-2xl bg-slate-900 p-4">
             <div className="flex items-center justify-between text-xs font-semibold text-slate-200">
-              <span>Total monthly cost (tracked)</span>
+              <span>{t("analytics.llm.totalMonthly")}</span>
               <span className="text-lg font-semibold text-white">
                 {data?.llm_total_monthly_jpy != null ? `¥${formatInt(Math.round(data.llm_total_monthly_jpy))}` : "—"}
               </span>
             </div>
             {!llmTracked ? (
-              <p className="mt-2 text-[11px] text-slate-400">LLM usage is not persisted in the database yet.</p>
+              <p className="mt-2 text-[11px] text-slate-400">{t("analytics.llm.notPersisted")}</p>
             ) : null}
           </div>
         </div>

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useTranslation } from "react-i18next";
 
 const MailIcon = (props) => (
   <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
@@ -53,20 +54,20 @@ const LockIcon = (props) => (
 
 const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
-const validate = ({ fullName, email, password, confirmPassword }) => {
+const validate = ({ t, fullName, email, password, confirmPassword }) => {
   const errors = {};
   const name = fullName.trim();
   const e = email.trim();
 
-  if (!name) errors.fullName = "Full name is required.";
-  if (!e) errors.email = "Email is required.";
-  else if (!isValidEmail(e)) errors.email = "Enter a valid email address.";
+  if (!name) errors.fullName = t("auth.validation.fullNameRequired");
+  if (!e) errors.email = t("auth.validation.emailRequired");
+  else if (!isValidEmail(e)) errors.email = t("auth.validation.emailInvalid");
 
-  if (!password) errors.password = "Password is required.";
-  else if (password.length < 8) errors.password = "Password must be at least 8 characters.";
+  if (!password) errors.password = t("auth.validation.passwordRequired");
+  else if (password.length < 8) errors.password = t("auth.validation.passwordMin", { min: 8 });
 
-  if (!confirmPassword) errors.confirmPassword = "Please confirm your password.";
-  else if (confirmPassword !== password) errors.confirmPassword = "Passwords do not match.";
+  if (!confirmPassword) errors.confirmPassword = t("auth.validation.confirmPasswordRequired");
+  else if (confirmPassword !== password) errors.confirmPassword = t("auth.validation.passwordMismatch");
 
   return errors;
 };
@@ -75,6 +76,7 @@ const Signup = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { register } = useAuth();
+  const { t } = useTranslation();
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -85,15 +87,15 @@ const Signup = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const canSubmit = useMemo(() => {
-    const errs = validate({ fullName, email, password, confirmPassword });
+    const errs = validate({ t, fullName, email, password, confirmPassword });
     return Object.keys(errs).length === 0 && !isSubmitting;
-  }, [confirmPassword, email, fullName, isSubmitting, password]);
+  }, [confirmPassword, email, fullName, isSubmitting, password, t]);
 
   const onSubmit = async (event) => {
     event.preventDefault();
     setError("");
 
-    const errs = validate({ fullName, email, password, confirmPassword });
+    const errs = validate({ t, fullName, email, password, confirmPassword });
     setFieldErrors(errs);
     if (Object.keys(errs).length) return;
 
@@ -103,7 +105,7 @@ const Signup = () => {
       const destination = location.state?.from || "/dashboard";
       navigate(destination, { replace: true });
     } catch (submitError) {
-      setError(submitError.message || "Sign up failed. Please try again.");
+      setError(submitError.message || t("auth.signup.failed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -154,26 +156,26 @@ const inputClass = (hasError) =>
               LN
             </div>
             <div>
-              <h1 className="text-base font-bold text-indigo-700">Lead Nurturing</h1>
-              <p className="text-xs text-gray-500 dark:text-slate-400">Your Intelligence Platform</p>
+              <h1 className="text-base font-bold text-indigo-700">{t("brand.name")}</h1>
+              <p className="text-xs text-gray-500 dark:text-slate-400">{t("brand.tagline")}</p>
             </div>
           </header>
 
           <div className="mx-auto flex w-full max-w-[460px] flex-1 flex-col justify-center">
-            <h3 className="text-sm font-medium text-gray-600 dark:text-slate-300">Sign up for</h3>
+            <h3 className="text-sm font-medium text-gray-600 dark:text-slate-300">{t("auth.signup.title")}</h3>
             <p className="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">
-              <span className="text-indigo-700">Lead Nurturing</span>
+              <span className="text-indigo-700">{t("brand.name")}</span>
             </p>
 
             <form onSubmit={onSubmit} className="mt-8">
-              <label className="mb-2 block text-xs font-medium text-gray-600 dark:text-slate-300">Full name</label>
+              <label className="mb-2 block text-xs font-medium text-gray-600 dark:text-slate-300">{t("auth.fields.fullName")}</label>
               <div className="relative mb-1">
                 <UserIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-indigo-500/70" />
                 <input
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Enter full name"
+                  placeholder={t("auth.placeholders.fullName")}
                   autoComplete="name"
                   className={inputClass(Boolean(fieldErrors.fullName))}
                 />
@@ -184,14 +186,14 @@ const inputClass = (hasError) =>
                 <div className="mb-3" />
               )}
 
-              <label className="mb-2 block text-xs font-medium text-gray-600 dark:text-slate-300">Email</label>
+              <label className="mb-2 block text-xs font-medium text-gray-600 dark:text-slate-300">{t("auth.fields.email")}</label>
               <div className="relative mb-1">
                 <MailIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-indigo-500/70" />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter email"
+                  placeholder={t("auth.placeholders.email")}
                   autoComplete="email"
                   className={inputClass(Boolean(fieldErrors.email))}
                 />
@@ -202,14 +204,14 @@ const inputClass = (hasError) =>
                 <div className="mb-3" />
               )}
 
-              <label className="mb-2 block text-xs font-medium text-gray-600 dark:text-slate-300">Password</label>
+              <label className="mb-2 block text-xs font-medium text-gray-600 dark:text-slate-300">{t("auth.fields.password")}</label>
               <div className="relative mb-1">
                 <LockIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-indigo-500/70" />
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Create password"
+                  placeholder={t("auth.placeholders.password")}
                   autoComplete="new-password"
                   className={inputClass(Boolean(fieldErrors.password))}
                 />
@@ -217,17 +219,17 @@ const inputClass = (hasError) =>
               {fieldErrors.password ? (
                 <p className="mb-3 ml-4 text-xs text-rose-600">{fieldErrors.password}</p>
               ) : (
-                <p className="mb-3 ml-4 text-[11px] text-gray-400 dark:text-slate-400">Must be at least 8 characters.</p>
+                <p className="mb-3 ml-4 text-[11px] text-gray-400 dark:text-slate-400">{t("auth.hints.passwordMin", { min: 8 })}</p>
               )}
 
-              <label className="mb-2 block text-xs font-medium text-gray-600 dark:text-slate-300">Confirm password</label>
+              <label className="mb-2 block text-xs font-medium text-gray-600 dark:text-slate-300">{t("auth.fields.confirmPassword")}</label>
               <div className="relative mb-1">
                 <LockIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-indigo-500/70" />
                 <input
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm password"
+                  placeholder={t("auth.placeholders.confirmPassword")}
                   autoComplete="new-password"
                   className={inputClass(Boolean(fieldErrors.confirmPassword))}
                 />
@@ -245,14 +247,14 @@ const inputClass = (hasError) =>
                 disabled={!canSubmit}
                 className="mt-2 h-11 w-full rounded-full bg-gradient-to-r from-[#3b2fd6] to-[#2a1bb3] text-sm font-semibold text-white shadow-[0_10px_25px_rgba(59,47,214,0.25)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isSubmitting ? "Creating account..." : "Create Account →"}
+                {isSubmitting ? t("auth.signup.creating") : t("auth.signup.cta")}
               </button>
             </form>
 
             <p className="mt-10 text-center text-xs text-gray-500 dark:text-slate-400">
-              Already have an account?{" "}
+              {t("signup.haveAccount")}{" "}
               <Link to="/login" className="font-semibold text-indigo-700 hover:underline">
-                Log in
+                {t("signup.login")}
               </Link>
             </p>
           </div>

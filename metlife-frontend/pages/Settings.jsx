@@ -652,7 +652,7 @@ const Settings = () => {
                   onClick={() => setPage((p) => p - 1)}
                   className="inline-flex h-8 items-center justify-center rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition hover:border-indigo-200 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-300"
                 >
-                  Prev
+                  {t("common.prev")}
                 </button>
                 <span className="px-2 text-xs text-gray-500 dark:text-slate-400">
                   {safePage} / {totalPages}
@@ -663,7 +663,7 @@ const Settings = () => {
                   onClick={() => setPage((p) => p + 1)}
                   className="inline-flex h-8 items-center justify-center rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition hover:border-indigo-200 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-300"
                 >
-                  Next
+                  {t("common.next")}
                 </button>
               </div>
             </div>

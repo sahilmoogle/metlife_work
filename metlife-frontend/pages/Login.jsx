@@ -91,7 +91,7 @@ const Login = () => {
                 <div className="relative mx-auto mb-10 aspect-[4/3] w-full overflow-hidden rounded-3xl bg-white/10 ring-1 ring-white/20">
                   <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,rgba(255,255,255,0.20),transparent_50%),radial-gradient(circle_at_80%_70%,rgba(255,255,255,0.18),transparent_55%)]" />
                   <div className="absolute inset-0 flex items-center justify-center">
-                     <img src={loginIcon} alt="" srcset="" />
+                     <img src={loginIcon} alt="" />
                   </div>
                 </div>
 

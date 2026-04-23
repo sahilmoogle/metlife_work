@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { fetchDashboardStats } from "../src/services/dashboardApi";
+import { useTranslation } from "react-i18next";
 
 const MetricIcon = ({ variant }) => {
   const common = "h-4 w-4";
@@ -95,17 +96,18 @@ const pct = (num, den) => {
 };
 
 const scenarioMeta = {
-  S1: { label: "Young Prof" },
-  S2: { label: "Married" },
-  S3: { label: "Senior" },
-  S4: { label: "Dormant" },
-  S5: { label: "Buyer" },
-  S6: { label: "F2F" },
-  S7: { label: "W2C" },
+  S1: { key: "S1" },
+  S2: { key: "S2" },
+  S3: { key: "S3" },
+  S4: { key: "S4" },
+  S5: { key: "S5" },
+  S6: { key: "S6" },
+  S7: { key: "S7" },
 };
 
 const Dashboard = () => {
   const { token } = useAuth();
+  const { t } = useTranslation();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -123,7 +125,7 @@ const Dashboard = () => {
       } catch (e) {
         if (!cancelled) {
           setStats(null);
-          setError(e.message || "Failed to load dashboard.");
+          setError(e.message || t("dashboard.failed"));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -135,7 +137,8 @@ const Dashboard = () => {
     return () => {
       cancelled = true;
     };
-  }, [token, refreshKey]);
+  // t is stable from react-i18next; include for lint correctness.
+  }, [token, refreshKey, t]);
 
   const refresh = () => setRefreshKey((k) => k + 1);
 
@@ -151,81 +154,82 @@ const Dashboard = () => {
     return ["S1", "S2", "S3", "S4", "S5", "S6", "S7"].map((id) => ({
       id,
       value: formatInt(breakdown[id] ?? 0),
-      label: scenarioMeta[id]?.label || "—",
+      label: scenarioMeta[id]?.key ? t(`dashboard.scenarioLabels.${scenarioMeta[id].key}`) : "—",
     }));
-  }, [stats]);
+  }, [stats, t]);
 
   const funnelBars = useMemo(() => {
-    const t = total || 0;
+    const totalCount = total || 0;
     return [
       {
-        label: `Total Leads ${formatInt(t)}`,
-        value: t ? 100 : 0,
+        label: `${t("dashboard.funnel.totalLeads")} ${formatInt(totalCount)}`,
+        value: totalCount ? 100 : 0,
         color: "bg-violet-600",
         track: "bg-violet-50",
       },
       {
-        label: `Active / Processing ${formatInt(active)}`,
-        value: pct(active, t),
+        label: `${t("dashboard.funnel.activeProcessing")} ${formatInt(active)}`,
+        value: pct(active, totalCount),
         color: "bg-emerald-600",
         track: "bg-emerald-50",
       },
       {
-        label: `HITL queue ${formatInt(hitl)}`,
-        value: pct(hitl, t),
+        label: `${t("dashboard.funnel.hitlQueue")} ${formatInt(hitl)}`,
+        value: pct(hitl, totalCount),
         color: "bg-amber-500",
         track: "bg-amber-50",
       },
       {
-        label: `Converted ${formatInt(converted)}`,
-        value: pct(converted, t),
+        label: `${t("dashboard.funnel.converted")} ${formatInt(converted)}`,
+        value: pct(converted, totalCount),
         color: "bg-fuchsia-600",
         track: "bg-fuchsia-50",
       },
       {
-        label: `Dormant ${formatInt(dormant)}`,
-        value: pct(dormant, t),
+        label: `${t("dashboard.funnel.dormant")} ${formatInt(dormant)}`,
+        value: pct(dormant, totalCount),
         color: "bg-blue-600",
         track: "bg-blue-50",
       },
     ];
-  }, [active, converted, dormant, hitl, total]);
+  }, [active, converted, dormant, hitl, t, total]);
 
   const kpiCards = useMemo(
     () => [
       {
-        title: "Total Leads",
+        title: t("dashboard.kpi.totalLeads"),
         value: formatInt(total),
-        change: suppressed ? `${formatInt(suppressed)} suppressed` : "All records",
+        change: suppressed ? t("dashboard.kpi.suppressed", { count: formatInt(suppressed) }) : t("dashboard.kpi.allRecords"),
         icon: "leads",
         chip: "bg-violet-50 text-violet-700 ring-violet-100",
         iconWrap: "bg-violet-50 text-violet-700",
       },
       {
-        title: "Active Workflows",
+        title: t("dashboard.kpi.activeWorkflows"),
         value: formatInt(active),
-        change: total ? `${pct(active, total)}% of total` : "—",
+        change: total ? t("dashboard.kpi.ofTotal", { pct: pct(active, total) }) : "—",
         icon: "workflows",
         chip: "bg-emerald-50 text-emerald-700 ring-emerald-100",
         iconWrap: "bg-emerald-50 text-emerald-700",
       },
       {
-        title: "Converted",
+        title: t("dashboard.kpi.converted"),
         value: formatInt(converted),
-        change: total ? `${pct(converted, total)}% of total` : "—",
+        change: total ? t("dashboard.kpi.ofTotal", { pct: pct(converted, total) }) : "—",
         icon: "converted",
         chip: "bg-amber-50 text-amber-700 ring-amber-100",
         iconWrap: "bg-amber-50 text-amber-700",
       },
       {
-        title: "Pending HITL",
+        title: t("dashboard.kpi.pendingHitl"),
         value: formatInt(hitl),
-        change: total ? `${pct(hitl, total)}% of total` : "—",
+        change: total ? t("dashboard.kpi.ofTotal", { pct: pct(hitl, total) }) : "—",
         icon: "pending",
         chip: "bg-rose-50 text-rose-700 ring-rose-100",
         iconWrap: "bg-rose-50 text-rose-700",
       },
     ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [active, converted, hitl, suppressed, total]
   );
 
@@ -236,10 +240,10 @@ const Dashboard = () => {
       .sort((a, b) => (b[1] || 0) - (a[1] || 0))
       .slice(0, 6)
       .map(([node, count]) => ({
-        title: `${node} — ${formatInt(count)} active leads`,
-        meta: "Active pipeline",
+        title: `${node} — ${t("dashboard.feed.activeLeads", { count: formatInt(count) })}`,
+        meta: t("dashboard.feed.activePipeline"),
       }));
-  }, [stats]);
+  }, [stats, t]);
 
   return (
     <>
@@ -247,14 +251,14 @@ const Dashboard = () => {
         <div className="mb-3 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-800">
           {error}{" "}
           <button type="button" className="ml-2 font-semibold underline" onClick={refresh}>
-            Retry
+            {t("common.retry")}
           </button>
         </div>
       ) : null}
 
       {loading ? (
         <div className="mb-3 rounded-2xl border border-gray-100 bg-white px-4 py-3 text-sm text-gray-500">
-          Loading dashboard…
+          {t("dashboard.loading")}
         </div>
       ) : null}
 
@@ -284,8 +288,8 @@ const Dashboard = () => {
 
       <section className="mt-4 grid gap-3 xl:grid-cols-2">
         <article className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
-          <h3 className="text-sm font-semibold text-[#1e2a52] dark:text-white">Conversion Funnel</h3>
-          <p className="mb-4 text-[11px] text-gray-400 dark:text-slate-400">Lead journey from database aggregates</p>
+          <h3 className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("dashboard.funnel.title")}</h3>
+          <p className="mb-4 text-[11px] text-gray-400 dark:text-slate-400">{t("dashboard.funnel.subtitle")}</p>
           <div className="space-y-3">
             {funnelBars.map((bar) => (
               <div key={bar.label}>
@@ -305,8 +309,8 @@ const Dashboard = () => {
         </article>
 
         <article className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
-          <h3 className="text-sm font-semibold text-[#1e2a52] dark:text-white">Scenario Distribution</h3>
-          <p className="mb-4 text-[11px] text-gray-400 dark:text-slate-400">All leads by scenario_id</p>
+          <h3 className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("dashboard.scenarios.title")}</h3>
+          <p className="mb-4 text-[11px] text-gray-400 dark:text-slate-400">{t("dashboard.scenarios.subtitle")}</p>
           <div className="grid gap-2 sm:grid-cols-2">
             {scenarioRows.map((scenario) => (
               <div
@@ -328,10 +332,10 @@ const Dashboard = () => {
 
       <section className="mt-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-[#1e2a52] dark:text-white">Live Activity Feed</h3>
+          <h3 className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("dashboard.feed.title")}</h3>
           <span className="inline-flex items-center gap-2 text-xs text-gray-400 dark:text-slate-400">
             <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
-            From active agent nodes
+            {t("dashboard.feed.fromActiveNodes")}
           </span>
         </div>
         <div className="space-y-3">
@@ -349,7 +353,7 @@ const Dashboard = () => {
               </div>
             ))
           ) : (
-            <p className="text-sm text-gray-500 dark:text-slate-400">No active pipeline nodes with counts yet.</p>
+            <p className="text-sm text-gray-500 dark:text-slate-400">{t("dashboard.feed.empty")}</p>
           )}
         </div>
       </section>
