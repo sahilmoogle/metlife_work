@@ -65,7 +65,7 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950">
+    <div className="min-h-screen bg-white dark:bg-gradient-to-b dark:from-volt-bg1 dark:via-volt-bg0 dark:to-volt-bg0">
       <div className="mx-auto flex min-h-screen max-w-[1600px]">
         <section className="relative hidden w-1/2 overflow-hidden bg-gradient-to-b from-[#2f21c7] via-[#2a1bb3] to-[#21179a] text-white lg:flex lg:flex-col">
           <div className="absolute inset-0 opacity-30">
@@ -106,25 +106,25 @@ const Login = () => {
           </div>
         </section>
 
-        <section className="flex w-full flex-col bg-white px-6 py-8 sm:px-10 lg:w-1/2 lg:px-16 dark:bg-slate-950">
+        <section className="flex w-full flex-col bg-white px-6 py-8 sm:px-10 lg:w-1/2 lg:px-16 dark:bg-volt-bg1">
           <header className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 text-lg font-bold text-indigo-700">
               <img src={mainIcon} alt="icon" className="w-8 h-8" /> 
             </div>
             <div>
               <h1 className="text-base font-bold text-indigo-700">{t("brand.name")}</h1>
-              <p className="text-xs text-gray-500 dark:text-slate-400">{t("brand.tagline")}</p>
+              <p className="text-xs text-gray-500 dark:text-volt-muted">{t("brand.tagline")}</p>
             </div>
           </header>
 
           <div className="mx-auto flex w-full max-w-[460px] flex-1 flex-col justify-center">
-            <h3 className="text-sm font-medium text-gray-600 dark:text-slate-300">Log in to</h3>
+            <h3 className="text-sm font-medium text-gray-600 dark:text-volt-muted">Log in to</h3>
             <p className="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">
               <span className="text-indigo-700">{t("brand.name")}</span>
             </p>
 
             <form onSubmit={handleSubmit} className="mt-8">
-              <label className="mb-2 block text-xs font-medium text-gray-600 dark:text-slate-300">{t("login.email")}</label>
+              <label className="mb-2 block text-xs font-medium text-gray-600 dark:text-volt-muted">{t("login.email")}</label>
               <div className="relative mb-4">
                 <MailIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-indigo-500/70" />
                 <input
@@ -134,11 +134,11 @@ const Login = () => {
                   placeholder={t("login.email")}
                   autoComplete="email"
                   required
-                  className="h-11 w-full rounded-full border border-gray-200 bg-white pl-11 pr-4 text-sm text-gray-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200 dark:focus:ring-indigo-500/20"
+                  className="h-11 w-full rounded-full border border-gray-200 bg-white pl-11 pr-4 text-sm text-gray-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-volt-borderSoft dark:bg-volt-panel dark:text-volt-text dark:focus:ring-indigo-500/20"
                 />
               </div>
 
-              <label className="mb-2 block text-xs font-medium text-gray-600 dark:text-slate-300">{t("login.password")}</label>
+              <label className="mb-2 block text-xs font-medium text-gray-600 dark:text-volt-muted">{t("login.password")}</label>
               <div className="relative mb-4">
                 <LockIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-indigo-500/70" />
                 <input
@@ -148,7 +148,7 @@ const Login = () => {
                   placeholder={t("login.password")}
                   autoComplete="current-password"
                   required
-                  className="h-11 w-full rounded-full border border-gray-200 bg-white pl-11 pr-4 text-sm text-gray-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200 dark:focus:ring-indigo-500/20"
+                  className="h-11 w-full rounded-full border border-gray-200 bg-white pl-11 pr-4 text-sm text-gray-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-volt-borderSoft dark:bg-volt-panel dark:text-volt-text dark:focus:ring-indigo-500/20"
                 />
               </div>
 
@@ -163,7 +163,7 @@ const Login = () => {
               </button>
             </form>
 
-            <p className="mt-10 text-center text-xs text-gray-500 dark:text-slate-400">
+            <p className="mt-10 text-center text-xs text-gray-500 dark:text-volt-muted2">
               Don&apos;t have an account?{" "}
               <Link to="/signup" className="font-semibold text-indigo-700 hover:underline">
                 Sign up

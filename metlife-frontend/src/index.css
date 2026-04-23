@@ -1,3 +1,33 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Scrollbar theming (dark mode only) */
+.dark {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: rgba(124, 92, 255, 0.55) rgba(15, 10, 44, 0.35);
+}
+
+.dark ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: rgba(15, 10, 44, 0.35);
+  border-radius: 999px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(124, 92, 255, 0.75), rgba(53, 167, 255, 0.55));
+  border-radius: 999px;
+  border: 2px solid rgba(15, 10, 44, 0.35);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(124, 92, 255, 0.92), rgba(53, 167, 255, 0.72));
+}
+
+.dark ::-webkit-scrollbar-corner {
+  background: rgba(15, 10, 44, 0.35);
+}
