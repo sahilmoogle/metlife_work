@@ -600,11 +600,11 @@ const Campaigns = () => {
 
   return (
     <section className="space-y-3">
-      <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
+      <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold text-[#1e2a52] dark:text-white">{t("campaigns.title")}</h2>
-            <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
+            <p className="mt-1 text-xs text-gray-500 dark:text-volt-muted">
               {t("campaigns.subtitle")}
             </p>
           </div>
@@ -619,7 +619,7 @@ const Campaigns = () => {
                 {t("campaigns.status.batchRunning")}
               </span>
             ) : (
-              <span className="text-xs font-semibold text-gray-500 dark:text-slate-400">{loading ? t("common.loading") : t("common.ready")}</span>
+              <span className="text-xs font-semibold text-gray-500 dark:text-volt-muted2">{loading ? t("common.loading") : t("common.ready")}</span>
             )}
 
             <button
@@ -661,16 +661,16 @@ const Campaigns = () => {
             </div>
           ) : null}
 
-          <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-white/10 dark:bg-slate-950/40 dark:shadow-none">
+          <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:shadow-none">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xs font-semibold text-gray-700 dark:text-slate-200">
+              <p className="text-xs font-semibold text-gray-700 dark:text-volt-text">
                 {t("campaigns.batch.processing")}{" "}
                 <span className="text-indigo-700">
                   {formatInt(processed)} / {formatInt(batch?.total ?? totalLeads)}
                 </span>{" "}
                 {t("campaigns.batch.leads")}
               </p>
-              <div className="flex flex-wrap items-center gap-3 text-[11px] text-gray-500 dark:text-slate-400">
+              <div className="flex flex-wrap items-center gap-3 text-[11px] text-gray-500 dark:text-volt-muted2">
                 <span className="inline-flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-emerald-500" />
                   {formatInt(success)} {t("campaigns.batch.succeeded")}
@@ -702,7 +702,7 @@ const Campaigns = () => {
             {scenarioCards.map((s) => (
               <div
                 key={s.id}
-                className="rounded-2xl border border-gray-100 bg-white p-3 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-white/10 dark:bg-slate-950/40 dark:shadow-none"
+                className="rounded-2xl border border-gray-100 bg-white p-3 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:shadow-none"
               >
                 <div className="flex items-center justify-between">
                   <span className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ring-1 ${s.tone}`}>
@@ -715,18 +715,18 @@ const Campaigns = () => {
                 <p className="mt-3 text-xl font-semibold tracking-tight text-[#1e2a52] dark:text-white">
                   {loading ? "—" : formatInt(scenarioCounts[s.id] || 0)}
                 </p>
-                <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">{s.label}</p>
-                <p className="mt-2 text-[11px] text-gray-400 dark:text-slate-400">
+                <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">{s.label}</p>
+                <p className="mt-2 text-[11px] text-gray-400 dark:text-volt-muted2">
                   {loading ? "Loading" : "Ready"}
                 </p>
               </div>
             ))}
           </div>
 
-          <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
+          <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
             <div className="mb-3">
               <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("campaigns.pipeline.title")}</p>
-              <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">
+              <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">
                 {t("campaigns.pipeline.subtitle")}
               </p>
             </div>
@@ -746,7 +746,7 @@ const Campaigns = () => {
                 return (
                   <div
                     key={stage.key}
-                    className={`rounded-2xl border border-gray-100 bg-white p-4 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-white/10 dark:bg-slate-950/40 dark:shadow-none ${
+                    className={`rounded-2xl border border-gray-100 bg-white p-4 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:shadow-none ${
                       isHitl && awaitingHitl > 0 ? "ring-1 ring-amber-200" : ""
                     }`}
                   >
@@ -755,7 +755,7 @@ const Campaigns = () => {
                       <p className={`text-3xl font-semibold tracking-tight ${isConv ? "text-emerald-700" : "text-[#1e2a52] dark:text-white"}`}>
                         {loading ? 0 : isAgentStage ? executed : value}
                       </p>
-                      <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">
+                      <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">
                         {loading
                           ? "Idle"
                           : isHitl

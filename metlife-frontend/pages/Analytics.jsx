@@ -129,17 +129,17 @@ const Analytics = () => {
         </div>
       ) : null}
 
-      <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
+      <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold text-[#1e2a52] dark:text-white">{t("analytics.title")}</h2>
-            <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
+            <p className="mt-1 text-xs text-gray-500 dark:text-volt-muted">
               {t("analytics.subtitle", { range: loading ? t("common.loading") : rangeLabel })}
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex rounded-full border border-gray-200 bg-gray-50 p-1 dark:border-white/10 dark:bg-white/5">
+            <div className="inline-flex rounded-full border border-gray-200 bg-gray-50 p-1 dark:border-volt-borderSoft dark:bg-white/5">
               {ranges.map((r) => {
                 const active = range === r.key;
                 return (
@@ -150,8 +150,8 @@ const Analytics = () => {
                     disabled={loading}
                     className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
                       active
-                        ? "bg-white text-indigo-700 shadow-sm dark:bg-slate-950/40 dark:shadow-none"
-                        : "text-gray-600 hover:text-gray-800 dark:text-slate-300 dark:hover:text-white"
+                        ? "bg-white text-indigo-700 shadow-sm dark:bg-volt-card/60 dark:shadow-none"
+                        : "text-gray-600 hover:text-gray-800 dark:text-volt-muted dark:hover:text-volt-text"
                     }`}
                   >
                     {t(r.labelKey)}
@@ -164,7 +164,7 @@ const Analytics = () => {
               type="button"
               onClick={exportJson}
               disabled={!data}
-              className="inline-flex h-9 items-center gap-2 rounded-full border border-gray-200 bg-white px-4 text-xs font-semibold text-gray-700 hover:border-indigo-200 hover:text-indigo-700 disabled:opacity-50 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200 dark:hover:border-white/20 dark:hover:text-white"
+              className="inline-flex h-9 items-center gap-2 rounded-full border border-gray-200 bg-white px-4 text-xs font-semibold text-gray-700 hover:border-indigo-200 hover:text-indigo-700 disabled:opacity-50 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text dark:hover:border-volt-border dark:hover:text-white"
             >
               {t("common.export")}
               <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
@@ -187,16 +187,16 @@ const Analytics = () => {
             ? Array.from({ length: 6 }).map((_, i) => (
                 <div
                   key={i}
-                  className="relative h-28 animate-pulse rounded-2xl border border-gray-100 bg-gray-100 dark:border-white/10 dark:bg-white/10"
+                  className="relative h-28 animate-pulse rounded-2xl border border-gray-100 bg-gray-100 dark:border-volt-borderSoft dark:bg-white/10"
                 />
               ))
             : kpisWithStyle.map((k) => (
                 <div
                   key={k.title}
-                  className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-white/10 dark:bg-slate-950/40 dark:shadow-none"
+                  className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:shadow-none"
                 >
                   <div className={`absolute left-0 top-0 h-1 w-full ${k.bar}`} />
-                  <p className="text-xs font-medium text-gray-500 dark:text-slate-400">{k.title}</p>
+                  <p className="text-xs font-medium text-gray-500 dark:text-volt-muted">{k.title}</p>
                   <p className={`mt-2 text-2xl font-semibold tracking-tight ${k.valueTone}`}>{k.value}</p>
                   <p className={`mt-1 text-[11px] font-medium ${k.subTone}`}>{k.sub}</p>
                 </div>
@@ -205,10 +205,10 @@ const Analytics = () => {
       </div>
 
       <div className="grid gap-3 xl:grid-cols-[2fr_1fr]">
-        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
+        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
           <div className="mb-3">
             <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("analytics.weekly.title")}</p>
-            <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">{t("analytics.weekly.subtitle")}</p>
+            <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">{t("analytics.weekly.subtitle")}</p>
           </div>
 
           <div className="flex items-end justify-between gap-3">
@@ -219,14 +219,14 @@ const Analytics = () => {
               const hConv = Math.max(0, 100 - hNew - hEng);
               return (
                 <div key={w.label} className="flex flex-1 flex-col items-center gap-2">
-                  <div className="flex h-44 w-full max-w-[120px] items-end justify-center rounded-2xl bg-gray-50 p-2 ring-1 ring-gray-100 dark:bg-white/5 dark:ring-white/10">
-                    <div className="flex h-full w-10 flex-col-reverse overflow-hidden rounded-xl bg-white ring-1 ring-gray-100 dark:bg-slate-950/40 dark:ring-white/10">
+                  <div className="flex h-44 w-full max-w-[120px] items-end justify-center rounded-2xl bg-gray-50 p-2 ring-1 ring-gray-100 dark:bg-white/5 dark:ring-volt-borderSoft">
+                    <div className="flex h-full w-10 flex-col-reverse overflow-hidden rounded-xl bg-white ring-1 ring-gray-100 dark:bg-volt-card/60 dark:ring-volt-borderSoft">
                       <div className="w-full bg-emerald-500" style={{ height: `${hConv}%` }} />
                       <div className="w-full bg-violet-500" style={{ height: `${hEng}%` }} />
                       <div className="w-full bg-blue-500" style={{ height: `${hNew}%` }} />
                     </div>
                   </div>
-                  <p className="text-[11px] font-semibold text-gray-500 dark:text-slate-400">{w.label}</p>
+                  <p className="text-[11px] font-semibold text-gray-500 dark:text-volt-muted2">{w.label}</p>
                 </div>
               );
             })}
@@ -235,7 +235,7 @@ const Analytics = () => {
             ) : null}
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-[11px] text-gray-500 dark:text-slate-400">
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-[11px] text-gray-500 dark:text-volt-muted2">
             <span className="inline-flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-blue-500" /> {t("analytics.weekly.newLeads")}
             </span>
@@ -248,17 +248,17 @@ const Analytics = () => {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
+        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
           <div className="mb-3">
             <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("analytics.scenarioConversion.title")}</p>
-            <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">{t("analytics.scenarioConversion.subtitle")}</p>
+            <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">{t("analytics.scenarioConversion.subtitle")}</p>
           </div>
 
           <div className="space-y-3">
             {(data?.scenario_conversion ?? []).map((s) => (
               <div key={s.scenario_id} className="flex items-center gap-3">
                 <div className="w-28 shrink-0">
-                  <p className="text-xs font-semibold text-gray-700 dark:text-slate-200">
+                  <p className="text-xs font-semibold text-gray-700 dark:text-volt-text">
                     {s.scenario_id} <span className="text-gray-400">·</span> {s.label}
                   </p>
                 </div>
@@ -270,10 +270,10 @@ const Analytics = () => {
                     />
                   </div>
                 </div>
-                <div className="w-10 text-right text-xs font-semibold text-gray-700 dark:text-slate-200">
+                <div className="w-10 text-right text-xs font-semibold text-gray-700 dark:text-volt-text">
                   {s.conversion_pct.toFixed(1)}%
                 </div>
-                <div className="w-14 text-right text-xs text-gray-400 dark:text-slate-400">
+                <div className="w-14 text-right text-xs text-gray-400 dark:text-volt-muted2">
                   {formatInt(s.converted_count)}/{formatInt(s.total_leads_in_period)}
                 </div>
               </div>
@@ -286,10 +286,10 @@ const Analytics = () => {
       </div>
 
       <div className="grid gap-3 xl:grid-cols-3">
-        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
+        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
           <div className="mb-3">
             <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("analytics.agentPerf.title")}</p>
-            <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">
+            <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">
               {t("analytics.agentPerf.subtitle")}
             </p>
           </div>
@@ -297,7 +297,7 @@ const Analytics = () => {
           <div className="overflow-x-auto">
             <table className="min-w-[640px] w-full border-separate border-spacing-0">
               <thead>
-                <tr className="text-left text-[11px] font-semibold text-gray-500 dark:text-slate-400">
+                <tr className="text-left text-[11px] font-semibold text-gray-500 dark:text-volt-muted2">
                   <th className="px-3 py-2">{t("analytics.agentPerf.agent")}</th>
                   <th className="px-3 py-2">{t("analytics.agentPerf.processed")}</th>
                   <th className="px-3 py-2">{t("analytics.agentPerf.avgLatency")}</th>
@@ -308,13 +308,13 @@ const Analytics = () => {
                 {(data?.agent_performance ?? []).map((row) => (
                   <tr
                     key={row.node_key}
-                    className="border-t border-gray-100 text-xs text-gray-700 hover:bg-gray-50/60 dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/5"
+                    className="border-t border-gray-100 text-xs text-gray-700 hover:bg-gray-50/60 dark:border-volt-borderSoft dark:text-volt-text dark:hover:bg-white/10"
                   >
                     <td className={`px-3 py-2 font-semibold ${AGENT_ROW_TONE[row.node_key] || "text-gray-700"}`}>
                       {row.name}
                     </td>
                     <td className="px-3 py-2 font-medium text-gray-800 dark:text-white">{formatInt(row.processed_count)}</td>
-                    <td className="px-3 py-2 text-gray-600 dark:text-slate-300">
+                    <td className="px-3 py-2 text-gray-600 dark:text-volt-muted">
                       {row.latency_seconds != null ? `${row.latency_seconds.toFixed(1)}s` : "—"}
                     </td>
                     <td className="px-3 py-2 font-semibold text-emerald-700">
@@ -330,10 +330,10 @@ const Analytics = () => {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
+        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
           <div className="mb-3">
             <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("analytics.emailPerf.title")}</p>
-            <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">{t("analytics.emailPerf.subtitle")}</p>
+            <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">{t("analytics.emailPerf.subtitle")}</p>
           </div>
 
           <div className="space-y-3">
@@ -342,9 +342,9 @@ const Analytics = () => {
               const st = EMAIL_METRIC_STYLE[b.metric] || { color: "bg-gray-500", track: "bg-gray-100" };
               return (
                 <div key={b.metric}>
-                  <div className="mb-1 flex items-center justify-between text-[11px] text-gray-500 dark:text-slate-400">
+                  <div className="mb-1 flex items-center justify-between text-[11px] text-gray-500 dark:text-volt-muted2">
                     <span>{label}</span>
-                    <span className="font-semibold text-gray-700 dark:text-slate-200">{b.value_pct.toFixed(1)}%</span>
+                    <span className="font-semibold text-gray-700 dark:text-volt-text">{b.value_pct.toFixed(1)}%</span>
                   </div>
                   <div className={`h-2 rounded-full ${st.track}`}>
                     <div className={`h-full rounded-full ${st.color}`} style={{ width: `${Math.min(100, b.value_pct)}%` }} />
@@ -354,13 +354,13 @@ const Analytics = () => {
             })}
           </div>
 
-          <div className="mt-4 rounded-2xl border border-gray-100 bg-gray-50 p-3 dark:border-white/10 dark:bg-white/5">
-            <p className="text-[11px] font-semibold text-gray-500 dark:text-slate-400">{t("analytics.emailPerf.topPerforming")}</p>
+          <div className="mt-4 rounded-2xl border border-gray-100 bg-gray-50 p-3 dark:border-volt-borderSoft dark:bg-white/5">
+            <p className="text-[11px] font-semibold text-gray-500 dark:text-volt-muted2">{t("analytics.emailPerf.topPerforming")}</p>
             <div className="mt-2 space-y-2">
               {(data?.email_top_performing ?? []).map((t, idx) => (
                 <div
                   key={`${t.scenario_id}-${t.rank_type}-${idx}`}
-                  className="flex items-center justify-between rounded-xl bg-white px-3 py-2 ring-1 ring-gray-100 dark:bg-slate-950/40 dark:ring-white/10"
+                  className="flex items-center justify-between rounded-xl bg-white px-3 py-2 ring-1 ring-gray-100 dark:bg-volt-card/60 dark:ring-volt-borderSoft"
                 >
                   <p className="text-xs font-semibold text-gray-800 dark:text-white">
                     {t.scenario_id}
@@ -382,10 +382,10 @@ const Analytics = () => {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
+        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
           <div className="mb-3">
             <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("analytics.hitlGate.title")}</p>
-            <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">{t("analytics.hitlGate.subtitle")}</p>
+            <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">{t("analytics.hitlGate.subtitle")}</p>
           </div>
 
           <div className="space-y-2">
@@ -412,14 +412,14 @@ const Analytics = () => {
               return (
                 <div
                   key={g.gate}
-                  className="rounded-2xl border border-gray-100 bg-white p-3 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-white/10 dark:bg-slate-950/40 dark:shadow-none"
+                  className="rounded-2xl border border-gray-100 bg-white p-3 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:shadow-none"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <span className={`inline-flex rounded-full px-3 py-1 text-[11px] font-semibold ring-1 ${chipTone}`}>
                         {g.title}
                       </span>
-                      <p className="mt-2 text-[11px] text-gray-400 dark:text-slate-400">{meta}</p>
+                      <p className="mt-2 text-[11px] text-gray-400 dark:text-volt-muted2">{meta}</p>
                     </div>
                     <p className={`text-lg font-semibold ${pctTone}`}>{pct}</p>
                   </div>
@@ -436,19 +436,19 @@ const Analytics = () => {
       </div>
 
       <div className="grid gap-3 lg:grid-cols-2">
-        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
+        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
           <div className="mb-3">
             <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("analytics.scoreDist.title")}</p>
-            <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">{t("analytics.scoreDist.subtitle")}</p>
+            <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">{t("analytics.scoreDist.subtitle")}</p>
           </div>
 
-          <div className="flex h-44 items-end justify-between gap-2 rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-100 dark:bg-white/5 dark:ring-white/10">
+          <div className="flex h-44 items-end justify-between gap-2 rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-100 dark:bg-white/5 dark:ring-volt-borderSoft">
             {scoreBars.map((b) => (
               <div key={b.score_range_label} className="flex flex-1 flex-col items-center gap-2">
                 <div className="flex h-32 w-full items-end justify-center">
                   <div className={`w-10 rounded-xl ${b.color}`} style={{ height: `${Math.max(8, b.heightPct)}%` }} />
                 </div>
-                <p className="text-[11px] font-semibold text-gray-500 dark:text-slate-400">{b.score_range_label}</p>
+                <p className="text-[11px] font-semibold text-gray-500 dark:text-volt-muted2">{b.score_range_label}</p>
               </div>
             ))}
             {!loading && scoreBars.length === 0 ? (
@@ -456,7 +456,7 @@ const Analytics = () => {
             ) : null}
           </div>
 
-          <div className="mt-3 flex items-center justify-between text-[11px] text-gray-500 dark:text-slate-400">
+          <div className="mt-3 flex items-center justify-between text-[11px] text-gray-500 dark:text-volt-muted2">
             <span>{t("analytics.scoreDist.below", { count: formatInt(data?.score_insights?.below_0_40 ?? 0) })}</span>
             <span className="font-semibold text-emerald-700">
               {t("analytics.scoreDist.above", { count: formatInt(data?.score_insights?.above_0_70 ?? 0) })}
@@ -464,10 +464,10 @@ const Analytics = () => {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
+        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
           <div className="mb-3">
             <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("analytics.llm.title")}</p>
-            <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">{t("analytics.llm.subtitle")}</p>
+            <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">{t("analytics.llm.subtitle")}</p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
@@ -491,15 +491,15 @@ const Analytics = () => {
             ))}
           </div>
 
-          <div className="mt-3 rounded-2xl bg-slate-900 p-4">
-            <div className="flex items-center justify-between text-xs font-semibold text-slate-200">
+          <div className="mt-3 rounded-2xl bg-volt-card p-4 ring-1 ring-volt-borderSoft">
+            <div className="flex items-center justify-between text-xs font-semibold text-volt-muted">
               <span>{t("analytics.llm.totalMonthly")}</span>
-              <span className="text-lg font-semibold text-white">
+              <span className="text-lg font-semibold text-volt-text">
                 {data?.llm_total_monthly_jpy != null ? `¥${formatInt(Math.round(data.llm_total_monthly_jpy))}` : "—"}
               </span>
             </div>
             {!llmTracked ? (
-              <p className="mt-2 text-[11px] text-slate-400">{t("analytics.llm.notPersisted")}</p>
+              <p className="mt-2 text-[11px] text-volt-muted2">{t("analytics.llm.notPersisted")}</p>
             ) : null}
           </div>
         </div>

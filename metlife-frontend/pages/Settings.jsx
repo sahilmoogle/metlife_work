@@ -98,7 +98,7 @@ const Toggle = ({ checked, onChange, ariaLabel }) => {
       className={`relative inline-flex h-5 w-9 items-center rounded-full border transition ${
         checked
           ? "border-emerald-200 bg-emerald-500"
-          : "border-gray-200 bg-gray-100 dark:border-white/15 dark:bg-white/10"
+          : "border-gray-200 bg-gray-100 dark:border-volt-borderSoft dark:bg-white/10"
       }`}
     >
       <span
@@ -442,11 +442,11 @@ const Settings = () => {
         </div>
       ) : null}
 
-      <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
+      <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold text-[#1e2a52] dark:text-white">{t("settings.accessControlTitle")}</h2>
-            <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
+            <p className="mt-1 text-xs text-gray-500 dark:text-volt-muted">
               {t("settings.accessControlSubtitle")}
             </p>
           </div>
@@ -466,13 +466,13 @@ const Settings = () => {
           {roles.map((r) => (
             <div
               key={r.key}
-              className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-white/10 dark:bg-slate-950/40 dark:shadow-none"
+              className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:shadow-none"
             >
               <div className={`absolute left-0 top-0 h-1 w-full ${r.topBar}`} />
               <p className="text-2xl font-semibold tracking-tight text-[#1e2a52] dark:text-white">
                 {loading ? "—" : roleCounts[r.key]}
               </p>
-              <p className="mt-1 text-xs font-medium text-gray-600 dark:text-slate-300">{r.label}</p>
+              <p className="mt-1 text-xs font-medium text-gray-600 dark:text-volt-muted">{r.label}</p>
               <span className={`mt-3 inline-flex rounded-full px-3 py-1 text-[11px] font-semibold ring-1 ${r.tone}`}>
                 {r.subtitle}
               </span>
@@ -481,7 +481,7 @@ const Settings = () => {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
+      <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-amber-50 text-amber-700 ring-1 ring-amber-100 dark:bg-amber-500/15 dark:text-amber-200 dark:ring-amber-500/20">
@@ -489,7 +489,7 @@ const Settings = () => {
             </span>
             <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("settings.permissionsMatrixTitle")}</p>
           </div>
-          <p className="text-xs text-gray-400 dark:text-slate-400">
+          <p className="text-xs text-gray-400 dark:text-volt-muted2">
             {totals.totalUsers} users • {totals.totalRoles} roles
           </p>
         </div>
@@ -497,7 +497,7 @@ const Settings = () => {
         <div className="overflow-x-auto">
           <table className="min-w-[980px] w-full border-separate border-spacing-0">
             <thead>
-              <tr className="text-left text-[11px] font-semibold text-gray-500 dark:text-slate-400">
+              <tr className="text-left text-[11px] font-semibold text-gray-500 dark:text-volt-muted2">
                 <th className="px-3 py-3">User</th>
                 <th className="px-3 py-3">Role</th>
                 {permissionCols.map((c) => (
@@ -512,7 +512,7 @@ const Settings = () => {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={permissionCols.length + 4} className="px-3 py-8 text-center text-sm text-gray-500 dark:text-slate-400">
+                  <td colSpan={permissionCols.length + 4} className="px-3 py-8 text-center text-sm text-gray-500 dark:text-volt-muted">
                     {t("common.loading")}
                   </td>
                 </tr>
@@ -520,14 +520,14 @@ const Settings = () => {
 
               {!loading && users.length === 0 ? (
                 <tr>
-                  <td colSpan={permissionCols.length + 4} className="px-3 py-8 text-center text-sm text-gray-500 dark:text-slate-400">
+                  <td colSpan={permissionCols.length + 4} className="px-3 py-8 text-center text-sm text-gray-500 dark:text-volt-muted">
                     {t("common.noItems")}
                   </td>
                 </tr>
               ) : null}
 
               {!loading ? pagedUsers.map((u) => (
-                <tr key={u.user_id} className="border-t border-gray-100 text-xs text-gray-700 hover:bg-gray-50/60 dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/5">
+                <tr key={u.user_id} className="border-t border-gray-100 text-xs text-gray-700 hover:bg-gray-50/60 dark:border-volt-borderSoft dark:text-volt-text dark:hover:bg-white/10">
                   <td className="px-3 py-3">
                     <div className="flex items-center gap-3">
                       <div className={`flex h-8 w-8 items-center justify-center rounded-lg text-[11px] font-bold text-white ${avatarTone[normalizeRoleKey(u.role)] || avatarTone.viewer}`}>
@@ -539,7 +539,7 @@ const Settings = () => {
                       </div>
                       <div className="leading-tight">
                         <p className="text-sm font-semibold text-gray-800 dark:text-white">{u.name}</p>
-                        <p className="text-[11px] text-gray-400 dark:text-slate-400">{u.email}</p>
+                        <p className="text-[11px] text-gray-400 dark:text-volt-muted2">{u.email}</p>
                       </div>
                     </div>
                   </td>
@@ -567,7 +567,7 @@ const Settings = () => {
                         type="button"
                         onClick={() => openView(u)}
                         title="View user"
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-400 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted2 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
                       >
                         <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
                           <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -579,7 +579,7 @@ const Settings = () => {
                         type="button"
                         onClick={() => openPermissions(u)}
                         title="Manage permissions"
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-600 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-400 dark:hover:border-violet-500/40 dark:hover:bg-violet-500/10 dark:hover:text-violet-300"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-600 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted2 dark:hover:border-violet-500/40 dark:hover:bg-violet-500/10 dark:hover:text-violet-300"
                       >
                         <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
                           <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6l-8-4Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -592,7 +592,7 @@ const Settings = () => {
                         disabled={!canManage || actionLoading}
                         onClick={() => openEdit(u)}
                         title={canManage ? "Edit user" : "You do not have permission to manage users"}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition hover:border-amber-200 hover:bg-amber-50 hover:text-amber-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-400 dark:hover:border-amber-500/40 dark:hover:bg-amber-500/10 dark:hover:text-amber-300"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition hover:border-amber-200 hover:bg-amber-50 hover:text-amber-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted2 dark:hover:border-amber-500/40 dark:hover:bg-amber-500/10 dark:hover:text-amber-300"
                       >
                         <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
                           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -600,18 +600,18 @@ const Settings = () => {
                         </svg>
                       </button>
                       {/* Deactivate */}
-                      <button
+                      {/* <button
                         type="button"
                         disabled={!canManage || actionLoading || !u.is_active}
                         onClick={() => confirmDeactivate(u)}
                         title={canManage ? "Delete user" : "You do not have permission to manage users"}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-500 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-500/30 dark:bg-slate-950/40 dark:text-rose-400 dark:hover:border-rose-400/50 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-500 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-500/30 dark:bg-volt-card/60 dark:text-rose-400 dark:hover:border-rose-400/50 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
                       >
                         <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
                           <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                           <path d="M4.93 4.93l14.14 14.14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
-                      </button>
+                      </button> */}
                     </div>
                   </td>
                 </tr>
@@ -621,13 +621,13 @@ const Settings = () => {
         </div>
 
         {!loading && users.length > 0 ? (
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500 dark:text-slate-400">
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500 dark:text-volt-muted2">
             <div className="flex items-center gap-2">
               <span>{t("common.perPage")}</span>
               <select
                 value={pageSize}
                 onChange={(e) => setPageSize(Number(e.target.value))}
-                className="h-8 rounded-full border border-gray-200 bg-white px-3 text-xs text-gray-700 outline-none dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200"
+                className="h-8 rounded-full border border-gray-200 bg-white px-3 text-xs text-gray-700 outline-none dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text"
               >
                 <option value={5}>5</option>
                 <option value={10}>10</option>
@@ -637,7 +637,7 @@ const Settings = () => {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-gray-500 dark:text-slate-400">
+              <span className="text-gray-500 dark:text-volt-muted2">
                 {t("reviews.showing", {
                   from: totalRows ? startIndex + 1 : 0,
                   to: endIndex,
@@ -650,18 +650,18 @@ const Settings = () => {
                   type="button"
                   disabled={safePage === 1}
                   onClick={() => setPage((p) => p - 1)}
-                  className="inline-flex h-8 items-center justify-center rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition hover:border-indigo-200 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-300"
+                  className="inline-flex h-8 items-center justify-center rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition hover:border-indigo-200 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-40 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
                 >
                   {t("common.prev")}
                 </button>
-                <span className="px-2 text-xs text-gray-500 dark:text-slate-400">
+                <span className="px-2 text-xs text-gray-500 dark:text-volt-muted2">
                   {safePage} / {totalPages}
                 </span>
                 <button
                   type="button"
                   disabled={safePage === totalPages}
                   onClick={() => setPage((p) => p + 1)}
-                  className="inline-flex h-8 items-center justify-center rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition hover:border-indigo-200 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-300"
+                  className="inline-flex h-8 items-center justify-center rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition hover:border-indigo-200 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-40 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
                 >
                   {t("common.next")}
                 </button>
@@ -673,24 +673,24 @@ const Settings = () => {
 
       {isViewOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-[560px] rounded-2xl border border-gray-100 bg-white p-4 shadow-xl dark:border-white/10 dark:bg-slate-900">
+          <div className="w-full max-w-[560px] rounded-2xl border border-gray-100 bg-white p-4 shadow-xl dark:border-volt-borderSoft dark:bg-volt-panel">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("settings.userDetail")}</p>
-                <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">User ID: {viewUserId}</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-volt-muted2">User ID: {viewUserId}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsViewOpen(false)}
-                className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-600 hover:border-indigo-200 hover:text-indigo-700 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-300"
+                className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-600 hover:border-indigo-200 hover:text-indigo-700 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
               >
                 {t("common.close")}
               </button>
             </div>
 
-            <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50 p-4 text-sm text-gray-700 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200">
+            <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50 p-4 text-sm text-gray-700 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text">
               {viewLoading ? (
-                <p className="text-sm text-gray-500 dark:text-slate-400">Loading…</p>
+                <p className="text-sm text-gray-500 dark:text-volt-muted">Loading…</p>
               ) : viewUser ? (
                 <div className="space-y-2">
                   <p><span className="font-semibold">Name:</span> {viewUser.name}</p>
@@ -699,7 +699,7 @@ const Settings = () => {
                   <p><span className="font-semibold">Active:</span> {String(Boolean(viewUser.is_active))}</p>
                 </div>
               ) : (
-                <p className="text-sm text-gray-500 dark:text-slate-400">No data.</p>
+                <p className="text-sm text-gray-500 dark:text-volt-muted">No data.</p>
               )}
             </div>
           </div>
@@ -708,16 +708,16 @@ const Settings = () => {
 
       {isEditOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-[560px] rounded-2xl border border-gray-100 bg-white p-4 shadow-xl dark:border-white/10 dark:bg-slate-900">
+          <div className="w-full max-w-[560px] rounded-2xl border border-gray-100 bg-white p-4 shadow-xl dark:border-volt-borderSoft dark:bg-volt-panel">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("settings.editUser")}</p>
-                <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">User ID: {editUserId}</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-volt-muted2">User ID: {editUserId}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsEditOpen(false)}
-                className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-600 hover:border-indigo-200 hover:text-indigo-700 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-300"
+                className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-600 hover:border-indigo-200 hover:text-indigo-700 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
               >
                 {t("common.close")}
               </button>
@@ -725,27 +725,27 @@ const Settings = () => {
 
             <div className="mt-4 grid gap-3">
               <div>
-                <label className="text-xs font-semibold text-gray-600 dark:text-slate-300">Name</label>
+                <label className="text-xs font-semibold text-gray-600 dark:text-volt-muted">Name</label>
                 <input
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="mt-1 h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-indigo-300 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200"
+                  className="mt-1 h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-indigo-300 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text"
                 />
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-600 dark:text-slate-300">Role</label>
+                <label className="text-xs font-semibold text-gray-600 dark:text-volt-muted">Role</label>
                 <select
                   value={editRole}
                   onChange={(e) => setEditRole(e.target.value)}
-                  className="mt-1 h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-indigo-300 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200"
+                  className="mt-1 h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-indigo-300 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text"
                 >
                   {roleOptions.map((r) => (
                     <option key={r.value} value={r.value}>{r.label}</option>
                   ))}
                 </select>
               </div>
-              <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-3 py-3 dark:border-white/10 dark:bg-slate-950/40">
-                <p className="text-xs font-semibold text-gray-700 dark:text-slate-200">Active</p>
+              <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-3 py-3 dark:border-volt-borderSoft dark:bg-volt-card/60">
+                <p className="text-xs font-semibold text-gray-700 dark:text-volt-text">Active</p>
                 <Toggle checked={editActive} onChange={() => setEditActive((v) => !v)} ariaLabel="Toggle active" />
               </div>
             </div>
@@ -754,7 +754,7 @@ const Settings = () => {
               <button
                 type="button"
                 onClick={() => setIsEditOpen(false)}
-                className="inline-flex h-9 items-center justify-center rounded-full border border-gray-200 bg-white px-4 text-xs font-semibold text-gray-700 hover:border-indigo-200 hover:text-indigo-700 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200"
+                className="inline-flex h-9 items-center justify-center rounded-full border border-gray-200 bg-white px-4 text-xs font-semibold text-gray-700 hover:border-indigo-200 hover:text-indigo-700 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text"
               >
                 {t("common.cancel")}
               </button>
@@ -773,30 +773,30 @@ const Settings = () => {
 
       {isPermOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-[760px] rounded-2xl border border-gray-100 bg-white p-4 shadow-xl dark:border-white/10 dark:bg-slate-900">
+          <div className="w-full max-w-[760px] rounded-2xl border border-gray-100 bg-white p-4 shadow-xl dark:border-volt-borderSoft dark:bg-volt-panel">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("settings.userPermissions")}</p>
-                <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">User ID: {permUserId}</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-volt-muted2">User ID: {permUserId}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsPermOpen(false)}
-                className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-600 hover:border-indigo-200 hover:text-indigo-700 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-300"
+                className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-600 hover:border-indigo-200 hover:text-indigo-700 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
               >
                 {t("common.close")}
               </button>
             </div>
 
             {permLoading ? (
-              <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50 p-4 text-sm text-gray-500 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-400">
+              <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50 p-4 text-sm text-gray-500 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted">
                 Loading permissions…
               </div>
             ) : permDetail ? (
               <>
-                <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50 p-4 text-sm text-gray-700 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200">
+                <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50 p-4 text-sm text-gray-700 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text">
                   <p className="text-xs font-semibold">User: {permDetail.name} • {permDetail.email} • Role: {permDetail.role}</p>
-                  <p className="mt-1 text-[11px] text-gray-500 dark:text-slate-400">
+                  <p className="mt-1 text-[11px] text-gray-500 dark:text-volt-muted2">
                     Overrides are tri-state: Default (role), Grant, Revoke.
                   </p>
                 </div>
@@ -804,7 +804,7 @@ const Settings = () => {
                 <div className="mt-4 overflow-x-auto">
                   <table className="w-full min-w-[680px] border-separate border-spacing-0">
                     <thead>
-                      <tr className="text-left text-[11px] font-semibold text-gray-500 dark:text-slate-400">
+                      <tr className="text-left text-[11px] font-semibold text-gray-500 dark:text-volt-muted2">
                         <th className="px-3 py-2">Permission</th>
                         <th className="px-3 py-2">Role default</th>
                         <th className="px-3 py-2">Override</th>
@@ -817,7 +817,7 @@ const Settings = () => {
                         const effective = effectiveFromUi(c.key);
                         const override = permOverridesUi?.[c.key] || "default";
                         return (
-                          <tr key={c.key} className="border-t border-gray-100 text-xs text-gray-700 dark:border-white/10 dark:text-slate-200">
+                          <tr key={c.key} className="border-t border-gray-100 text-xs text-gray-700 dark:border-volt-borderSoft dark:text-volt-text">
                             <td className="px-3 py-2 font-semibold">{c.label}</td>
                             <td className="px-3 py-2">{roleDefault ? <Check /> : <Dash />}</td>
                             <td className="px-3 py-2">
@@ -825,7 +825,7 @@ const Settings = () => {
                                 value={override}
                                 disabled={!canManage || actionLoading}
                                 onChange={(e) => setPermOverridesUi((prev) => ({ ...prev, [c.key]: e.target.value }))}
-                                className="h-9 rounded-xl border border-gray-200 bg-white px-3 text-xs text-gray-700 outline-none disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200"
+                                className="h-9 rounded-xl border border-gray-200 bg-white px-3 text-xs text-gray-700 outline-none disabled:cursor-not-allowed disabled:opacity-60 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text"
                               >
                                 <option value="default">Default</option>
                                 <option value="grant">Grant</option>
@@ -841,14 +841,14 @@ const Settings = () => {
                 </div>
 
                 <div className="mt-4 flex items-center justify-between gap-2">
-                  <p className="text-[11px] text-gray-500 dark:text-slate-400">
+                  <p className="text-[11px] text-gray-500 dark:text-volt-muted2">
                     Matrix loaded: {permMatrix ? "yes" : "no"}
                   </p>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => setIsPermOpen(false)}
-                      className="inline-flex h-9 items-center justify-center rounded-full border border-gray-200 bg-white px-4 text-xs font-semibold text-gray-700 hover:border-indigo-200 hover:text-indigo-700 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200"
+                      className="inline-flex h-9 items-center justify-center rounded-full border border-gray-200 bg-white px-4 text-xs font-semibold text-gray-700 hover:border-indigo-200 hover:text-indigo-700 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text"
                     >
                       Cancel
                     </button>
@@ -864,7 +864,7 @@ const Settings = () => {
                 </div>
               </>
             ) : (
-              <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50 p-4 text-sm text-gray-500 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-400">
+              <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50 p-4 text-sm text-gray-500 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted">
                 No permission data.
               </div>
             )}
@@ -874,16 +874,16 @@ const Settings = () => {
 
       {isAddOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-[520px] rounded-2xl border border-gray-100 bg-white p-4 shadow-xl dark:border-white/10 dark:bg-slate-900">
+          <div className="w-full max-w-[520px] rounded-2xl border border-gray-100 bg-white p-4 shadow-xl dark:border-volt-borderSoft dark:bg-volt-panel">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">Add user</p>
-                <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">Create a MetLife operational staff account.</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-volt-muted2">Create a MetLife operational staff account.</p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsAddOpen(false)}
-                className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-600 hover:border-indigo-200 hover:text-indigo-700 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-300"
+                className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-600 hover:border-indigo-200 hover:text-indigo-700 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
               >
                 Close
               </button>
@@ -891,40 +891,40 @@ const Settings = () => {
 
             <div className="mt-4 grid gap-3">
               <div>
-                <label className="text-xs font-semibold text-gray-600 dark:text-slate-300">Name</label>
+                <label className="text-xs font-semibold text-gray-600 dark:text-volt-muted">Name</label>
                 <input
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  className="mt-1 h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-indigo-300 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200"
+                  className="mt-1 h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-indigo-300 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text"
                   placeholder="Full name"
                 />
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-600 dark:text-slate-300">Email</label>
+                <label className="text-xs font-semibold text-gray-600 dark:text-volt-muted">Email</label>
                 <input
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
-                  className="mt-1 h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-indigo-300 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200"
+                  className="mt-1 h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-indigo-300 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text"
                   placeholder="name@metlife.co.jp"
                   inputMode="email"
                 />
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-600 dark:text-slate-300">Password</label>
+                <label className="text-xs font-semibold text-gray-600 dark:text-volt-muted">Password</label>
                 <input
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="mt-1 h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-indigo-300 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200"
+                  className="mt-1 h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-indigo-300 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text"
                   placeholder="Min 8 characters"
                   type="password"
                 />
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-600 dark:text-slate-300">Role</label>
+                <label className="text-xs font-semibold text-gray-600 dark:text-volt-muted">Role</label>
                 <select
                   value={newRole}
                   onChange={(e) => setNewRole(e.target.value)}
-                  className="mt-1 h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-indigo-300 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200"
+                  className="mt-1 h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-indigo-300 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text"
                 >
                   <option value="Admin">Admin</option>
                   <option value="Manager">Manager</option>
@@ -938,7 +938,7 @@ const Settings = () => {
               <button
                 type="button"
                 onClick={() => setIsAddOpen(false)}
-                className="inline-flex h-9 items-center justify-center rounded-full border border-gray-200 bg-white px-4 text-xs font-semibold text-gray-700 hover:border-indigo-200 hover:text-indigo-700 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200"
+                className="inline-flex h-9 items-center justify-center rounded-full border border-gray-200 bg-white px-4 text-xs font-semibold text-gray-700 hover:border-indigo-200 hover:text-indigo-700 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text"
               >
                 Cancel
               </button>
@@ -956,69 +956,69 @@ const Settings = () => {
       ) : null}
 
       <div className="grid gap-3 lg:grid-cols-2">
-        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
+        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">Role Definitions</p>
           </div>
 
           <div className="space-y-3">
-            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 dark:border-white/10 dark:bg-white/5">
+            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 dark:border-volt-borderSoft dark:bg-white/5">
               <div className="flex items-center gap-3">
                 <span className="inline-flex rounded-full bg-rose-50 px-3 py-1 text-[11px] font-semibold text-rose-700 ring-1 ring-rose-100">
                   ADMIN
                 </span>
-                <p className="text-xs font-semibold text-gray-700 dark:text-slate-200">Full platform access</p>
+                <p className="text-xs font-semibold text-gray-700 dark:text-volt-text">Full platform access</p>
               </div>
-              <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">
+              <p className="mt-2 text-xs text-gray-500 dark:text-volt-muted2">
                 Run/stop workflows, start any agent, approve all HITL gates, manage users, export data,
                 configure scenarios. Can modify RBAC roles.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 dark:border-white/10 dark:bg-white/5">
+            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 dark:border-volt-borderSoft dark:bg-white/5">
               <div className="flex items-center gap-3">
                 <span className="inline-flex rounded-full bg-violet-50 px-3 py-1 text-[11px] font-semibold text-violet-700 ring-1 ring-violet-100">
                   MANAGER
                 </span>
-                <p className="text-xs font-semibold text-gray-700 dark:text-slate-200">Workflow + HITL</p>
+                <p className="text-xs font-semibold text-gray-700 dark:text-volt-text">Workflow + HITL</p>
               </div>
-              <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">
+              <p className="mt-2 text-xs text-gray-500 dark:text-volt-muted2">
                 Start/pause/resume workflows, click “Run from here” on agents, approve G1–G5 gates,
                 edit leads. Cannot manage users.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 dark:border-white/10 dark:bg-white/5">
+            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 dark:border-volt-borderSoft dark:bg-white/5">
               <div className="flex items-center gap-3">
                 <span className="inline-flex rounded-full bg-amber-50 px-3 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-100">
                   REVIEWER
                 </span>
-                <p className="text-xs font-semibold text-gray-700 dark:text-slate-200">HITL only</p>
+                <p className="text-xs font-semibold text-gray-700 dark:text-volt-text">HITL only</p>
               </div>
-              <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">
+              <p className="mt-2 text-xs text-gray-500 dark:text-volt-muted2">
                 Review and approve/reject HITL gates (G1–G5). Can view lead details and edit content.
                 Cannot start workflows or agents.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 dark:border-white/10 dark:bg-white/5">
+            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 dark:border-volt-borderSoft dark:bg-white/5">
               <div className="flex items-center gap-3">
                 <span className="inline-flex rounded-full bg-gray-100 px-3 py-1 text-[11px] font-semibold text-gray-700 ring-1 ring-gray-200">
                   VIEWER
                 </span>
-                <p className="text-xs font-semibold text-gray-700 dark:text-slate-200">Read-only</p>
+                <p className="text-xs font-semibold text-gray-700 dark:text-volt-text">Read-only</p>
               </div>
-              <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">
+              <p className="mt-2 text-xs text-gray-500 dark:text-volt-muted2">
                 View dashboard, lead list, workflow status, analytics. No edit or action permissions.
               </p>
             </div>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
+        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">Access Audit Log</p>
-            <span className="text-xs text-gray-400 dark:text-slate-400">Last 24h</span>
+            <span className="text-xs text-gray-400 dark:text-volt-muted2">Last 24h</span>
           </div>
 
           <div className="space-y-2">
@@ -1056,12 +1056,12 @@ const Settings = () => {
             ].map((item) => (
               <div
                 key={item.text}
-                className="flex items-start gap-3 rounded-2xl border border-gray-100 bg-white px-3 py-3 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-white/10 dark:bg-slate-950/40 dark:shadow-none"
+                className="flex items-start gap-3 rounded-2xl border border-gray-100 bg-white px-3 py-3 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:shadow-none"
               >
                 <span className={`mt-1.5 h-2 w-2 flex-none rounded-full ${item.dot}`} />
                 <div className="min-w-0">
                   <p className="text-xs font-semibold text-gray-800 dark:text-white">{item.text}</p>
-                  <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">{item.meta}</p>
+                  <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">{item.meta}</p>
                 </div>
               </div>
             ))}

@@ -154,7 +154,7 @@ const Leads = () => {
   };
 
   return (
-    <section className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm sm:p-4 dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
+    <section className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm sm:p-4 dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
       {loadError ? (
         <div className="mb-3 rounded-lg border border-rose-100 bg-rose-50 px-3 py-2 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
           {loadError}{" "}
@@ -186,7 +186,7 @@ const Leads = () => {
                 className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
                   isActive
                     ? "bg-indigo-600 text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-white/10 dark:text-volt-muted dark:hover:bg-white/15"
                 }`}
               >
                 {label}
@@ -196,14 +196,14 @@ const Leads = () => {
         </div>
 
         <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
-          <div className="flex h-9 w-full items-center gap-2 rounded-full border border-gray-200 bg-white px-3 text-sm text-gray-400 sm:w-[320px] dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-400">
-            <span className="select-none text-gray-400 dark:text-slate-400">Q</span>
+          <div className="flex h-9 w-full items-center gap-2 rounded-full border border-gray-200 bg-white px-3 text-sm text-gray-400 sm:w-[320px] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted2">
+            <span className="select-none text-gray-400 dark:text-volt-muted2">Q</span>
             <input
               type="text"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={t("common.search")}
-              className="w-full bg-transparent text-sm text-gray-700 outline-none dark:text-slate-200"
+              className="w-full bg-transparent text-sm text-gray-700 outline-none dark:text-volt-text"
             />
           </div>
           <button
@@ -225,14 +225,14 @@ const Leads = () => {
       <div className="overflow-x-auto">
         <table className="min-w-[980px] w-full border-separate border-spacing-0">
           <thead>
-            <tr className="text-left text-xs font-semibold text-gray-500 dark:text-slate-400">
+            <tr className="text-left text-xs font-semibold text-gray-500 dark:text-volt-muted2">
               <th className="w-10 px-3 py-3">
                 <input
                   type="checkbox"
                   checked={allVisibleSelected}
                   onChange={toggleAllVisible}
                   disabled={!pagedLeads.length}
-                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-200 dark:border-white/20 dark:bg-slate-950/40"
+                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-200 dark:border-white/20 dark:bg-volt-card/60"
                 />
               </th>
               <th className="w-16 px-3 py-3">Sr. No</th>
@@ -248,14 +248,14 @@ const Leads = () => {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={9} className="px-3 py-8 text-center text-sm text-gray-500 dark:text-slate-400">
+                <td colSpan={9} className="px-3 py-8 text-center text-sm text-gray-500 dark:text-volt-muted">
                   Loading leads…
                 </td>
               </tr>
             ) : null}
             {!loading && !pagedLeads.length ? (
               <tr>
-                <td colSpan={9} className="px-3 py-8 text-center text-sm text-gray-500 dark:text-slate-400">
+                <td colSpan={9} className="px-3 py-8 text-center text-sm text-gray-500 dark:text-volt-muted">
                   No leads match your filters.
                 </td>
               </tr>
@@ -267,7 +267,7 @@ const Leads = () => {
                   return (
                     <tr
                       key={lead.id}
-                      className="cursor-pointer border-t border-gray-100 text-sm text-gray-700 hover:bg-gray-50/60 dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/5"
+                      className="cursor-pointer border-t border-gray-100 text-sm text-gray-700 hover:bg-gray-50/60 dark:border-volt-borderSoft dark:text-volt-text dark:hover:bg-white/10"
                       onClick={() => navigate(`/leads/${lead.id}`)}
                     >
                       <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
@@ -275,14 +275,14 @@ const Leads = () => {
                           type="checkbox"
                           checked={selected.has(lead.id)}
                           onChange={() => toggleOne(lead.id)}
-                          className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-200 dark:border-white/20 dark:bg-slate-950/40"
+                          className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-200 dark:border-white/20 dark:bg-volt-card/60"
                         />
                       </td>
-                      <td className="px-3 py-3 text-gray-600 dark:text-slate-300">{startIndex + index + 1}</td>
+                      <td className="px-3 py-3 text-gray-600 dark:text-volt-muted">{startIndex + index + 1}</td>
                       <td className="px-3 py-3">
                         <div className="leading-tight">
                           <p className="font-medium text-gray-800 dark:text-white">{lead.name}</p>
-                          <p className="text-xs text-gray-400 dark:text-slate-400">{lead.email}</p>
+                          <p className="text-xs text-gray-400 dark:text-volt-muted2">{lead.email}</p>
                         </div>
                       </td>
                       <td className="px-3 py-3">
@@ -292,8 +292,8 @@ const Leads = () => {
                           {scenario}
                         </span>
                       </td>
-                      <td className="px-3 py-3 text-gray-700 dark:text-slate-200">{lead.persona_code || "—"}</td>
-                      <td className="px-3 py-3 text-gray-700 dark:text-slate-200">{lead.current_agent_node || "—"}</td>
+                      <td className="px-3 py-3 text-gray-700 dark:text-volt-text">{lead.persona_code || "—"}</td>
+                      <td className="px-3 py-3 text-gray-700 dark:text-volt-text">{lead.current_agent_node || "—"}</td>
                       <td className="px-3 py-3 font-medium text-gray-800 dark:text-white">
                         {(lead.engagement_score ?? 0).toFixed(2)}
                       </td>
@@ -306,7 +306,7 @@ const Leads = () => {
                           {status}
                         </span>
                       </td>
-                      <td className="px-3 py-3 text-gray-500 dark:text-slate-400">{lead.last_activity || "—"}</td>
+                      <td className="px-3 py-3 text-gray-500 dark:text-volt-muted2">{lead.last_activity || "—"}</td>
                     </tr>
                   );
                 })
@@ -315,13 +315,13 @@ const Leads = () => {
         </table>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500 dark:text-slate-400">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500 dark:text-volt-muted2">
         <div className="flex items-center gap-2">
           <span>{t("leads.rowsPerPage")}</span>
           <select
             value={rowsPerPage}
             onChange={(event) => setRowsPerPage(Number(event.target.value))}
-            className="h-8 rounded-full border border-gray-200 bg-white px-3 text-xs text-gray-700 outline-none dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200"
+            className="h-8 rounded-full border border-gray-200 bg-white px-3 text-xs text-gray-700 outline-none dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text"
           >
             <option value={5}>5</option>
             <option value={10}>10</option>
@@ -330,7 +330,7 @@ const Leads = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-gray-500 dark:text-slate-400">
+          <span className="text-gray-500 dark:text-volt-muted2">
             {t("reviews.showing", {
               from: totalRows ? startIndex + 1 : 0,
               to: endIndex,
@@ -342,7 +342,7 @@ const Leads = () => {
               type="button"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1 || loading}
-              className="h-8 rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 transition hover:border-indigo-200 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200 dark:hover:border-white/20 dark:hover:text-white"
+              className="h-8 rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 transition hover:border-indigo-200 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text dark:hover:border-volt-border dark:hover:text-white"
             >
               {t("common.prev")}
             </button>
@@ -361,7 +361,7 @@ const Leads = () => {
               }, [])
               .map((p, idx) =>
                 p === "…" ? (
-                  <span key={`dots-${idx}`} className="px-2 text-gray-400 dark:text-slate-500">
+                  <span key={`dots-${idx}`} className="px-2 text-gray-400 dark:text-volt-muted2">
                     …
                   </span>
                 ) : (
@@ -373,7 +373,7 @@ const Leads = () => {
                     className={`h-8 min-w-8 rounded-full border px-3 text-xs font-semibold transition ${
                       p === page
                         ? "border-indigo-600 bg-indigo-600 text-white"
-                        : "border-gray-200 bg-white text-gray-700 hover:border-indigo-200 hover:text-indigo-700 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200 dark:hover:border-white/20 dark:hover:text-white"
+                        : "border-gray-200 bg-white text-gray-700 hover:border-indigo-200 hover:text-indigo-700 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text dark:hover:border-volt-border dark:hover:text-white"
                     } disabled:cursor-not-allowed disabled:opacity-60`}
                   >
                     {p}
@@ -385,7 +385,7 @@ const Leads = () => {
               type="button"
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page >= totalPages || loading}
-              className="h-8 rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 transition hover:border-indigo-200 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200 dark:hover:border-white/20 dark:hover:text-white"
+              className="h-8 rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 transition hover:border-indigo-200 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text dark:hover:border-volt-border dark:hover:text-white"
             >
               {t("common.next")}
             </button>
