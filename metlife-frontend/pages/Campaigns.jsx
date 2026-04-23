@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { fetchLeadsList } from "../src/services/leadsApi";
 import { fetchHitlQueue } from "../src/services/hitlApi";
+import { fetchDashboardStats } from "../src/services/dashboardApi";
 import { getBatchStatus, getLatestBatch, runBatch } from "../src/services/agentsApi";
 
 const scenarioCards = [
@@ -13,6 +14,37 @@ const scenarioCards = [
   { id: "S6", label: "F2F", tone: "text-teal-700 bg-teal-50 ring-teal-100" },
   { id: "S7", label: "W2C", tone: "text-rose-700 bg-rose-50 ring-rose-100" },
 ];
+
+/** Maps backend ``Lead.current_agent_node`` values → pipeline card keys (see agent NODE_ID constants). */
+const BACKEND_NODE_TO_STAGE_KEY = {
+  A1_Identity: "a1",
+  A2_Persona: "a2",
+  A3_Intent: "a3",
+  A4_ContentStrategy: "a4",
+  A5_Writer: "a4",
+  A6_Send: "a6",
+  A8_Scoring: "a8",
+  A9_Handoff: "a9",
+  A10_Dormancy: "a10",
+};
+
+const emptyPipelineCounts = () =>
+  pipelineStages.reduce((acc, s) => {
+    if (!["hitl", "conv"].includes(s.key)) acc[s.key] = 0;
+    return acc;
+  }, {});
+
+function aggregatePipelineCounts(nodeCounts) {
+  const base = emptyPipelineCounts();
+  if (!nodeCounts || typeof nodeCounts !== "object") return base;
+  for (const [nodeId, raw] of Object.entries(nodeCounts)) {
+    const key = BACKEND_NODE_TO_STAGE_KEY[nodeId];
+    const n = Number(raw);
+    if (!key || Number.isNaN(n)) continue;
+    base[key] = (base[key] || 0) + n;
+  }
+  return base;
+}
 
 const pipelineStages = [
   { key: "a1", label: "A1 - Identity", accent: "text-cyan-700", icon: "id" },
@@ -263,6 +295,8 @@ const Campaigns = () => {
   const [runError, setRunError] = useState("");
   const [loading, setLoading] = useState(true);
   const [awaitingHitl, setAwaitingHitl] = useState(0);
+  /** Per-stage counts from GET /dashboard/stats → ``node_counts`` (Active/Processing leads). */
+  const [pipelineCounts, setPipelineCounts] = useState(() => aggregatePipelineCounts(null));
   const [scenarioCounts, setScenarioCounts] = useState(() => ({
     S1: 0,
     S2: 0,
@@ -311,6 +345,15 @@ const Campaigns = () => {
     }
   };
 
+  const refreshPipelineFromDashboard = async () => {
+    try {
+      const stats = await fetchDashboardStats(token);
+      setPipelineCounts(aggregatePipelineCounts(stats?.node_counts));
+    } catch {
+      // Keep previous pipeline counts on failure.
+    }
+  };
+
   const pollBatch = (batchId) => {
     stopTimer();
     timerRef.current = setInterval(async () => {
@@ -318,6 +361,7 @@ const Campaigns = () => {
         const b = await getBatchStatus(token, batchId);
         setBatch(b);
         await refreshHitl();
+        await refreshPipelineFromDashboard();
         if (b?.status && b.status !== "running") {
           stopTimer();
           setStatus("complete");
@@ -348,6 +392,7 @@ const Campaigns = () => {
       const b = payload?.data;
       setBatch(b);
       await refreshHitl();
+      await refreshPipelineFromDashboard();
       if (b?.batch_id) pollBatch(b.batch_id);
     } catch (e) {
       setStatus("error");
@@ -362,10 +407,11 @@ const Campaigns = () => {
       setLoading(true);
       setLoadError("");
       try {
-        const [leads, latest, hitl] = await Promise.allSettled([
+        const [leads, latest, hitl, dash] = await Promise.allSettled([
           fetchLeadsList(token),
           getLatestBatch(token),
           fetchHitlQueue(token),
+          fetchDashboardStats(token),
         ]);
 
         if (!cancelled) {
@@ -382,6 +428,10 @@ const Campaigns = () => {
 
           if (hitl.status === "fulfilled") {
             setAwaitingHitl(Array.isArray(hitl.value) ? hitl.value.length : 0);
+          }
+
+          if (dash.status === "fulfilled" && dash.value?.node_counts) {
+            setPipelineCounts(aggregatePipelineCounts(dash.value.node_counts));
           }
 
           if (latest.status === "fulfilled") {
@@ -412,6 +462,29 @@ const Campaigns = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
+  // When a batch finishes, the 1.2s poller stops — HITL approvals would not update the top
+  // “awaiting HITL” number. Keep HITL + pipeline stats fresh even with no running batch.
+  useEffect(() => {
+    if (!token) return;
+    const id = setInterval(() => {
+      void (async () => {
+        try {
+          const q = await fetchHitlQueue(token);
+          setAwaitingHitl(Array.isArray(q) ? q.length : 0);
+        } catch {
+          /* ignore */
+        }
+        try {
+          const stats = await fetchDashboardStats(token);
+          setPipelineCounts(aggregatePipelineCounts(stats?.node_counts));
+        } catch {
+          /* ignore */
+        }
+      })();
+    }, 4000);
+    return () => clearInterval(id);
+  }, [token]);
+
   return (
     <section className="space-y-3">
       <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
@@ -423,10 +496,14 @@ const Campaigns = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {status === "complete" ? (
               <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
                 ✓ Complete
+              </span>
+            ) : status === "running" ? (
+              <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 ring-1 ring-amber-100">
+                Batch running
               </span>
             ) : (
               <span className="text-xs font-semibold text-gray-500 dark:text-slate-400">{loading ? "Loading…" : "Ready"}</span>
@@ -436,15 +513,24 @@ const Campaigns = () => {
               type="button"
               onClick={status === "complete" ? reset : runAll}
               disabled={status === "running"}
-              className={`inline-flex h-9 items-center gap-2 rounded-full px-4 text-xs font-semibold text-white shadow-[0_10px_25px_rgba(16,185,129,0.20)] transition ${
+              title={
+                status === "running"
+                  ? "Server batch job is in progress. Pausing mid-batch is not supported — graphs pause only at HITL gates."
+                  : undefined
+              }
+              className={`inline-flex h-9 items-center gap-2 rounded-full px-4 text-xs font-semibold text-white shadow-[0_10px_25px_rgba(16,185,129,0.20)] transition disabled:cursor-not-allowed disabled:opacity-90 ${
                 status === "complete"
                   ? "bg-emerald-600 hover:bg-emerald-700"
                   : "bg-emerald-600 hover:bg-emerald-700"
               }`}
             >
               {status === "complete" ? "Complete" : status === "running" ? "Running…" : "Run All Workflows"}
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/20">
-                ▶
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/20" aria-hidden>
+                {status === "running" ? (
+                  <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : (
+                  "▶"
+                )}
               </span>
             </button>
           </div>
@@ -528,7 +614,7 @@ const Campaigns = () => {
             <div className="mb-3">
               <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">Agent Execution Pipeline</p>
               <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">
-                Live processing counts • Leads flow through agents automatically • Click any node to inspect
+                Agent counts = active leads whose last persisted step matches that agent (dashboard API). Refreshes with batch polling — not live SSE. HITL / converted use batch + queue.
               </p>
             </div>
 
@@ -541,7 +627,7 @@ const Campaigns = () => {
                     ? awaitingHitl
                     : stage.key === "conv"
                       ? success
-                      : 0;
+                      : pipelineCounts[stage.key] ?? 0;
                 return (
                   <div
                     key={stage.key}
@@ -563,7 +649,9 @@ const Campaigns = () => {
                               : "Idle"
                             : isConv
                               ? "Succeeded"
-                              : "—"}
+                              : value
+                                ? "Last synced step"
+                                : "—"}
                       </p>
                     </div>
                   </div>

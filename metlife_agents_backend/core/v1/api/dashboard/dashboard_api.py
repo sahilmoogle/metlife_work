@@ -9,6 +9,7 @@ import logging
 
 from model.api.v1 import APIResponse
 from model.api.v1.dashboard import DashboardStatsResponse
+from model.database.v1.hitl import HITLQueue
 from model.database.v1.leads import Lead
 from utils.v1.connections import get_db
 
@@ -57,11 +58,20 @@ async def get_dashboard_stats(
         k: v for k, v in dict(scenario_res.all()).items() if k is not None
     }
 
+    # Pending human review lives in ``hitl_queue`` (same source as GET /hitl/queue).
+    # Lead.workflow_status is rarely set to Pending_HITL/HITL by the graph — paused
+    # threads usually keep workflow_status='Active', so counting by Lead alone showed 0.
+    hitl_pending_q = await db.execute(
+        select(func.count(HITLQueue.id)).where(HITLQueue.review_status == "Awaiting")
+    )
+    hitl_from_queue = hitl_pending_q.scalar() or 0
+    hitl_legacy = status_counts.get("Pending_HITL", 0) + status_counts.get("HITL", 0)
+
     stats = DashboardStatsResponse(
         total_leads=sum(status_counts.values()),
         active_leads=status_counts.get("Active", 0)
         + status_counts.get("Processing", 0),
-        hitl_leads=status_counts.get("Pending_HITL", 0) + status_counts.get("HITL", 0),
+        hitl_leads=max(hitl_from_queue, hitl_legacy),
         converted_leads=status_counts.get("Converted", 0),
         dormant_leads=status_counts.get("Dormant", 0),
         suppressed_leads=status_counts.get("Suppressed", 0),

@@ -11,10 +11,13 @@ import json
 import logging
 import time
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from prompts.writer import A4A5_WRITER_SYSTEM, A4A5_WRITER_USER
 from core.v1.services.agents.rules.scenario_rules import SCENARIO_DEFAULTS
 from core.v1.services.sse.manager import event_manager, node_transition_event
 from core.v1.services.agents.state import create_log_entry
+from utils.v1.db_sync import sync_lead_state
 from langchain_core.messages import SystemMessage, HumanMessage
 
 logger = logging.getLogger(__name__)
@@ -22,7 +25,9 @@ logger = logging.getLogger(__name__)
 NODE_ID = "A5_Writer"
 
 
-async def generative_writer(state: dict, *, llm=None) -> dict:
+async def generative_writer(
+    state: dict, *, llm=None, db: AsyncSession | None = None
+) -> dict:
     """Generate or pass through email content."""
     lead_id = state["lead_id"]
     await event_manager.publish(node_transition_event(lead_id, NODE_ID, "started"))
@@ -92,6 +97,14 @@ async def generative_writer(state: dict, *, llm=None) -> dict:
         )
 
     state["current_node"] = NODE_ID
+
+    if db is not None:
+        await sync_lead_state(
+            db,
+            state["lead_id"],
+            current_agent_node=NODE_ID,
+            workflow_status="Active",
+        )
 
     latency_ms = int((time.perf_counter() - start) * 1000)
     logger.info("A5 completed for lead %s in %dms", lead_id, latency_ms)

@@ -1,4 +1,6 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useAuth } from "../context/AuthContext";
+import { fetchAnalyticsOverview } from "../src/services/analyticsApi";
 
 const ranges = [
   { key: "30d", label: "30 Days" },
@@ -6,147 +8,130 @@ const ranges = [
   { key: "all", label: "All Time" },
 ];
 
-const kpis = [
-  {
-    title: "Conversion Rate",
-    value: "12.0%",
-    sub: "↑ 2.3% vs last month",
-    valueTone: "text-emerald-700",
-    subTone: "text-emerald-700",
-    bar: "bg-emerald-500",
-  },
-  {
-    title: "Avg Handoff Score",
-    value: "0.84",
-    sub: "Threshold: ≥ 0.80",
-    valueTone: "text-blue-700",
-    subTone: "text-gray-400",
-    bar: "bg-blue-500",
-  },
-  {
-    title: "HITL Avg Review",
-    value: "2.4m",
-    sub: "● Below 5m target",
-    valueTone: "text-amber-700",
-    subTone: "text-emerald-700",
-    bar: "bg-amber-500",
-  },
-  {
-    title: "Email Open Rate",
-    value: "38.7%",
-    sub: "↑ 4.1% vs industry avg",
-    valueTone: "text-cyan-700",
-    subTone: "text-emerald-700",
-    bar: "bg-cyan-500",
-  },
-  {
-    title: "LLM Cost / Lead",
-    value: "¥12.4",
-    sub: "↓ 18% from last month",
-    valueTone: "text-violet-700",
-    subTone: "text-emerald-700",
-    bar: "bg-violet-500",
-  },
-  {
-    title: "Avg Days to Convert",
-    value: "14.2",
-    sub: "Median: 11 days",
-    valueTone: "text-teal-700",
-    subTone: "text-gray-400",
-    bar: "bg-teal-500",
-  },
+/** Visual tokens for KPI cards (API returns data only; styling stays in UI). */
+const KPI_CARD_STYLES = [
+  { bar: "bg-emerald-500", valueTone: "text-emerald-700", subTone: "text-gray-500" },
+  { bar: "bg-blue-500", valueTone: "text-blue-700", subTone: "text-gray-400" },
+  { bar: "bg-amber-500", valueTone: "text-amber-700", subTone: "text-emerald-700" },
+  { bar: "bg-cyan-500", valueTone: "text-cyan-700", subTone: "text-gray-400" },
+  { bar: "bg-violet-500", valueTone: "text-violet-700", subTone: "text-gray-400" },
+  { bar: "bg-teal-500", valueTone: "text-teal-700", subTone: "text-gray-400" },
 ];
 
-const weeklyBars = [
-  { label: "W1", newLeads: 62, engaged: 44, converted: 18 },
-  { label: "W2", newLeads: 70, engaged: 48, converted: 20 },
-  { label: "W3", newLeads: 66, engaged: 46, converted: 19 },
-  { label: "W4", newLeads: 74, engaged: 52, converted: 22 },
-];
+const SCENARIO_BAR = {
+  S1: "bg-blue-500",
+  S2: "bg-fuchsia-500",
+  S3: "bg-violet-500",
+  S4: "bg-rose-500",
+  S5: "bg-cyan-500",
+  S6: "bg-teal-500",
+  S7: "bg-amber-500",
+};
 
-const scenarioConversion = [
-  { id: "S5", label: "Buyer", pct: 24, count: 31, bar: "bg-cyan-500" },
-  { id: "S6", label: "F2F", pct: 22, count: 11, bar: "bg-teal-500" },
-  { id: "S7", label: "W2C", pct: 18, count: 7, bar: "bg-amber-500" },
-  { id: "S3", label: "Senior", pct: 15, count: 18, bar: "bg-violet-500" },
-  { id: "S1", label: "Young", pct: 10, count: 27, bar: "bg-blue-500" },
-  { id: "S2", label: "Married", pct: 8, count: 12, bar: "bg-fuchsia-500" },
-  { id: "S4", label: "Dormant", pct: 5, count: 4, bar: "bg-rose-500" },
-];
+const AGENT_ROW_TONE = {
+  A1_Identity: "text-cyan-700",
+  A2_Persona: "text-cyan-700",
+  A3_Intent: "text-amber-700",
+  A4_A5_Content: "text-amber-700",
+  A6_Send: "text-blue-700",
+  A8_Scoring: "text-violet-700",
+  A9_Handoff: "text-emerald-700",
+};
 
-const agentRows = [
-  { agent: "A1 · Identity", tone: "text-cyan-700", processed: "2,847", latency: "0.3s", success: "100%" },
-  { agent: "A2 · Persona", tone: "text-cyan-700", processed: "2,847", latency: "0.8s", success: "99.8%" },
-  { agent: "A3 · Intent (LLM)", tone: "text-amber-700", processed: "1,368", latency: "2.1s", success: "98.5%" },
-  { agent: "A4+A5 · Content", tone: "text-amber-700", processed: "2,050", latency: "3.4s", success: "97.2%" },
-  { agent: "A6 · Send", tone: "text-blue-700", processed: "2,050", latency: "1.2s", success: "99.9%" },
-  { agent: "A8 · Scoring", tone: "text-violet-700", processed: "1,368", latency: "0.5s", success: "100%" },
-  { agent: "A9 · Handoff", tone: "text-emerald-700", processed: "342", latency: "4.8s", success: "96.5%" },
-];
+const EMAIL_METRIC_LABEL = {
+  delivered: "Delivered",
+  open_rate: "Open Rate",
+  click_rate: "Click Rate",
+  unsubscribe: "Unsubscribe",
+};
 
-const emailBars = [
-  { label: "Delivered", value: 99.2, color: "bg-emerald-500", track: "bg-emerald-50" },
-  { label: "Open Rate", value: 38.7, color: "bg-cyan-500", track: "bg-cyan-50" },
-  { label: "Click Rate", value: 12.4, color: "bg-violet-500", track: "bg-violet-50" },
-  { label: "Unsubscribe", value: 0.3, color: "bg-rose-500", track: "bg-rose-50" },
-];
+const EMAIL_METRIC_STYLE = {
+  delivered: { color: "bg-emerald-500", track: "bg-emerald-50" },
+  open_rate: { color: "bg-cyan-500", track: "bg-cyan-50" },
+  click_rate: { color: "bg-violet-500", track: "bg-violet-50" },
+  unsubscribe: { color: "bg-rose-500", track: "bg-rose-50" },
+};
 
-const hitlGates = [
-  {
-    title: "G1 · Compliance",
-    meta: "814 reviewed · 1.8m avg",
-    pct: "92%",
-    pctTone: "text-emerald-700",
-    tone: "bg-fuchsia-50 text-fuchsia-700 ring-fuchsia-100",
-  },
-  {
-    title: "G3 · Campaign",
-    meta: "85 reviewed · 3.2m avg",
-    pct: "78%",
-    pctTone: "text-amber-700",
-    tone: "bg-amber-50 text-amber-700 ring-amber-100",
-  },
-  {
-    title: "G4 · Sales Handoff",
-    meta: "342 reviewed · 2.1m avg",
-    pct: "88%",
-    pctTone: "text-emerald-700",
-    tone: "bg-fuchsia-50 text-fuchsia-700 ring-fuchsia-100",
-  },
-  {
-    title: "G5 · Score Override",
-    meta: "198 reviewed · 1.4m avg",
-    pct: "95%",
-    pctTone: "text-emerald-700",
-    tone: "bg-fuchsia-50 text-fuchsia-700 ring-fuchsia-100",
-  },
-];
+const SCORE_BUCKET_COLORS = ["bg-rose-500", "bg-orange-500", "bg-amber-400", "bg-blue-500", "bg-emerald-500"];
 
-const scoreBuckets = [
-  { label: "0-0.2", h: 18, color: "bg-rose-500" },
-  { label: "0.2-0.4", h: 28, color: "bg-orange-500" },
-  { label: "0.4-0.6", h: 40, color: "bg-amber-400" },
-  { label: "0.6-0.8", h: 62, color: "bg-blue-500" },
-  { label: "0.8-1.0", h: 86, color: "bg-emerald-500" },
-];
+const formatInt = (n) => new Intl.NumberFormat().format(Number(n) || 0);
 
 const Analytics = () => {
+  const { token } = useAuth();
   const [range, setRange] = useState("30d");
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const rangeLabel = useMemo(() => {
-    if (range === "30d") return "Last 30 days";
-    if (range === "90d") return "Last 90 days";
-    return "All time";
-  }, [range]);
+  const load = useCallback(async () => {
+    setError("");
+    setLoading(true);
+    try {
+      const d = await fetchAnalyticsOverview(token, range);
+      setData(d);
+    } catch (e) {
+      setData(null);
+      setError(e.message || "Failed to load analytics.");
+    } finally {
+      setLoading(false);
+    }
+  }, [token, range]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const rangeLabel = useMemo(() => data?.range_label || "—", [data]);
+
+  const kpisWithStyle = useMemo(() => {
+    const list = data?.kpis ?? [];
+    return list.map((k, i) => ({
+      ...k,
+      ...(KPI_CARD_STYLES[i] || KPI_CARD_STYLES[0]),
+    }));
+  }, [data]);
+
+  const weeklyBars = data?.weekly_progression ?? [];
+
+  const exportJson = () => {
+    if (!data) return;
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `analytics-${data.range_key || range}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  const scoreBars = useMemo(() => {
+    const buckets = data?.score_distribution ?? [];
+    const max = Math.max(1, ...buckets.map((b) => b.count));
+    return buckets.map((b) => ({
+      ...b,
+      heightPct: Math.round((b.count / max) * 100),
+      color: SCORE_BUCKET_COLORS[b.range_index] ?? "bg-gray-400",
+    }));
+  }, [data]);
+
+  const llmTracked = data?.llm_usage?.some((r) => r.tracked);
 
   return (
     <section className="space-y-3">
+      {error ? (
+        <div className="rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-100">
+          {error}{" "}
+          <button type="button" className="ml-2 font-semibold underline" onClick={() => void load()}>
+            Retry
+          </button>
+        </div>
+      ) : null}
+
       <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold text-[#1e2a52] dark:text-white">Analytics</h2>
             <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
-              Performance metrics across all 7 scenarios • {rangeLabel}
+              Performance metrics across all 7 scenarios • {loading ? "Loading…" : rangeLabel}
             </p>
           </div>
 
@@ -159,6 +144,7 @@ const Analytics = () => {
                     key={r.key}
                     type="button"
                     onClick={() => setRange(r.key)}
+                    disabled={loading}
                     className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
                       active
                         ? "bg-white text-indigo-700 shadow-sm dark:bg-slate-950/40 dark:shadow-none"
@@ -173,7 +159,9 @@ const Analytics = () => {
 
             <button
               type="button"
-              className="inline-flex h-9 items-center gap-2 rounded-full border border-gray-200 bg-white px-4 text-xs font-semibold text-gray-700 hover:border-indigo-200 hover:text-indigo-700 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200 dark:hover:border-white/20 dark:hover:text-white"
+              onClick={exportJson}
+              disabled={!data}
+              className="inline-flex h-9 items-center gap-2 rounded-full border border-gray-200 bg-white px-4 text-xs font-semibold text-gray-700 hover:border-indigo-200 hover:text-indigo-700 disabled:opacity-50 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200 dark:hover:border-white/20 dark:hover:text-white"
             >
               Export
               <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
@@ -192,17 +180,24 @@ const Analytics = () => {
         </div>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-          {kpis.map((k) => (
-            <div
-              key={k.title}
-              className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-white/10 dark:bg-slate-950/40 dark:shadow-none"
-            >
-              <div className={`absolute left-0 top-0 h-1 w-full ${k.bar}`} />
-              <p className="text-xs font-medium text-gray-500 dark:text-slate-400">{k.title}</p>
-              <p className={`mt-2 text-2xl font-semibold tracking-tight ${k.valueTone}`}>{k.value}</p>
-              <p className={`mt-1 text-[11px] font-medium ${k.subTone}`}>{k.sub}</p>
-            </div>
-          ))}
+          {loading
+            ? Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="relative h-28 animate-pulse rounded-2xl border border-gray-100 bg-gray-100 dark:border-white/10 dark:bg-white/10"
+                />
+              ))
+            : kpisWithStyle.map((k) => (
+                <div
+                  key={k.title}
+                  className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-white/10 dark:bg-slate-950/40 dark:shadow-none"
+                >
+                  <div className={`absolute left-0 top-0 h-1 w-full ${k.bar}`} />
+                  <p className="text-xs font-medium text-gray-500 dark:text-slate-400">{k.title}</p>
+                  <p className={`mt-2 text-2xl font-semibold tracking-tight ${k.valueTone}`}>{k.value}</p>
+                  <p className={`mt-1 text-[11px] font-medium ${k.subTone}`}>{k.sub}</p>
+                </div>
+              ))}
         </div>
       </div>
 
@@ -214,9 +209,9 @@ const Analytics = () => {
           </div>
 
           <div className="flex items-end justify-between gap-3">
-            {weeklyBars.map((w) => {
-              const total = w.newLeads + w.engaged + w.converted;
-              const hNew = Math.round((w.newLeads / total) * 100);
+            {(weeklyBars.length ? weeklyBars : []).map((w) => {
+              const total = Math.max(1, w.new_leads + w.engaged + w.converted);
+              const hNew = Math.round((w.new_leads / total) * 100);
               const hEng = Math.round((w.engaged / total) * 100);
               const hConv = Math.max(0, 100 - hNew - hEng);
               return (
@@ -232,6 +227,9 @@ const Analytics = () => {
                 </div>
               );
             })}
+            {!loading && weeklyBars.length === 0 ? (
+              <p className="w-full py-8 text-center text-sm text-gray-400">No weekly data yet.</p>
+            ) : null}
           </div>
 
           <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-[11px] text-gray-500 dark:text-slate-400">
@@ -250,26 +248,36 @@ const Analytics = () => {
         <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
           <div className="mb-3">
             <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">Conversion by Scenario</p>
-            <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">% of leads converted per scenario</p>
+            <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">% of leads converted per scenario (cohort in range)</p>
           </div>
 
           <div className="space-y-3">
-            {scenarioConversion.map((s) => (
-              <div key={s.id} className="flex items-center gap-3">
+            {(data?.scenario_conversion ?? []).map((s) => (
+              <div key={s.scenario_id} className="flex items-center gap-3">
                 <div className="w-28 shrink-0">
                   <p className="text-xs font-semibold text-gray-700 dark:text-slate-200">
-                    {s.id} <span className="text-gray-400">·</span> {s.label}
+                    {s.scenario_id} <span className="text-gray-400">·</span> {s.label}
                   </p>
                 </div>
                 <div className="flex-1">
                   <div className="h-2 rounded-full bg-gray-100 dark:bg-white/10">
-                    <div className={`h-full rounded-full ${s.bar}`} style={{ width: `${s.pct}%` }} />
+                    <div
+                      className={`h-full rounded-full ${SCENARIO_BAR[s.scenario_id] || "bg-gray-400"}`}
+                      style={{ width: `${Math.min(100, s.conversion_pct)}%` }}
+                    />
                   </div>
                 </div>
-                <div className="w-10 text-right text-xs font-semibold text-gray-700 dark:text-slate-200">{s.pct}%</div>
-                <div className="w-10 text-right text-xs text-gray-400 dark:text-slate-400">{s.count}</div>
+                <div className="w-10 text-right text-xs font-semibold text-gray-700 dark:text-slate-200">
+                  {s.conversion_pct.toFixed(1)}%
+                </div>
+                <div className="w-14 text-right text-xs text-gray-400 dark:text-slate-400">
+                  {formatInt(s.converted_count)}/{formatInt(s.total_leads_in_period)}
+                </div>
               </div>
             ))}
+            {!loading && !(data?.scenario_conversion?.length) ? (
+              <p className="text-sm text-gray-400">No scenario data.</p>
+            ) : null}
           </div>
         </div>
       </div>
@@ -278,7 +286,9 @@ const Analytics = () => {
         <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
           <div className="mb-3">
             <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">Agent Performance</p>
-            <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">Throughput and latency per agent</p>
+            <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">
+              Throughput (approximate counts from DB). Latency/success when instrumented.
+            </p>
           </div>
 
           <div className="overflow-x-auto">
@@ -292,50 +302,79 @@ const Analytics = () => {
                 </tr>
               </thead>
               <tbody>
-                {agentRows.map((row) => (
-                  <tr key={row.agent} className="border-t border-gray-100 text-xs text-gray-700 hover:bg-gray-50/60 dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/5">
-                    <td className={`px-3 py-2 font-semibold ${row.tone}`}>{row.agent}</td>
-                    <td className="px-3 py-2 font-medium text-gray-800 dark:text-white">{row.processed}</td>
-                    <td className="px-3 py-2 text-gray-600 dark:text-slate-300">{row.latency}</td>
-                    <td className="px-3 py-2 font-semibold text-emerald-700">{row.success}</td>
+                {(data?.agent_performance ?? []).map((row) => (
+                  <tr
+                    key={row.node_key}
+                    className="border-t border-gray-100 text-xs text-gray-700 hover:bg-gray-50/60 dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/5"
+                  >
+                    <td className={`px-3 py-2 font-semibold ${AGENT_ROW_TONE[row.node_key] || "text-gray-700"}`}>
+                      {row.name}
+                    </td>
+                    <td className="px-3 py-2 font-medium text-gray-800 dark:text-white">{formatInt(row.processed_count)}</td>
+                    <td className="px-3 py-2 text-gray-600 dark:text-slate-300">
+                      {row.latency_seconds != null ? `${row.latency_seconds.toFixed(1)}s` : "—"}
+                    </td>
+                    <td className="px-3 py-2 font-semibold text-emerald-700">
+                      {row.success_rate_pct != null ? `${row.success_rate_pct.toFixed(1)}%` : "—"}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            {!loading && !(data?.agent_performance?.length) ? (
+              <p className="py-4 text-center text-sm text-gray-400">No agent rows.</p>
+            ) : null}
           </div>
         </div>
 
         <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
           <div className="mb-3">
             <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">Email Performance</p>
-            <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">Across all campaigns</p>
+            <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">Across all campaigns (selected window)</p>
           </div>
 
           <div className="space-y-3">
-            {emailBars.map((b) => (
-              <div key={b.label}>
-                <div className="mb-1 flex items-center justify-between text-[11px] text-gray-500 dark:text-slate-400">
-                  <span>{b.label}</span>
-                  <span className="font-semibold text-gray-700 dark:text-slate-200">{b.value.toFixed(1)}%</span>
+            {(data?.email_performance ?? []).map((b) => {
+              const label = EMAIL_METRIC_LABEL[b.metric] || b.metric;
+              const st = EMAIL_METRIC_STYLE[b.metric] || { color: "bg-gray-500", track: "bg-gray-100" };
+              return (
+                <div key={b.metric}>
+                  <div className="mb-1 flex items-center justify-between text-[11px] text-gray-500 dark:text-slate-400">
+                    <span>{label}</span>
+                    <span className="font-semibold text-gray-700 dark:text-slate-200">{b.value_pct.toFixed(1)}%</span>
+                  </div>
+                  <div className={`h-2 rounded-full ${st.track}`}>
+                    <div className={`h-full rounded-full ${st.color}`} style={{ width: `${Math.min(100, b.value_pct)}%` }} />
+                  </div>
                 </div>
-                <div className={`h-2 rounded-full ${b.track}`}>
-                  <div className={`h-full rounded-full ${b.color}`} style={{ width: `${Math.min(100, b.value)}%` }} />
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="mt-4 rounded-2xl border border-gray-100 bg-gray-50 p-3 dark:border-white/10 dark:bg-white/5">
-            <p className="text-[11px] font-semibold text-gray-500 dark:text-slate-400">Top performing</p>
+            <p className="text-[11px] font-semibold text-gray-500 dark:text-slate-400">Top performing (by scenario)</p>
             <div className="mt-2 space-y-2">
-              <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 ring-1 ring-gray-100 dark:bg-slate-950/40 dark:ring-white/10">
-                <p className="text-xs font-semibold text-gray-800 dark:text-white">S3 Welcome Email</p>
-                <p className="text-xs font-semibold text-emerald-700">52% open</p>
-              </div>
-              <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 ring-1 ring-gray-100 dark:bg-slate-950/40 dark:ring-white/10">
-                <p className="text-xs font-semibold text-gray-800 dark:text-white">S5 Product Nudge</p>
-                <p className="text-xs font-semibold text-amber-700">18% click</p>
-              </div>
+              {(data?.email_top_performing ?? []).map((t, idx) => (
+                <div
+                  key={`${t.scenario_id}-${t.rank_type}-${idx}`}
+                  className="flex items-center justify-between rounded-xl bg-white px-3 py-2 ring-1 ring-gray-100 dark:bg-slate-950/40 dark:ring-white/10"
+                >
+                  <p className="text-xs font-semibold text-gray-800 dark:text-white">
+                    {t.scenario_id}
+                    {t.rank_type === "best_open" ? " · best open" : " · best click"}
+                  </p>
+                  <p className={`text-xs font-semibold ${t.rank_type === "best_open" ? "text-emerald-700" : "text-amber-700"}`}>
+                    {t.rank_type === "best_open" && t.open_rate_pct != null
+                      ? `${t.open_rate_pct.toFixed(1)}% open`
+                      : t.click_rate_pct != null
+                        ? `${t.click_rate_pct.toFixed(1)}% click`
+                        : "—"}
+                  </p>
+                </div>
+              ))}
+              {!data?.email_top_performing?.length && !loading ? (
+                <p className="text-xs text-gray-400">Not enough email data to rank scenarios.</p>
+              ) : null}
             </div>
           </div>
         </div>
@@ -347,29 +386,45 @@ const Analytics = () => {
           </div>
 
           <div className="space-y-2">
-            {hitlGates.map((g) => (
-              <div
-                key={g.title}
-                className="rounded-2xl border border-gray-100 bg-white p-3 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-white/10 dark:bg-slate-950/40 dark:shadow-none"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <span className={`inline-flex rounded-full px-3 py-1 text-[11px] font-semibold ring-1 ${g.tone}`}>
-                      {g.title}
-                    </span>
-                    <p className="mt-2 text-[11px] text-gray-400 dark:text-slate-400">{g.meta}</p>
+            {(data?.hitl_gate_stats ?? []).map((g) => {
+              const meta =
+                g.reviewed_count === 0
+                  ? "No reviews in window"
+                  : `${g.reviewed_count} reviewed · ${g.avg_review_minutes != null ? `${g.avg_review_minutes.toFixed(1)}m avg` : "—"}`;
+              const pct =
+                g.approval_rate_pct != null ? `${g.approval_rate_pct.toFixed(0)}%` : "—";
+              const pctTone =
+                g.approval_rate_pct == null
+                  ? "text-gray-400"
+                  : g.approval_rate_pct >= 80
+                    ? "text-emerald-700"
+                    : "text-amber-700";
+              const chipTone =
+                g.approval_rate_pct == null || g.approval_rate_pct >= 80
+                  ? "bg-fuchsia-50 text-fuchsia-700 ring-fuchsia-100"
+                  : "bg-amber-50 text-amber-700 ring-amber-100";
+              return (
+                <div
+                  key={g.gate}
+                  className="rounded-2xl border border-gray-100 bg-white p-3 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-white/10 dark:bg-slate-950/40 dark:shadow-none"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <span className={`inline-flex rounded-full px-3 py-1 text-[11px] font-semibold ring-1 ${chipTone}`}>
+                        {g.title}
+                      </span>
+                      <p className="mt-2 text-[11px] text-gray-400 dark:text-slate-400">{meta}</p>
+                    </div>
+                    <p className={`text-lg font-semibold ${pctTone}`}>{pct}</p>
                   </div>
-                  <p className={`text-lg font-semibold ${g.pctTone}`}>{g.pct}</p>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="mt-3 rounded-2xl bg-teal-900 p-4 text-center text-white">
-            <p className="text-[11px] font-semibold tracking-wide text-teal-100">
-              AUTO-APPROVED (G1 PRE-APPROVED)
-            </p>
-            <p className="mt-2 text-3xl font-semibold text-emerald-300">1,236</p>
+            <p className="text-[11px] font-semibold tracking-wide text-teal-100">AUTO-APPROVED (G1 · existing_asset)</p>
+            <p className="mt-2 text-3xl font-semibold text-emerald-300">{formatInt(data?.hitl_auto_approved_estimate ?? 0)}</p>
           </div>
         </div>
       </div>
@@ -378,56 +433,68 @@ const Analytics = () => {
         <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
           <div className="mb-3">
             <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">Lead Score Distribution</p>
-            <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">Current score spread across all active leads</p>
+            <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">Non–opt-out leads · engagement_score</p>
           </div>
 
           <div className="flex h-44 items-end justify-between gap-2 rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-100 dark:bg-white/5 dark:ring-white/10">
-            {scoreBuckets.map((b) => (
-              <div key={b.label} className="flex flex-1 flex-col items-center gap-2">
+            {scoreBars.map((b) => (
+              <div key={b.score_range_label} className="flex flex-1 flex-col items-center gap-2">
                 <div className="flex h-32 w-full items-end justify-center">
-                  <div className={`w-10 rounded-xl ${b.color}`} style={{ height: `${b.h}%` }} />
+                  <div className={`w-10 rounded-xl ${b.color}`} style={{ height: `${Math.max(8, b.heightPct)}%` }} />
                 </div>
-                <p className="text-[11px] font-semibold text-gray-500 dark:text-slate-400">{b.label}</p>
+                <p className="text-[11px] font-semibold text-gray-500 dark:text-slate-400">{b.score_range_label}</p>
               </div>
             ))}
+            {!loading && scoreBars.length === 0 ? (
+              <p className="w-full py-6 text-center text-sm text-gray-400">No scores.</p>
+            ) : null}
           </div>
 
           <div className="mt-3 flex items-center justify-between text-[11px] text-gray-500 dark:text-slate-400">
-            <span>85 leads below 0.40</span>
-            <span className="font-semibold text-emerald-700">798 leads above 0.70</span>
+            <span>{formatInt(data?.score_insights?.below_0_40 ?? 0)} leads below 0.40</span>
+            <span className="font-semibold text-emerald-700">
+              {formatInt(data?.score_insights?.above_0_70 ?? 0)} leads above 0.70
+            </span>
           </div>
         </div>
 
         <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
           <div className="mb-3">
             <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">LLM Token Usage</p>
-            <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">GPT-4 and GPT-4 mini consumption this month</p>
+            <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-400">When billing hooks persist usage, values appear here</p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl border border-gray-100 bg-amber-50 p-4 ring-1 ring-amber-100">
-              <p className="text-xs font-semibold text-amber-800">GPT-4</p>
-              <p className="mt-2 text-2xl font-semibold text-amber-900">1.2M</p>
-              <p className="mt-1 text-[11px] text-amber-800/80">tokens · ¥8,400</p>
-              <p className="mt-2 text-[11px] text-amber-900/70">A3 Intent · A4 Content · A9 Handoff</p>
-            </div>
-            <div className="rounded-2xl border border-gray-100 bg-blue-50 p-4 ring-1 ring-blue-100">
-              <p className="text-xs font-semibold text-blue-800">GPT-4 mini</p>
-              <p className="mt-2 text-2xl font-semibold text-blue-900">4.8M</p>
-              <p className="mt-1 text-[11px] text-blue-800/80">tokens · ¥2,880</p>
-              <p className="mt-2 text-[11px] text-blue-900/70">A3 Intent (bulk) · Classification</p>
-            </div>
+            {(data?.llm_usage ?? []).map((row, i) => (
+              <div
+                key={row.model}
+                className={`rounded-2xl border border-gray-100 p-4 ring-1 ${
+                  i === 0 ? "bg-amber-50 ring-amber-100" : "bg-blue-50 ring-blue-100"
+                }`}
+              >
+                <p className={`text-xs font-semibold ${i === 0 ? "text-amber-800" : "text-blue-800"}`}>{row.model}</p>
+                <p className={`mt-2 text-2xl font-semibold ${i === 0 ? "text-amber-900" : "text-blue-900"}`}>
+                  {row.tokens_millions != null ? `${row.tokens_millions.toFixed(2)}M` : "—"}
+                </p>
+                <p className={`mt-1 text-[11px] ${i === 0 ? "text-amber-800/80" : "text-blue-800/80"}`}>
+                  tokens
+                  {row.cost_jpy != null ? ` · ¥${formatInt(Math.round(row.cost_jpy))}` : ""}
+                </p>
+                <p className={`mt-2 text-[11px] ${i === 0 ? "text-amber-900/70" : "text-blue-900/70"}`}>{row.note}</p>
+              </div>
+            ))}
           </div>
 
           <div className="mt-3 rounded-2xl bg-slate-900 p-4">
             <div className="flex items-center justify-between text-xs font-semibold text-slate-200">
-              <span>Total monthly cost</span>
-              <span className="text-lg font-semibold text-white">¥11,280</span>
+              <span>Total monthly cost (tracked)</span>
+              <span className="text-lg font-semibold text-white">
+                {data?.llm_total_monthly_jpy != null ? `¥${formatInt(Math.round(data.llm_total_monthly_jpy))}` : "—"}
+              </span>
             </div>
-            <div className="mt-2 h-2 rounded-full bg-slate-800">
-              <div className="h-full w-[72%] rounded-full bg-emerald-400" />
-            </div>
-            <p className="mt-2 text-[11px] font-semibold text-emerald-300">↓ 18% vs last month (¥13,750)</p>
+            {!llmTracked ? (
+              <p className="mt-2 text-[11px] text-slate-400">LLM usage is not persisted in the database yet.</p>
+            ) : null}
           </div>
         </div>
       </div>

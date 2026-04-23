@@ -381,7 +381,7 @@ def build_graph(*, db_session=None, checkpointer=None):
     bound_a1 = partial(identity_unifier, db=db_session)
     bound_a2 = partial(persona_classifier, db=db_session)
     bound_a3 = partial(intent_analyser, llm=llm)
-    bound_a5 = partial(generative_writer, llm=llm)
+    bound_a5 = partial(generative_writer, llm=llm, db=db_session)
     bound_a6 = partial(send_engine, db=db_session)
     bound_a8 = partial(propensity_scorer, db=db_session)
     bound_a9 = partial(sales_handoff, llm=llm)
@@ -618,6 +618,7 @@ async def resume_workflow(
     *,
     db_session: AsyncSession | None = None,
     resume_value: str = "approved",
+    state_patch: dict | None = None,
 ) -> dict:
     """Resume a paused workflow after HITL decision.
 
@@ -626,6 +627,10 @@ async def resume_workflow(
     with ``Command(resume=value)`` causes ``interrupt()`` to return ``value``
     inside the node; the node then writes it to ``hitl_resume_value`` and
     returns the complete state so downstream conditional edges can route on it.
+
+    Optional ``state_patch`` merges into the checkpoint **before** resume — used
+    for G1 when a reviewer edits ``draft_email_subject`` / ``draft_email_body``
+    so ``send_engine`` persists the human-approved text, not only the AI draft.
 
     This avoids the ``KeyError: 'lead_id'`` bug that plagued the previous
     ``aupdate_state + ainvoke(None)`` approach where ``aupdate_state`` with
@@ -636,6 +641,8 @@ async def resume_workflow(
 
     async with get_checkpointer() as cp:
         graph = build_graph(db_session=db_session, checkpointer=cp)
+        if state_patch:
+            await graph.aupdate_state(config, state_patch)
         # Command(resume=value) delivers `value` as the return of interrupt().
         # LangGraph loads the full saved checkpoint, runs from the interrupt
         # site, and continues until the next interrupt() or END.

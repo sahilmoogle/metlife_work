@@ -49,6 +49,8 @@ class HITLQueueItem(BaseModel):
     gate_description: Optional[str] = None
     draft_subject: Optional[str] = None
     draft_body: Optional[str] = None
+    edited_subject: Optional[str] = None
+    edited_body: Optional[str] = None
     handoff_briefing: Optional[str] = None
     suggested_persona: Optional[str] = None
     persona_confidence: Optional[float] = None

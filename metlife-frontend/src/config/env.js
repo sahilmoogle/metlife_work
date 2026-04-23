@@ -18,6 +18,8 @@ export const envConfig = {
   authLogoutPath: import.meta.env.VITE_AUTH_LOGOUT_PATH || "/auth/logout",
   dashboardStatsPath:
     import.meta.env.VITE_DASHBOARD_STATS_PATH || "/dashboard/stats",
+  analyticsOverviewPath:
+    import.meta.env.VITE_ANALYTICS_OVERVIEW_PATH || "/analytics/overview",
   agentsPath: import.meta.env.VITE_AGENTS_PATH || "/agents",
   leadsPath: import.meta.env.VITE_LEADS_PATH || "/leads",
   hitlPath: import.meta.env.VITE_HITL_PATH || "/hitl",

@@ -13,7 +13,11 @@ from model.api.v1 import APIResponse
 from model.api.v1.agents import HITLApproveRequest, HITLQueueItem
 from model.database.v1.hitl import HITLQueue
 from model.database.v1.leads import Lead
-from core.v1.services.agents.graph import resume_workflow, build_graph, get_checkpointer
+from core.v1.services.agents.graph import (
+    resume_workflow,
+    build_graph,
+    get_checkpointer,
+)
 from core.v1.services.sse.manager import (
     event_manager,
     hitl_resolved_event,
@@ -25,6 +29,20 @@ from utils.v1.permissions import require_permission
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _g1_checkpoint_patch(request: HITLApproveRequest) -> dict | None:
+    """Map reviewer edits onto LangGraph state keys before G1 resume.
+
+    ``hitl_queue`` stores reviewer edits as ``edited_*``; the graph uses
+    ``draft_email_*`` through send_engine — we merge here so DB + checkpoint match.
+    """
+    patch: dict = {}
+    if request.edited_subject is not None:
+        patch["draft_email_subject"] = request.edited_subject
+    if request.edited_body is not None:
+        patch["draft_email_body"] = request.edited_body
+    return patch if patch else None
 
 
 @router.get(
@@ -65,6 +83,8 @@ async def get_hitl_queue(
             gate_description=r.HITLQueue.gate_description,
             draft_subject=r.HITLQueue.draft_subject,
             draft_body=r.HITLQueue.draft_body,
+            edited_subject=r.HITLQueue.edited_subject,
+            edited_body=r.HITLQueue.edited_body,
             handoff_briefing=r.HITLQueue.handoff_briefing,
             suggested_persona=r.HITLQueue.suggested_persona,
             persona_confidence=r.HITLQueue.persona_confidence,
@@ -124,6 +144,8 @@ async def get_hitl_detail(
         gate_description=row.HITLQueue.gate_description,
         draft_subject=row.HITLQueue.draft_subject,
         draft_body=row.HITLQueue.draft_body,
+        edited_subject=row.HITLQueue.edited_subject,
+        edited_body=row.HITLQueue.edited_body,
         handoff_briefing=row.HITLQueue.handoff_briefing,
         suggested_persona=row.HITLQueue.suggested_persona,
         persona_confidence=row.HITLQueue.persona_confidence,
@@ -181,9 +203,9 @@ async def approve_hitl(
         "reviewer_notes": request.reviewer_notes,
         "reviewed_by_user_id": current_user.get("user_id"),
     }
-    if request.edited_subject:
+    if request.edited_subject is not None:
         update_values["edited_subject"] = request.edited_subject
-    if request.edited_body:
+    if request.edited_body is not None:
         update_values["edited_body"] = request.edited_body
 
     stmt = (
@@ -284,10 +306,16 @@ async def approve_hitl(
 
     if should_resume:
         try:
+            g1_patch = (
+                _g1_checkpoint_patch(request)
+                if gate_type == "G1" and request.action != "rejected"
+                else None
+            )
             result = await resume_workflow(
                 thread_id=thread_id,
                 db_session=db,
                 resume_value=request.action,
+                state_patch=g1_patch,
             )
             state = result.get("state", {})
             next_gate = state.get("hitl_gate")
