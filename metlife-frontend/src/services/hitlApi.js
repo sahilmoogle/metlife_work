@@ -11,9 +11,10 @@ const parseApiError = async (response, fallbackMessage) => {
   }
 };
 
-export const fetchHitlQueue = async (token, { gateType } = {}) => {
+export const fetchHitlQueue = async (token, { gateType, queue } = {}) => {
   const params = new URLSearchParams();
   if (gateType) params.set("gate_type", gateType);
+  if (queue === "resolved") params.set("queue", "resolved");
   const qs = params.toString();
 
   const response = await fetch(`${buildUrl(envConfig.hitlPath)}/queue${qs ? `?${qs}` : ""}`, {

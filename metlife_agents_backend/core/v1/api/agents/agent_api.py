@@ -321,7 +321,10 @@ async def run_batch_orchestrator(
     # This avoids the MissingGreenlet crash that occurs when a commit() expires
     # ORM objects and SQLAlchemy tries to lazy-reload them outside a greenlet.
     new_id_result = await db.execute(
-        select(Lead.id).where(Lead.workflow_status == "New")
+        select(Lead.id).where(
+            Lead.workflow_status == "New",
+            Lead.opt_in == False,  # noqa: E712  (opted-out suppressed leads are excluded)
+        )
     )
     new_lead_ids: list[str] = [str(row[0]) for row in new_id_result.all()]
 
@@ -365,6 +368,7 @@ async def run_batch_orchestrator(
     dormant_id_result = await db.execute(
         select(Lead.id).where(
             Lead.workflow_status == "Dormant",
+            Lead.opt_in == False,  # noqa: E712
             Lead.cooldown_flag == False,  # noqa: E712
             Lead.is_converted == False,  # noqa: E712
         )
@@ -431,11 +435,13 @@ async def run_batch_orchestrator(
                             lead_id=lead_id_str,
                             db_session=bg_db,
                             scenario="S4",
+                            batch_id=batch_id,
                         )
                     else:
                         await start_workflow(
                             lead_id=lead_id_str,
                             db_session=bg_db,
+                            batch_id=batch_id,
                         )
                     success_count += 1
                 except Exception as exc:

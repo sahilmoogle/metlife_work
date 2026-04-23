@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import time
+from datetime import datetime, timezone
 
 from core.v1.services.agents.rules.scenario_rules import (
     classify_scenario,
@@ -30,7 +31,9 @@ G2_CONFIDENCE_THRESHOLD = 0.60
 async def persona_classifier(state: dict, *, db=None) -> dict:
     """Classify the lead into a scenario and assign persona."""
     lead_id = state["lead_id"]
-    await event_manager.publish(node_transition_event(lead_id, NODE_ID, "started"))
+    await event_manager.publish(
+        node_transition_event(lead_id, NODE_ID, "started", batch_id=state.get("batch_id"))
+    )
     start = time.perf_counter()
 
     # ── OPT_IN check (preflight) ─────────────────────────────────────
@@ -42,11 +45,13 @@ async def persona_classifier(state: dict, *, db=None) -> dict:
                 db,
                 lead_id,
                 workflow_status="Suppressed",
+                workflow_completed=True,
+                completed_at=datetime.now(timezone.utc),
                 current_agent_node=NODE_ID,
             )
         await event_manager.publish(
             node_transition_event(
-                lead_id, NODE_ID, "completed", "OPT_IN=1 → suppressed"
+                lead_id, NODE_ID, "completed", "OPT_IN=1 → suppressed", batch_id=state.get("batch_id")
             )
         )
         state["execution_log"] = [
@@ -132,6 +137,7 @@ async def persona_classifier(state: dict, *, db=None) -> dict:
             NODE_ID,
             "completed",
             f"{scenario} conf={confidence:.2f} {latency_ms}ms",
+            batch_id=state.get("batch_id"),
         )
     )
     state["execution_log"] = [

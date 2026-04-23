@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { fetchHitlQueue } from "../src/services/hitlApi";
 import { useTranslation } from "react-i18next";
+import { buildSseStreamUrl } from "../src/services/sseStream";
 
 const queueTabs = [
   { key: "pending", label: "Pending" },
@@ -45,7 +46,8 @@ const Reviews = () => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("pending");
   const [activeGate, setActiveGate] = useState("all");
-  const [items, setItems] = useState([]);
+  const [pendingItems, setPendingItems] = useState([]);
+  const [resolvedItems, setResolvedItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
@@ -59,11 +61,18 @@ const Reviews = () => {
       setLoadError("");
       setLoading(true);
       try {
-        const data = await fetchHitlQueue(token);
-        if (!cancelled) setItems(Array.isArray(data) ? data : []);
+        const [pending, resolved] = await Promise.all([
+          fetchHitlQueue(token, { queue: "pending" }),
+          fetchHitlQueue(token, { queue: "resolved" }),
+        ]);
+        if (!cancelled) {
+          setPendingItems(Array.isArray(pending) ? pending : []);
+          setResolvedItems(Array.isArray(resolved) ? resolved : []);
+        }
       } catch (e) {
         if (!cancelled) {
-          setItems([]);
+          setPendingItems([]);
+          setResolvedItems([]);
           setLoadError(e.message || "Failed to load HITL queue.");
         }
       } finally {
@@ -84,31 +93,59 @@ const Reviews = () => {
     setPage(1);
   }, [activeTab, activeGate, pageSize]);
 
-  const counts = useMemo(() => {
-    const pending = items.length;
-    const resolved = 0;
-    return { pending, resolved };
-  }, [items.length]);
+  useEffect(() => {
+    if (!token || typeof EventSource === "undefined") return;
+
+    let es;
+    try {
+      es = new EventSource(buildSseStreamUrl(token));
+    } catch {
+      return;
+    }
+
+    const relevant = ["hitl_required", "hitl_approved", "hitl_edited", "hitl_rejected"];
+    let last = 0;
+    const refreshSoon = () => {
+      const t = Date.now();
+      if (t - last < 800) return;
+      last = t;
+      setRefreshKey((k) => k + 1);
+    };
+
+    for (const t of relevant) es.addEventListener(t, refreshSoon);
+    return () => {
+      es.close();
+    };
+  }, [token]);
+
+  const counts = useMemo(
+    () => ({
+      pending: pendingItems.length,
+      resolved: resolvedItems.length,
+    }),
+    [pendingItems.length, resolvedItems.length]
+  );
+
+  const visible = useMemo(() => {
+    return activeTab === "resolved" ? resolvedItems : pendingItems;
+  }, [activeTab, pendingItems, resolvedItems]);
 
   const gateCounts = useMemo(() => {
-    const result = { all: items.length };
+    const result = { all: visible.length };
     gateFilters.slice(1).forEach(({ key }) => {
-      result[key] = items.filter((it) =>
+      result[key] = visible.filter((it) =>
         String(it.gate_type || "").toUpperCase().startsWith(key)
       ).length;
     });
     return result;
-  }, [items]);
+  }, [visible]);
 
   const filtered = useMemo(() => {
-    let list = activeTab === "resolved" ? [] : items;
-    if (activeGate !== "all") {
-      list = list.filter((it) =>
-        String(it.gate_type || "").toUpperCase().startsWith(activeGate)
-      );
-    }
-    return list;
-  }, [activeTab, activeGate, items]);
+    if (activeGate === "all") return visible;
+    return visible.filter((it) =>
+      String(it.gate_type || "").toUpperCase().startsWith(activeGate)
+    );
+  }, [activeGate, visible]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages);
@@ -122,11 +159,7 @@ const Reviews = () => {
     const nums = [];
     const delta = 2;
     for (let i = 1; i <= totalPages; i++) {
-      if (
-        i === 1 ||
-        i === totalPages ||
-        (i >= safePage - delta && i <= safePage + delta)
-      ) {
+      if (i === 1 || i === totalPages || (i >= safePage - delta && i <= safePage + delta)) {
         nums.push(i);
       } else if (
         (i === safePage - delta - 1 && i > 1) ||
@@ -136,7 +169,7 @@ const Reviews = () => {
       }
     }
     return nums;
-  }, [totalPages, safePage]);
+  }, [safePage, totalPages]);
 
   return (
     <section className="space-y-3">
@@ -300,7 +333,6 @@ const Reviews = () => {
                     </p>
                   </div>
                 </div>
-
                 <div className="flex flex-none items-center gap-3">
                   <span className="hidden rounded-full bg-indigo-50 px-3 py-1 text-[11px] font-semibold text-indigo-700 sm:inline-flex dark:bg-indigo-500/15 dark:text-indigo-300">
                     {step}

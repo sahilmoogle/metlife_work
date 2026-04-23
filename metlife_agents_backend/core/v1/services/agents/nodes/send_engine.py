@@ -43,15 +43,32 @@ def _is_quiet_hours() -> bool:
 async def send_engine(state: dict, *, db: AsyncSession | None = None) -> dict:
     """Execute the email send (simulated) with compliance checks."""
     lead_id = state["lead_id"]
-    await event_manager.publish(node_transition_event(lead_id, NODE_ID, "started"))
+    await event_manager.publish(
+        node_transition_event(lead_id, NODE_ID, "started", batch_id=state.get("batch_id"))
+    )
     start = time.perf_counter()
 
     # ── Re-check OPT_IN ──────────────────────────────────────────────
     if state.get("opt_in"):
         state["workflow_status"] = "suppressed"
         state["current_node"] = NODE_ID
+        if db is not None:
+            now = datetime.now(timezone.utc)
+            await db.execute(
+                sa_update(Lead)
+                .where(Lead.id == lead_id)
+                .values(
+                    workflow_status="Suppressed",
+                    workflow_completed=True,
+                    completed_at=now,
+                    current_agent_node=NODE_ID,
+                )
+            )
+            await db.commit()
         await event_manager.publish(
-            node_transition_event(lead_id, NODE_ID, "completed", "OPT_IN → suppressed")
+            node_transition_event(
+                lead_id, NODE_ID, "completed", "OPT_IN → suppressed", batch_id=state.get("batch_id")
+            )
         )
         return state
 
@@ -75,7 +92,11 @@ async def send_engine(state: dict, *, db: AsyncSession | None = None) -> dict:
         ]
         await event_manager.publish(
             node_transition_event(
-                lead_id, NODE_ID, "paused", "quiet hours hold until 08:00 JST"
+                lead_id,
+                NODE_ID,
+                "paused",
+                "quiet hours hold until 08:00 JST",
+                batch_id=state.get("batch_id"),
             )
         )
 
@@ -132,7 +153,9 @@ async def send_engine(state: dict, *, db: AsyncSession | None = None) -> dict:
 
     latency_ms = int((time.perf_counter() - start) * 1000)
     await event_manager.publish(
-        node_transition_event(lead_id, NODE_ID, "completed", f"sent {latency_ms}ms")
+        node_transition_event(
+            lead_id, NODE_ID, "completed", f"sent {latency_ms}ms", batch_id=state.get("batch_id")
+        )
     )
     await event_manager.publish(
         workflow_state_event(lead_id, "email_sent", f"Email #{email_num} dispatched")

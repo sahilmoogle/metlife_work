@@ -25,7 +25,9 @@ NODE_ID = "A8_Scoring"
 async def propensity_scorer(state: dict, *, db=None) -> dict:
     """Update the engagement score and determine routing."""
     lead_id = state["lead_id"]
-    await event_manager.publish(node_transition_event(lead_id, NODE_ID, "started"))
+    await event_manager.publish(
+        node_transition_event(lead_id, NODE_ID, "started", batch_id=state.get("batch_id"))
+    )
     start = time.perf_counter()
 
     # ── Score increment based on email send ──────────────────────────
@@ -71,6 +73,7 @@ async def propensity_scorer(state: dict, *, db=None) -> dict:
             NODE_ID,
             "completed",
             f"score={score:.4f} threshold={threshold:.2f} {latency_ms}ms",
+            batch_id=state.get("batch_id"),
         )
     )
 

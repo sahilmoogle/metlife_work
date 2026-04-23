@@ -17,12 +17,12 @@ import {
 
 
 const navItems = [
-  { key: "dashboard", path: "/dashboard", icon: LayoutDashboard },
-  { key: "leads", path: "/leads", icon: Users },
-  { key: "campaigns", path: "/campaigns", icon: Workflow },
-  { key: "reviews", path: "/reviews", icon: ClipboardCheck },
-  { key: "analytics", path: "/analytics", icon: BarChart3 },
-  { key: "settings", path: "/settings", icon: Settings },
+  { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
+  { label: "Leads", path: "/leads", icon: Users },
+  { label: "Work Flow Engine", path: "/campaigns", icon: Workflow },
+  { label: "HITL Reviews", path: "/reviews", icon: ClipboardCheck },
+  { label: "Analytics", path: "/analytics", icon: BarChart3 },
+  { label: "Admin - RBAC", path: "/settings", icon: Settings },
 ];
 const pageMeta = {
   "/dashboard": {

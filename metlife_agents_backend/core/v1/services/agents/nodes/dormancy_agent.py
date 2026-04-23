@@ -13,16 +13,19 @@ import time
 from core.v1.services.agents.rules.scoring_rules import classify_dormant_segment
 from core.v1.services.sse.manager import event_manager, node_transition_event
 from core.v1.services.agents.state import create_log_entry
+from utils.v1.db_sync import sync_lead_state
 
 logger = logging.getLogger(__name__)
 
 NODE_ID = "A10_Dormancy"
 
 
-async def dormancy_agent(state: dict) -> dict:
+async def dormancy_agent(state: dict, *, db=None) -> dict:
     """Assign a P1/P2/P3 revival segment for dormant leads."""
     lead_id = state["lead_id"]
-    await event_manager.publish(node_transition_event(lead_id, NODE_ID, "started"))
+    await event_manager.publish(
+        node_transition_event(lead_id, NODE_ID, "started", batch_id=state.get("batch_id"))
+    )
     start = time.perf_counter()
 
     # ── Re-use existing segment if already assigned ───────────────────
@@ -54,12 +57,23 @@ async def dormancy_agent(state: dict) -> dict:
     state["hitl_gate"] = "G3"
     state["hitl_status"] = "pending"
     state["current_node"] = NODE_ID
+    if db is not None:
+        await sync_lead_state(
+            db,
+            lead_id,
+            revival_segment=segment,
+            scenario_id="S4",
+            current_agent_node=NODE_ID,
+            workflow_status="Active",
+        )
 
     latency_ms = int((time.perf_counter() - start) * 1000)
     logger.info("A10 segment=%s for lead %s in %dms", segment, lead_id, latency_ms)
     await event_manager.publish(
         node_transition_event(
             lead_id, NODE_ID, "completed", f"{segment} {latency_ms}ms"
+            ,
+            batch_id=state.get("batch_id"),
         )
     )
 

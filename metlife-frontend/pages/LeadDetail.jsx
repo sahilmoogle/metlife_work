@@ -3,6 +3,7 @@ import { Link, Navigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { fetchLeadDetail } from "../src/services/leadsApi";
 import { downloadBlob, leadDetailToJson } from "../src/utils/exportFile";
+import { buildSseStreamUrl } from "../src/services/sseStream";
 
 const statusStyles = {
   Active: "bg-emerald-50 text-emerald-700",
@@ -32,6 +33,13 @@ const StepStateIcon = ({ state }) => {
     return <div className={`${base} border-sky-200 bg-sky-50 text-sky-700`}>•</div>;
   }
   return <div className={`${base} border-gray-200 bg-gray-50 text-gray-400`}>○</div>;
+};
+
+const formatTimestamp = (iso) => {
+  if (!iso) return "";
+  const dt = new Date(iso);
+  if (!Number.isFinite(dt.getTime())) return "";
+  return dt.toLocaleString();
 };
 
 const LeadDetail = () => {
@@ -79,6 +87,51 @@ const LeadDetail = () => {
     };
   }, [id, token, refreshKey]);
 
+  useEffect(() => {
+    if (!token || !id || typeof EventSource === "undefined") return;
+
+    let es;
+    try {
+      es = new EventSource(buildSseStreamUrl(token));
+    } catch {
+      return;
+    }
+
+    let last = 0;
+    const refreshSoon = () => {
+      const t = Date.now();
+      if (t - last < 800) return;
+      last = t;
+      setRefreshKey((k) => k + 1);
+    };
+
+    const onLeadEvent = (ev) => {
+      let d;
+      try {
+        d = JSON.parse(ev.data);
+      } catch {
+        return;
+      }
+      if (!d || String(d.lead_id || "") !== String(id)) return;
+      refreshSoon();
+    };
+
+    const leadEvents = [
+      "node_transition",
+      "workflow_state",
+      "hitl_required",
+      "hitl_approved",
+      "hitl_edited",
+      "hitl_rejected",
+      "lead_converted",
+    ];
+    for (const t of leadEvents) es.addEventListener(t, onLeadEvent);
+
+    return () => {
+      es.close();
+    };
+  }, [token, id]);
+
   const displayName = useMemo(() => {
     if (!lead) return "";
     const parts = [lead.first_name, lead.last_name].filter(Boolean);
@@ -104,6 +157,9 @@ const LeadDetail = () => {
         lines: [
           lead.thread_id ? `Thread: ${lead.thread_id}` : "Workflow not started (no thread yet)",
           `Emails sent: ${lead.emails_sent_count ?? 0}`,
+          lead.workflow_completed
+            ? `Completed: ${lead.completed_at ? new Date(lead.completed_at).toLocaleString() : "Yes"}`
+            : "Completed: No",
         ],
         tags: lead.thread_id ? ["LangGraph"] : [],
         state: lead.thread_id ? "active" : "pending",
@@ -124,6 +180,27 @@ const LeadDetail = () => {
     }
     return steps;
   }, [lead]);
+
+  const executionTimeline = useMemo(() => {
+    const raw = Array.isArray(lead?.execution_log) ? lead.execution_log : [];
+    const items = raw
+      .map((e, idx) => ({
+        key: `${idx}-${e?.timestamp || ""}-${e?.title || ""}`,
+        title: e?.title || "Event",
+        description: e?.description || "",
+        badges: Array.isArray(e?.badges) ? e.badges : [],
+        timestamp: e?.timestamp || "",
+      }))
+      .filter((x) => x.title || x.description);
+
+    items.sort((a, b) => {
+      const ta = new Date(a.timestamp).getTime();
+      const tb = new Date(b.timestamp).getTime();
+      if (!Number.isFinite(ta) || !Number.isFinite(tb)) return 0;
+      return ta - tb;
+    });
+    return items;
+  }, [lead?.execution_log]);
 
   const handleExport = () => {
     if (!lead) return;
@@ -322,6 +399,48 @@ const LeadDetail = () => {
         </div>
 
         <aside className="space-y-3">
+          <div className="rounded-xl border border-gray-100 bg-white p-4 dark:border-white/10 dark:bg-slate-950/40">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-semibold text-indigo-700">Execution timeline</p>
+              <span className="text-[11px] text-gray-400 dark:text-slate-400">
+                {lead.current_node ? `Now: ${lead.current_node}` : "—"}
+              </span>
+            </div>
+
+            {executionTimeline.length ? (
+              <div className="mt-3 max-h-[360px] space-y-2 overflow-auto pr-1">
+                {executionTimeline.map((e) => (
+                  <div key={e.key} className="rounded-xl border border-gray-100 bg-white p-3 dark:border-white/10 dark:bg-slate-900">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-gray-700 dark:text-slate-200">{e.title}</p>
+                        {e.description ? (
+                          <p className="mt-1 text-[11px] text-gray-500 dark:text-slate-400">{e.description}</p>
+                        ) : null}
+                      </div>
+                      <span className="flex-none text-[11px] font-semibold text-gray-400 dark:text-slate-500">
+                        {formatTimestamp(e.timestamp)}
+                      </span>
+                    </div>
+                    {e.badges?.length ? (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {e.badges.map((b) => (
+                          <span key={`${e.key}-${b}`} className="rounded-full bg-gray-50 px-2.5 py-1 text-[11px] font-semibold text-gray-600 dark:bg-white/5 dark:text-slate-300">
+                            {b}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">
+                No execution log yet. Start the workflow or wait for the first agent step.
+              </p>
+            )}
+          </div>
+
           <div className="rounded-xl border border-gray-100 bg-white p-4 dark:border-white/10 dark:bg-slate-950/40">
             <p className="text-xs font-semibold text-indigo-700">Urgency</p>
             <div className="mt-2 flex items-center justify-between gap-2">

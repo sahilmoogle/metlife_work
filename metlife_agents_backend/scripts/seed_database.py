@@ -146,6 +146,8 @@ async def _seed_consolidated_workbooks(db: AsyncSession) -> dict[str, int]:
 
     tyec_path = root / "TYecQuoteMst.xlsx"
     legacy_tyec_id_to_lead: dict[str, uuid.UUID] = {}
+    # AdobeAnalytics.xlsx uses QUOTE_NO-like identifiers (e.g. Q000014340) as ``lead_id``.
+    quote_no_to_lead: dict[str, uuid.UUID] = {}
     tyec_lead_pk_set: set[uuid.UUID] = set()
     quote_ids_used: set[str] = set()
 
@@ -169,11 +171,20 @@ async def _seed_consolidated_workbooks(db: AsyncSession) -> dict[str, int]:
         quotes_batch: list[Quote] = []
         for _, row in df.iterrows():
             src_id = row.get("id")
+            raw_quote_no = row.get("QUOTE_NO")
+            quote_no_key = (
+                None
+                if raw_quote_no is None
+                or (isinstance(raw_quote_no, float) and pd.isna(raw_quote_no))
+                else str(raw_quote_no).strip()
+            )
             lead_pk = uuid.uuid4()
             if src_id is not None and not (
                 isinstance(src_id, float) and pd.isna(src_id)
             ):
                 legacy_tyec_id_to_lead[str(src_id).strip()] = lead_pk
+            if quote_no_key:
+                quote_no_to_lead.setdefault(quote_no_key, lead_pk)
             tyec_lead_pk_set.add(lead_pk)
 
             mail = _str_val(row.get("MAIL_ID"))
@@ -184,7 +195,7 @@ async def _seed_consolidated_workbooks(db: AsyncSession) -> dict[str, int]:
 
             lead = Lead(
                 id=lead_pk,
-                quote_id=take_quote_id(row.get("QUOTE_NO")),
+                quote_id=take_quote_id(raw_quote_no),
                 first_name=_truncate(_str_val(row.get("POWN_KFNM")), 100),
                 last_name=_truncate(_str_val(row.get("POWN_KLNM")), 100),
                 email=_truncate(mail, 255),
@@ -204,7 +215,9 @@ async def _seed_consolidated_workbooks(db: AsyncSession) -> dict[str, int]:
                 ),
                 session_id=_truncate(_str_val(row.get("SESSION_ID")), 200),
                 registration_source=REG_TYEC,
-                workflow_status="New",
+                workflow_status="Suppressed" if opt is True else "New",
+                workflow_completed=True if opt is True else False,
+                completed_at=datetime.now(timezone.utc) if opt is True else None,
                 commit_time=commit,
                 engagement_score=0.0,
             )
@@ -326,6 +339,9 @@ async def _seed_consolidated_workbooks(db: AsyncSession) -> dict[str, int]:
             lead_uuid: uuid.UUID | None = (
                 legacy_tyec_id_to_lead.get(lid_key) if lid_key else None
             )
+            if lead_uuid is None and lid_key:
+                # Most Adobe rows reference the TYec QUOTE_NO, not the numeric TYec id.
+                lead_uuid = quote_no_to_lead.get(lid_key)
             if lead_uuid is None and lid_key:
                 try:
                     parsed = uuid.UUID(lid_key)

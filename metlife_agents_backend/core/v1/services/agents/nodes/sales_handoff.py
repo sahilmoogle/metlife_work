@@ -17,16 +17,19 @@ from prompts.briefing import A9_BRIEFING_SYSTEM, A9_BRIEFING_USER
 from core.v1.services.agents.rules.scenario_rules import SCENARIO_DEFAULTS
 from core.v1.services.sse.manager import event_manager, node_transition_event
 from core.v1.services.agents.state import create_log_entry
+from utils.v1.db_sync import sync_lead_state
 
 logger = logging.getLogger(__name__)
 
 NODE_ID = "A9_Handoff"
 
 
-async def sales_handoff(state: dict, *, llm=None) -> dict:
+async def sales_handoff(state: dict, *, llm=None, db=None) -> dict:
     """Generate the advisor briefing and prepare for CRM escalation."""
     lead_id = state["lead_id"]
-    await event_manager.publish(node_transition_event(lead_id, NODE_ID, "started"))
+    await event_manager.publish(
+        node_transition_event(lead_id, NODE_ID, "started", batch_id=state.get("batch_id"))
+    )
     start = time.perf_counter()
 
     scenario = state.get("scenario", "S1")
@@ -82,11 +85,15 @@ async def sales_handoff(state: dict, *, llm=None) -> dict:
     state["hitl_gate"] = "G4"
     state["hitl_status"] = "pending"
     state["current_node"] = NODE_ID
+    if db is not None:
+        await sync_lead_state(db, lead_id, current_agent_node=NODE_ID, workflow_status="Active")
 
     latency_ms = int((time.perf_counter() - start) * 1000)
     logger.info("A9 handoff briefing for lead %s in %dms", lead_id, latency_ms)
     await event_manager.publish(
-        node_transition_event(lead_id, NODE_ID, "completed", f"{latency_ms}ms")
+        node_transition_event(
+            lead_id, NODE_ID, "completed", f"{latency_ms}ms", batch_id=state.get("batch_id")
+        )
     )
 
     state["execution_log"] = [
