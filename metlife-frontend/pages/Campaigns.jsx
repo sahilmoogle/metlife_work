@@ -337,7 +337,8 @@ const Campaigns = () => {
 
   useEffect(() => {
     return () => stopTimer();
-  }, []);
+  // stopTimer is stable (useCallback with []), include for lint correctness.
+  }, [stopTimer]);
 
   const reset = () => {
     stopTimer();
@@ -476,6 +477,7 @@ const Campaigns = () => {
   useEffect(() => {
     activeBatchIdRef.current = batch?.batch_id ?? null;
     // When a new batch is set (or cleared), reset executed counters for "this run".
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setExecutedCounts(emptyExecutedCounts());
   }, [batch?.batch_id]);
 
