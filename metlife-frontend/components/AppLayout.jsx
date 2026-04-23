@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import mainIcon from "../src/assets/images/main-icon.jpg";
 import lightIcon from "../src/assets/images/light.jpg";
 import userIcon from "../src/assets/images/user.jpg";
+import { useTranslation } from "react-i18next";
 import {
   LayoutDashboard,
   BarChart3,
@@ -16,39 +17,40 @@ import {
 
 
 const navItems = [
-  { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
-  { label: "Leads", path: "/leads", icon: Users },
-  { label: "Work Flow Engine", path: "/campaigns", icon: Workflow },
-  { label: "HLTL Reviews", path: "/reviews", icon: ClipboardCheck },
-  { label: "Analytics", path: "/analytics", icon: BarChart3 },
-  { label: "Admin - RBAC", path: "/settings", icon: Settings },
+  { key: "dashboard", path: "/dashboard", icon: LayoutDashboard },
+  { key: "leads", path: "/leads", icon: Users },
+  { key: "campaigns", path: "/campaigns", icon: Workflow },
+  { key: "reviews", path: "/reviews", icon: ClipboardCheck },
+  { key: "analytics", path: "/analytics", icon: BarChart3 },
+  { key: "settings", path: "/settings", icon: Settings },
 ];
 const pageMeta = {
   "/dashboard": {
-    title: "Dashboard",
-    subtitle: "Real-time overview across 7 scenarios",
+    titleKey: "page.dashboard.title",
+    subtitleKey: "page.dashboard.subtitle",
   },
   "/leads": {
-    title: "All Leads",
-    subtitle: "Real-time overview across 7 scenarios",
+    titleKey: "page.leads.title",
+    subtitleKey: "page.leads.subtitle",
   },
   "/campaigns": {
-    title: "All Agents",
-    subtitle: "2 of 6 agents complete - 33% progress - Hybrid Mode",
+    titleKey: "page.campaigns.title",
+    subtitleKey: "page.campaigns.subtitle",
   },
   "/analytics": {
-    title: "Analytics",
-    subtitle: "Performance and conversion intelligence",
+    titleKey: "page.analytics.title",
+    subtitleKey: "page.analytics.subtitle",
   },
   "/settings": {
-    title: "Admin - RBAC",
-    subtitle: "Access control and administration",
+    titleKey: "page.settings.title",
+    subtitleKey: "page.settings.subtitle",
   },
 };
 
 const AppLayout = () => {
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { t, i18n } = useTranslation();
   const [isDark, setIsDark] = useState(() => {
     try {
       return window.localStorage.getItem("theme") === "dark";
@@ -68,8 +70,8 @@ const AppLayout = () => {
   }, [isDark]);
 
   const meta = pageMeta[location.pathname] ?? {
-    title: "Lead Detail",
-    subtitle: "Lead profile and activity timeline",
+    titleKey: "page.leadDetail.title",
+    subtitleKey: "page.leadDetail.subtitle",
   };
 
   return (
@@ -80,8 +82,8 @@ const AppLayout = () => {
             <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 text-sm font-bold text-indigo-700">
               <img src={mainIcon} alt="icon" className="w-8 h-8" />            </div>
             <div>
-              <h1 className="text-sm font-bold text-indigo-700">Lead Nurturing</h1>
-              <p className="text-[11px] text-gray-400 dark:text-slate-400">Your Intelligence Platform</p>
+              <h1 className="text-sm font-bold text-indigo-700">{t("brand.name")}</h1>
+              <p className="text-[11px] text-gray-400 dark:text-slate-400">{t("brand.tagline")}</p>
             </div>
           </div>
           <nav className="space-y-2 text-sm">
@@ -90,7 +92,7 @@ const AppLayout = () => {
 
               return (
                 <NavLink
-                  key={`${item.label}-${item.path}`}
+                  key={`${item.key}-${item.path}`}
                   to={item.path}
                   className={({ isActive }) =>
                     `flex items-center gap-3 rounded-lg px-3 py-2 transition ${isActive
@@ -100,7 +102,7 @@ const AppLayout = () => {
                   }
                 >
                   <Icon className="h-4 w-4" />
-                  {item.label}
+                  {t(`nav.${item.key}`)}
                 </NavLink>
               );
             })}
@@ -111,18 +113,34 @@ const AppLayout = () => {
           <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-xl font-semibold text-[#004EB2]">
-                {meta.title}
+                {t(meta.titleKey)}
               </h2>
-              <p className="text-xs text-gray-500 dark:text-slate-400">{meta.subtitle}</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400">{t(meta.subtitleKey)}</p>
             </div>
             <div className="flex items-center gap-3">
 
               <div className="rounded-md border border-indigo-200 p-0.5 text-xs">
-                <button type="button" className="rounded bg-indigo-600 px-2 py-1 text-white">
-                  EN
+                <button
+                  type="button"
+                  onClick={() => i18n.changeLanguage("en")}
+                  className={`rounded px-2 py-1 ${
+                    i18n.language === "en"
+                      ? "bg-indigo-600 text-white"
+                      : "text-gray-500 hover:bg-indigo-50 dark:text-slate-300 dark:hover:bg-white/10"
+                  }`}
+                >
+                  {t("language.en")}
                 </button>
-                <button type="button" className="rounded px-2 py-1 text-gray-500">
-                  JP
+                <button
+                  type="button"
+                  onClick={() => i18n.changeLanguage("jp")}
+                  className={`rounded px-2 py-1 ${
+                    i18n.language === "jp"
+                      ? "bg-indigo-600 text-white"
+                      : "text-gray-500 hover:bg-indigo-50 dark:text-slate-300 dark:hover:bg-white/10"
+                  }`}
+                >
+                  {t("language.jp")}
                 </button>
 
               </div>
@@ -154,7 +172,7 @@ const AppLayout = () => {
                 onClick={logout}
                 className="rounded-full border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-indigo-300 hover:text-indigo-700 dark:border-white/10 dark:text-slate-300 dark:hover:border-white/20 dark:hover:text-white"
               >
-                Logout
+                {t("common.logout")}
               </button>
             </div>
           </header>

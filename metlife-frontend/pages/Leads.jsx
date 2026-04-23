@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { fetchLeadsList } from "../src/services/leadsApi";
 import { downloadBlob, leadsToCsv } from "../src/utils/exportFile";
+import { useTranslation } from "react-i18next";
 
 const leadFilters = ["All", "Active", "HITL", "Converted", "Dormant"];
 
@@ -39,6 +40,7 @@ const matchesFilter = (status, filter) => {
 const Leads = () => {
   const navigate = useNavigate();
   const { token } = useAuth();
+  const { t } = useTranslation();
   const [leads, setLeads] = useState([]);
   const [loadError, setLoadError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -100,12 +102,14 @@ const Leads = () => {
 
   useEffect(() => {
     // Reset to first page when dataset shape changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(1);
     setSelected(new Set());
   }, [activeFilter, query, rowsPerPage]);
 
   useEffect(() => {
     // Clamp page if current page becomes invalid (e.g., after filter changes).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage((p) => Math.min(Math.max(1, p), totalPages));
   }, [totalPages]);
 
@@ -155,7 +159,7 @@ const Leads = () => {
         <div className="mb-3 rounded-lg border border-rose-100 bg-rose-50 px-3 py-2 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
           {loadError}{" "}
           <button type="button" className="font-semibold underline" onClick={() => setRefreshKey((k) => k + 1)}>
-            Retry
+            {t("common.retry")}
           </button>
         </div>
       ) : null}
@@ -164,6 +168,16 @@ const Leads = () => {
         <div className="flex flex-wrap items-center gap-2">
           {leadFilters.map((filter) => {
             const isActive = activeFilter === filter;
+            const label =
+              filter === "All"
+                ? t("leads.all")
+                : filter === "Active"
+                ? t("leads.active")
+                : filter === "HITL"
+                ? t("leads.hitl")
+                : filter === "Converted"
+                ? t("leads.converted")
+                : t("leads.dormant");
             return (
               <button
                 key={filter}
@@ -175,7 +189,7 @@ const Leads = () => {
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
                 }`}
               >
-                {filter}
+                {label}
               </button>
             );
           })}
@@ -188,7 +202,7 @@ const Leads = () => {
               type="text"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search"
+              placeholder={t("common.search")}
               className="w-full bg-transparent text-sm text-gray-700 outline-none dark:text-slate-200"
             />
           </div>
@@ -203,7 +217,7 @@ const Leads = () => {
                 : "Export all leads matching current filters"
             }
           >
-            Export
+            {t("common.export")}
           </button>
         </div>
       </div>
@@ -303,7 +317,7 @@ const Leads = () => {
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500 dark:text-slate-400">
         <div className="flex items-center gap-2">
-          <span>Rows per page</span>
+          <span>{t("leads.rowsPerPage")}</span>
           <select
             value={rowsPerPage}
             onChange={(event) => setRowsPerPage(Number(event.target.value))}
@@ -317,7 +331,11 @@ const Leads = () => {
 
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-gray-500 dark:text-slate-400">
-            Showing {totalRows ? startIndex + 1 : 0} to {endIndex} of {totalRows} Entries
+            {t("reviews.showing", {
+              from: totalRows ? startIndex + 1 : 0,
+              to: endIndex,
+              total: totalRows,
+            })}
           </span>
           <div className="flex items-center gap-1">
             <button
