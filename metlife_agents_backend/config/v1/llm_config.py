@@ -22,6 +22,8 @@ class AzureOpenAIConfig(BaseSettingsWrapper):
     AZURE_OPENAI_ENDPOINT: Optional[str] = None
     AZURE_OPENAI_API_VERSION: str = "2025-04-01-preview"
     AZURE_OPENAI_DEPLOYMENT: str = "gpt-5"
+    # 0 = deterministic-ish runs for A3/A5/etc.; override in .env if your deployment rejects 0.
+    AZURE_OPENAI_TEMPERATURE: float = 0.0
 
     def is_configured(self) -> bool:
         return bool(self.AZURE_OPENAI_API_KEY and self.AZURE_OPENAI_ENDPOINT)
@@ -51,7 +53,7 @@ def get_llm():
             api_key=azure_openai_config.AZURE_OPENAI_API_KEY,
             api_version=azure_openai_config.AZURE_OPENAI_API_VERSION,
             azure_deployment=azure_openai_config.AZURE_OPENAI_DEPLOYMENT,
-            temperature=0.3,
+            temperature=azure_openai_config.AZURE_OPENAI_TEMPERATURE,
             max_tokens=2048,
         )
     except ImportError:

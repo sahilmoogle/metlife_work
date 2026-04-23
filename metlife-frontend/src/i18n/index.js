@@ -84,6 +84,14 @@ const resources = {
         noGateItems: "No {{gate}} items in the queue right now.",
         resolvedNotExposed: "Resolved queue is not exposed by the backend yet.",
         nothingInQueue: "Nothing in this queue right now.",
+        detail: {
+          fieldReviewStatus: "Review status",
+          successApproved:
+            "Approved — decision saved and the workflow will continue for this lead.",
+          successEdited:
+            "Saved — your edits were applied and the workflow will continue.",
+          redirecting: "Returning to queue…",
+        },
       },
       settings: {
         accessControlTitle: "Admin - Access Control",
@@ -109,6 +117,9 @@ const resources = {
         password: "Password",
         loginNow: "Login Now →",
         loggingIn: "Logging in...",
+        subtitle: "Sign in",
+        welcomeLine: "Welcome back",
+        welcomeHint: "Enter your credentials to access the workspace.",
       },
       dashboard: {
         loading: "Loading dashboard…",
@@ -118,16 +129,20 @@ const resources = {
           activeWorkflows: "Active Workflows",
           converted: "Converted",
           pendingHitl: "Pending HITL",
+          pendingHitlCaption: "{{items}} review items · {{leads}} leads awaiting",
           allRecords: "All records",
           suppressed: "{{count}} suppressed",
           ofTotal: "{{pct}}% of total",
+          ltTenthPct: "<0.1% of total",
         },
         funnel: {
           title: "Conversion Funnel",
-          subtitle: "Lead journey from database aggregates",
+          subtitle:
+            "Percent bars use share of total leads. HITL uses unique leads with a pending review (queue may list more than one item per lead).",
           totalLeads: "Total Leads",
           activeProcessing: "Active / Processing",
           hitlQueue: "HITL queue",
+          hitlQueueBar: "{{items}} items · {{leads}} leads",
           converted: "Converted",
           dormant: "Dormant",
         },
@@ -173,17 +188,51 @@ const resources = {
           leads: "leads",
           succeeded: "succeeded",
           awaitingHitl: "awaiting HITL",
+          awaitingHitlScoped: "awaiting HITL (this batch)",
+          awaitingHitlAll: "awaiting HITL (all batches)",
           remaining: "remaining",
           failed: "failed",
+          legendExplain:
+            "Green, blue, and red numbers are for this batch run only. Amber shows HITL rows tagged with this batch (new items only); legacy rows without a batch tag are omitted. Do not add the chips together—they measure different scopes.",
+          hitlOrgWide: "Full pending queue (all batches): {{count}}",
+          scopeSucceeded: "Successfully processed leads in this batch.",
+          scopeAwaitingHitl:
+            "Human reviews opened during this batch run (requires batch_id on the queue row).",
+          scopeAwaitingHitlGlobal: "Everyone currently awaiting human review across all batches.",
+          scopeRemaining: "Leads in this batch not processed yet.",
+          scopeFailed: "Leads that failed in this batch run.",
+        },
+        scenarios: {
+          subtitle:
+            "Counts every lead in the database by scenario—not limited to the current batch.",
         },
         pipeline: {
           title: "Agent Execution Pipeline",
           subtitle:
-            "Batch bar uses live SSE batch_progress events plus a 1.2s poll backup. Pipeline and HITL counts refresh from the dashboard API on a timer and when SSE reports workflow or HITL activity.",
+            "Large figure: stage completions this batch (graph exits via SSE—not unique leads; A4+A5 share one tile). Subtext adds how many Active/Processing leads sit at that stage now (DB snapshot). Batch bar uses SSE batch_progress plus 1.2s polling; refreshes use the dashboard API on a timer and when SSE signals activity.",
+          queueScopeNote:
+            "“In queue” on agent tiles counts Active/Processing leads globally at that stage—not “remaining” in the batch bar.",
           hitlAwaiting: "{{count}} awaiting",
           succeeded: "Succeeded",
-          executedCurrent: "Executed · current {{value}}",
-          current: "Current {{value}}",
+          idleCaption: "Idle",
+          emDash: "—",
+          completionsQueued: "Completions this batch · {{queued}} in queue",
+          queuedOnly: "In queue: {{queued}}",
+          stageMainHint:
+            "Completions this batch: each graph node exit increments the count (not deduplicated per lead). A4 and A5 both roll into this card.",
+          stageSubHint:
+            "Queued in DB: Active/Processing leads whose current_agent_node maps to this stage.",
+          hitlTileHintBatch:
+            "Same scope as the amber legend when a batch is loaded—pending reviews tagged with this batch id.",
+          hitlTileHintGlobal:
+            "Same scope as the amber legend—entire pending queue when no batch filter applies.",
+          batchSuccessLabel: "✓ Batch run OK",
+          batchSuccessCaption:
+            "Graph finished without error (may still await HITL). CRM converted (all leads in DB): {{crm}}",
+          batchSuccessTitleHint:
+            "Number of leads where this batch’s graph invocation returned without an exception — includes runs that stopped at HITL. Not the same as CRM conversion.",
+          batchSuccessSubHint:
+            "Compare to “CRM converted” from dashboard stats (subtitle). Large figure is batch success_count.",
         },
       },
       analytics: {
@@ -370,6 +419,14 @@ const resources = {
         noGateItems: "現在、{{gate}} の項目はありません。",
         resolvedNotExposed: "解決済みキューはまだバックエンドで提供されていません。",
         nothingInQueue: "現在キューに項目はありません。",
+        detail: {
+          fieldReviewStatus: "レビュー状態",
+          successApproved:
+            "承認しました — 決定を保存し、このリードのワークフローを再開しました。",
+          successEdited:
+            "保存しました — 編集を反映し、ワークフローを再開しました。",
+          redirecting: "キューに戻ります…",
+        },
       },
       settings: {
         accessControlTitle: "管理 - アクセス制御",
@@ -395,6 +452,9 @@ const resources = {
         password: "パスワード",
         loginNow: "ログイン →",
         loggingIn: "ログイン中...",
+        subtitle: "サインイン",
+        welcomeLine: "おかえりなさい",
+        welcomeHint: "ワークスペースにアクセスするための認証情報を入力してください。",
       },
       dashboard: {
         loading: "ダッシュボードを読み込み中…",
@@ -404,16 +464,20 @@ const resources = {
           activeWorkflows: "稼働中ワークフロー",
           converted: "成約",
           pendingHitl: "HITL 保留",
+          pendingHitlCaption: "レビュー項目 {{items}} · 対象リード {{leads}}",
           allRecords: "全レコード",
           suppressed: "{{count}} 件抑制",
           ofTotal: "全体の {{pct}}%",
+          ltTenthPct: "全体の <0.1%",
         },
         funnel: {
           title: "コンバージョンファネル",
-          subtitle: "DB 集計によるリードジャーニー",
+          subtitle:
+            "％は総リードに対する割合。HITL はレビュー待ちのユニークリード数（キュー行数はそれ以上の場合あり）。",
           totalLeads: "総リード",
           activeProcessing: "アクティブ / 処理中",
           hitlQueue: "HITL キュー",
+          hitlQueueBar: "{{items}} 件 · リード {{leads}}",
           converted: "成約",
           dormant: "休眠",
         },
@@ -459,17 +523,50 @@ const resources = {
           leads: "件",
           succeeded: "成功",
           awaitingHitl: "HITL 待ち",
+          awaitingHitlScoped: "HITL 待ち（このバッチ）",
+          awaitingHitlAll: "HITL 待ち（全バッチ）",
           remaining: "残り",
           failed: "失敗",
+          legendExplain:
+            "緑・青・赤はこのバッチのみ。琥珀はこのバッチ ID が付いた HITL のみ（新規）。タグなしの旧データは含みません。チップの合計とバッチ総数は一致しません。",
+          hitlOrgWide: "全バッチの保留キュー合計: {{count}}",
+          scopeSucceeded: "このバッチで正常に処理できたリード数。",
+          scopeAwaitingHitl:
+            "このバッチ実行で作成されたレビュー（キュー行に batch_id があるもの）。",
+          scopeAwaitingHitlGlobal: "全バッチを通じた現在のヒューマンレビュー待ち件数。",
+          scopeRemaining: "このバッチでまだ処理されていないリード数。",
+          scopeFailed: "このバッチでエラーになったリード数。",
+        },
+        scenarios: {
+          subtitle: "シナリオ別件数はデータベース上の全リード対象です（現在のバッチのみではありません）。",
         },
         pipeline: {
           title: "エージェント実行パイプライン",
           subtitle:
-            "バッチバーは SSE の batch_progress と 1.2 秒ポーリングで更新します。パイプラインと HITL の数はタイマーと SSE イベントで更新します。",
+            "大きい数字＝本バッチの段階完了回数（SSE のノード完了。ユニークリード数ではありません。A4+A5 は同一カード）。小さな説明＝その段階に現在滞留している Active/Processing 件数（DB）。バッチバーは SSE と 1.2 秒ポーリング。更新はタイマーと SSE に連動したダッシュボード取得。",
+          queueScopeNote:
+            "エージェントタイルの「待ち」は、その段階にいる Active/Processing の全体件数であり、バッチバーの残り件数とは別です。",
           hitlAwaiting: "{{count}} 件待ち",
           succeeded: "成功",
-          executedCurrent: "実行済み · 現在 {{value}}",
-          current: "現在 {{value}}",
+          idleCaption: "待機",
+          emDash: "—",
+          completionsQueued: "本バッチの段階完了 · 待ち {{queued}}",
+          queuedOnly: "待ち: {{queued}}",
+          stageMainHint:
+            "本バッチ内のノード完了回数（リード単位では重複あり得る）。A4 と A5 はこのカードに集約されます。",
+          stageSubHint:
+            "DB 上の滞留: Active/Processing で現在のノードがこの段階に該当するリード数。",
+          hitlTileHintBatch:
+            "バッチ読み込み時の琥珀レジェンドと同じ — このバッチ ID の保留レビュー。",
+          hitlTileHintGlobal:
+            "琥珀レジェンドと同じ — バッチ指定がないときは全キュー。",
+          batchSuccessLabel: "✓ バッチ実行 OK",
+          batchSuccessCaption:
+            "グラフがエラー終了しなかった件数（HITL 待ちを含む）。CRM 成約（DB 全リード）: {{crm}}",
+          batchSuccessTitleHint:
+            "バッチの graph 呼び出しが例外なく終わったリード数（HITL で停止も含む）。ビジネス上の成約数ではありません。",
+          batchSuccessSubHint:
+            "ダッシュボード集計の CRM 成約件数と比較してください。大きい数字は batch の success_count です。",
         },
       },
       analytics: {

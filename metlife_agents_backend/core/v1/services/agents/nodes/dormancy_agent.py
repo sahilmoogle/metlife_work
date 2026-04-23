@@ -24,7 +24,9 @@ async def dormancy_agent(state: dict, *, db=None) -> dict:
     """Assign a P1/P2/P3 revival segment for dormant leads."""
     lead_id = state["lead_id"]
     await event_manager.publish(
-        node_transition_event(lead_id, NODE_ID, "started", batch_id=state.get("batch_id"))
+        node_transition_event(
+            lead_id, NODE_ID, "started", batch_id=state.get("batch_id")
+        )
     )
     start = time.perf_counter()
 
@@ -71,8 +73,10 @@ async def dormancy_agent(state: dict, *, db=None) -> dict:
     logger.info("A10 segment=%s for lead %s in %dms", segment, lead_id, latency_ms)
     await event_manager.publish(
         node_transition_event(
-            lead_id, NODE_ID, "completed", f"{segment} {latency_ms}ms"
-            ,
+            lead_id,
+            NODE_ID,
+            "completed",
+            f"{segment} {latency_ms}ms",
             batch_id=state.get("batch_id"),
         )
     )

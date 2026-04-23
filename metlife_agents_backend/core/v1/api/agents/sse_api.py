@@ -118,7 +118,9 @@ async def get_recent_events(
             payload.setdefault("event_type", row.event_type)
             payload.setdefault("lead_id", row.lead_id)
             payload.setdefault("thread_id", row.thread_id)
-            payload.setdefault("persisted_at", str(row.created_at) if row.created_at else None)
+            payload.setdefault(
+                "persisted_at", str(row.created_at) if row.created_at else None
+            )
             events.append(payload)
 
     return APIResponse(

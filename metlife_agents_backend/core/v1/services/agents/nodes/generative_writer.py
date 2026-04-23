@@ -114,7 +114,11 @@ async def generative_writer(
     logger.info("A5 completed for lead %s in %dms", lead_id, latency_ms)
     await event_manager.publish(
         node_transition_event(
-            lead_id, NODE_ID, "completed", f"{latency_ms}ms", batch_id=state.get("batch_id")
+            lead_id,
+            NODE_ID,
+            "completed",
+            f"{latency_ms}ms",
+            batch_id=state.get("batch_id"),
         )
     )
 

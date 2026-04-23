@@ -59,7 +59,7 @@ const formatInt = (n) => new Intl.NumberFormat().format(Number(n) || 0);
 
 const Analytics = () => {
   const { token } = useAuth();
-  const { t } = useTranslation();
+  const { t: translate } = useTranslation();
   const [range, setRange] = useState("30d");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -124,7 +124,7 @@ const Analytics = () => {
         <div className="rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-100">
           {error}{" "}
           <button type="button" className="ml-2 font-semibold underline" onClick={() => void load()}>
-            {t("common.retry")}
+            {translate("common.retry")}
           </button>
         </div>
       ) : null}
@@ -132,9 +132,9 @@ const Analytics = () => {
       <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-base font-semibold text-[#1e2a52] dark:text-white">{t("analytics.title")}</h2>
+            <h2 className="text-base font-semibold text-[#1e2a52] dark:text-white">{translate("analytics.title")}</h2>
             <p className="mt-1 text-xs text-gray-500 dark:text-volt-muted">
-              {t("analytics.subtitle", { range: loading ? t("common.loading") : rangeLabel })}
+              {translate("analytics.subtitle", { range: loading ? translate("common.loading") : rangeLabel })}
             </p>
           </div>
 
@@ -154,7 +154,7 @@ const Analytics = () => {
                         : "text-gray-600 hover:text-gray-800 dark:text-volt-muted dark:hover:text-volt-text"
                     }`}
                   >
-                    {t(r.labelKey)}
+                    {translate(r.labelKey)}
                   </button>
                 );
               })}
@@ -166,7 +166,7 @@ const Analytics = () => {
               disabled={!data}
               className="inline-flex h-9 items-center gap-2 rounded-full border border-gray-200 bg-white px-4 text-xs font-semibold text-gray-700 hover:border-indigo-200 hover:text-indigo-700 disabled:opacity-50 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text dark:hover:border-volt-border dark:hover:text-white"
             >
-              {t("common.export")}
+              {translate("common.export")}
               <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
                 <path d="M12 4v12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
                 <path
@@ -207,8 +207,8 @@ const Analytics = () => {
       <div className="grid gap-3 xl:grid-cols-[2fr_1fr]">
         <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
           <div className="mb-3">
-            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("analytics.weekly.title")}</p>
-            <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">{t("analytics.weekly.subtitle")}</p>
+            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{translate("analytics.weekly.title")}</p>
+            <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">{translate("analytics.weekly.subtitle")}</p>
           </div>
 
           <div className="flex items-end justify-between gap-3">
@@ -231,27 +231,27 @@ const Analytics = () => {
               );
             })}
             {!loading && weeklyBars.length === 0 ? (
-              <p className="w-full py-8 text-center text-sm text-gray-400">{t("analytics.noWeeklyData")}</p>
+              <p className="w-full py-8 text-center text-sm text-gray-400">{translate("analytics.noWeeklyData")}</p>
             ) : null}
           </div>
 
           <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-[11px] text-gray-500 dark:text-volt-muted2">
             <span className="inline-flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-blue-500" /> {t("analytics.weekly.newLeads")}
+              <span className="h-2 w-2 rounded-full bg-blue-500" /> {translate("analytics.weekly.newLeads")}
             </span>
             <span className="inline-flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-violet-500" /> {t("analytics.weekly.engaged")}
+              <span className="h-2 w-2 rounded-full bg-violet-500" /> {translate("analytics.weekly.engaged")}
             </span>
             <span className="inline-flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" /> {t("analytics.weekly.converted")}
+              <span className="h-2 w-2 rounded-full bg-emerald-500" /> {translate("analytics.weekly.converted")}
             </span>
           </div>
         </div>
 
         <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
           <div className="mb-3">
-            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("analytics.scenarioConversion.title")}</p>
-            <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">{t("analytics.scenarioConversion.subtitle")}</p>
+            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{translate("analytics.scenarioConversion.title")}</p>
+            <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">{translate("analytics.scenarioConversion.subtitle")}</p>
           </div>
 
           <div className="space-y-3">
@@ -279,7 +279,7 @@ const Analytics = () => {
               </div>
             ))}
             {!loading && !(data?.scenario_conversion?.length) ? (
-              <p className="text-sm text-gray-400">{t("analytics.scenarioConversion.empty")}</p>
+              <p className="text-sm text-gray-400">{translate("analytics.scenarioConversion.empty")}</p>
             ) : null}
           </div>
         </div>
@@ -288,9 +288,9 @@ const Analytics = () => {
       <div className="grid gap-3 xl:grid-cols-3">
         <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
           <div className="mb-3">
-            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("analytics.agentPerf.title")}</p>
+            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{translate("analytics.agentPerf.title")}</p>
             <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">
-              {t("analytics.agentPerf.subtitle")}
+              {translate("analytics.agentPerf.subtitle")}
             </p>
           </div>
 
@@ -298,10 +298,10 @@ const Analytics = () => {
             <table className="min-w-[640px] w-full border-separate border-spacing-0">
               <thead>
                 <tr className="text-left text-[11px] font-semibold text-gray-500 dark:text-volt-muted2">
-                  <th className="px-3 py-2">{t("analytics.agentPerf.agent")}</th>
-                  <th className="px-3 py-2">{t("analytics.agentPerf.processed")}</th>
-                  <th className="px-3 py-2">{t("analytics.agentPerf.avgLatency")}</th>
-                  <th className="px-3 py-2">{t("analytics.agentPerf.success")}</th>
+                  <th className="px-3 py-2">{translate("analytics.agentPerf.agent")}</th>
+                  <th className="px-3 py-2">{translate("analytics.agentPerf.processed")}</th>
+                  <th className="px-3 py-2">{translate("analytics.agentPerf.avgLatency")}</th>
+                  <th className="px-3 py-2">{translate("analytics.agentPerf.success")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -325,15 +325,15 @@ const Analytics = () => {
               </tbody>
             </table>
             {!loading && !(data?.agent_performance?.length) ? (
-              <p className="py-4 text-center text-sm text-gray-400">{t("analytics.agentPerf.empty")}</p>
+              <p className="py-4 text-center text-sm text-gray-400">{translate("analytics.agentPerf.empty")}</p>
             ) : null}
           </div>
         </div>
 
         <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
           <div className="mb-3">
-            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("analytics.emailPerf.title")}</p>
-            <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">{t("analytics.emailPerf.subtitle")}</p>
+            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{translate("analytics.emailPerf.title")}</p>
+            <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">{translate("analytics.emailPerf.subtitle")}</p>
           </div>
 
           <div className="space-y-3">
@@ -355,28 +355,34 @@ const Analytics = () => {
           </div>
 
           <div className="mt-4 rounded-2xl border border-gray-100 bg-gray-50 p-3 dark:border-volt-borderSoft dark:bg-white/5">
-            <p className="text-[11px] font-semibold text-gray-500 dark:text-volt-muted2">{t("analytics.emailPerf.topPerforming")}</p>
+            <p className="text-[11px] font-semibold text-gray-500 dark:text-volt-muted2">{translate("analytics.emailPerf.topPerforming")}</p>
             <div className="mt-2 space-y-2">
-              {(data?.email_top_performing ?? []).map((t, idx) => (
+              {(data?.email_top_performing ?? []).map((row, idx) => (
                 <div
-                  key={`${t.scenario_id}-${t.rank_type}-${idx}`}
+                  key={`${row.scenario_id}-${row.rank_type}-${idx}`}
                   className="flex items-center justify-between rounded-xl bg-white px-3 py-2 ring-1 ring-gray-100 dark:bg-volt-card/60 dark:ring-volt-borderSoft"
                 >
                   <p className="text-xs font-semibold text-gray-800 dark:text-white">
-                    {t.scenario_id}
-                    {t.rank_type === "best_open" ? ` ${t("analytics.emailPerf.bestOpen")}` : ` ${t("analytics.emailPerf.bestClick")}`}
+                    {row.scenario_id}
+                    {row.rank_type === "best_open"
+                      ? ` ${translate("analytics.emailPerf.bestOpen")}`
+                      : ` ${translate("analytics.emailPerf.bestClick")}`}
                   </p>
-                  <p className={`text-xs font-semibold ${t.rank_type === "best_open" ? "text-emerald-700" : "text-amber-700"}`}>
-                    {t.rank_type === "best_open" && t.open_rate_pct != null
-                      ? `${t.open_rate_pct.toFixed(1)}${t("analytics.emailPerf.openSuffix")}`
-                      : t.click_rate_pct != null
-                        ? `${t.click_rate_pct.toFixed(1)}${t("analytics.emailPerf.clickSuffix")}`
+                  <p
+                    className={`text-xs font-semibold ${
+                      row.rank_type === "best_open" ? "text-emerald-700" : "text-amber-700"
+                    }`}
+                  >
+                    {row.rank_type === "best_open" && row.open_rate_pct != null
+                      ? `${row.open_rate_pct.toFixed(1)}${translate("analytics.emailPerf.openSuffix")}`
+                      : row.click_rate_pct != null
+                        ? `${row.click_rate_pct.toFixed(1)}${translate("analytics.emailPerf.clickSuffix")}`
                         : "—"}
                   </p>
                 </div>
               ))}
               {!data?.email_top_performing?.length && !loading ? (
-                <p className="text-xs text-gray-400">{t("analytics.emailPerf.notEnough")}</p>
+                <p className="text-xs text-gray-400">{translate("analytics.emailPerf.notEnough")}</p>
               ) : null}
             </div>
           </div>
@@ -384,16 +390,16 @@ const Analytics = () => {
 
         <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
           <div className="mb-3">
-            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("analytics.hitlGate.title")}</p>
-            <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">{t("analytics.hitlGate.subtitle")}</p>
+            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{translate("analytics.hitlGate.title")}</p>
+            <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">{translate("analytics.hitlGate.subtitle")}</p>
           </div>
 
           <div className="space-y-2">
             {(data?.hitl_gate_stats ?? []).map((g) => {
               const meta =
                 g.reviewed_count === 0
-                  ? t("analytics.hitlGate.noReviews")
-                  : t("analytics.hitlGate.reviewedAvg", {
+                  ? translate("analytics.hitlGate.noReviews")
+                  : translate("analytics.hitlGate.reviewedAvg", {
                       count: g.reviewed_count,
                       mins: g.avg_review_minutes != null ? g.avg_review_minutes.toFixed(1) : "—",
                     });
@@ -429,7 +435,7 @@ const Analytics = () => {
           </div>
 
           <div className="mt-3 rounded-2xl bg-teal-900 p-4 text-center text-white">
-            <p className="text-[11px] font-semibold tracking-wide text-teal-100">{t("analytics.hitlGate.autoApproved")}</p>
+            <p className="text-[11px] font-semibold tracking-wide text-teal-100">{translate("analytics.hitlGate.autoApproved")}</p>
             <p className="mt-2 text-3xl font-semibold text-emerald-300">{formatInt(data?.hitl_auto_approved_estimate ?? 0)}</p>
           </div>
         </div>
@@ -438,8 +444,8 @@ const Analytics = () => {
       <div className="grid gap-3 lg:grid-cols-2">
         <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
           <div className="mb-3">
-            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("analytics.scoreDist.title")}</p>
-            <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">{t("analytics.scoreDist.subtitle")}</p>
+            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{translate("analytics.scoreDist.title")}</p>
+            <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">{translate("analytics.scoreDist.subtitle")}</p>
           </div>
 
           <div className="flex h-44 items-end justify-between gap-2 rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-100 dark:bg-white/5 dark:ring-volt-borderSoft">
@@ -452,22 +458,22 @@ const Analytics = () => {
               </div>
             ))}
             {!loading && scoreBars.length === 0 ? (
-              <p className="w-full py-6 text-center text-sm text-gray-400">{t("analytics.scoreDist.empty")}</p>
+              <p className="w-full py-6 text-center text-sm text-gray-400">{translate("analytics.scoreDist.empty")}</p>
             ) : null}
           </div>
 
           <div className="mt-3 flex items-center justify-between text-[11px] text-gray-500 dark:text-volt-muted2">
-            <span>{t("analytics.scoreDist.below", { count: formatInt(data?.score_insights?.below_0_40 ?? 0) })}</span>
+            <span>{translate("analytics.scoreDist.below", { count: formatInt(data?.score_insights?.below_0_40 ?? 0) })}</span>
             <span className="font-semibold text-emerald-700">
-              {t("analytics.scoreDist.above", { count: formatInt(data?.score_insights?.above_0_70 ?? 0) })}
+              {translate("analytics.scoreDist.above", { count: formatInt(data?.score_insights?.above_0_70 ?? 0) })}
             </span>
           </div>
         </div>
 
         <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
           <div className="mb-3">
-            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("analytics.llm.title")}</p>
-            <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">{t("analytics.llm.subtitle")}</p>
+            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{translate("analytics.llm.title")}</p>
+            <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">{translate("analytics.llm.subtitle")}</p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
@@ -483,7 +489,7 @@ const Analytics = () => {
                   {row.tokens_millions != null ? `${row.tokens_millions.toFixed(2)}M` : "—"}
                 </p>
                 <p className={`mt-1 text-[11px] ${i === 0 ? "text-amber-800/80" : "text-blue-800/80"}`}>
-                  {t("analytics.llm.tokens")}
+                  {translate("analytics.llm.tokens")}
                   {row.cost_jpy != null ? ` · ¥${formatInt(Math.round(row.cost_jpy))}` : ""}
                 </p>
                 <p className={`mt-2 text-[11px] ${i === 0 ? "text-amber-900/70" : "text-blue-900/70"}`}>{row.note}</p>
@@ -493,13 +499,13 @@ const Analytics = () => {
 
           <div className="mt-3 rounded-2xl bg-volt-card p-4 ring-1 ring-volt-borderSoft">
             <div className="flex items-center justify-between text-xs font-semibold text-volt-muted">
-              <span>{t("analytics.llm.totalMonthly")}</span>
+              <span>{translate("analytics.llm.totalMonthly")}</span>
               <span className="text-lg font-semibold text-volt-text">
                 {data?.llm_total_monthly_jpy != null ? `¥${formatInt(Math.round(data.llm_total_monthly_jpy))}` : "—"}
               </span>
             </div>
             {!llmTracked ? (
-              <p className="mt-2 text-[11px] text-volt-muted2">{t("analytics.llm.notPersisted")}</p>
+              <p className="mt-2 text-[11px] text-volt-muted2">{translate("analytics.llm.notPersisted")}</p>
             ) : null}
           </div>
         </div>

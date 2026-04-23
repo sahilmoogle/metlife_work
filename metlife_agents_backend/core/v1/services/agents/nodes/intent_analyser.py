@@ -31,7 +31,9 @@ async def intent_analyser(state: dict, *, llm=None, db=None) -> dict:
     """
     lead_id = state["lead_id"]
     await event_manager.publish(
-        node_transition_event(lead_id, NODE_ID, "started", batch_id=state.get("batch_id"))
+        node_transition_event(
+            lead_id, NODE_ID, "started", batch_id=state.get("batch_id")
+        )
     )
     start = time.perf_counter()
 
@@ -76,13 +78,19 @@ async def intent_analyser(state: dict, *, llm=None, db=None) -> dict:
 
     state["current_node"] = NODE_ID
     if db is not None:
-        await sync_lead_state(db, lead_id, current_agent_node=NODE_ID, workflow_status="Active")
+        await sync_lead_state(
+            db, lead_id, current_agent_node=NODE_ID, workflow_status="Active"
+        )
 
     latency_ms = int((time.perf_counter() - start) * 1000)
     logger.info("A3 completed for lead %s in %dms", lead_id, latency_ms)
     await event_manager.publish(
         node_transition_event(
-            lead_id, NODE_ID, "completed", f"{latency_ms}ms", batch_id=state.get("batch_id")
+            lead_id,
+            NODE_ID,
+            "completed",
+            f"{latency_ms}ms",
+            batch_id=state.get("batch_id"),
         )
     )
 

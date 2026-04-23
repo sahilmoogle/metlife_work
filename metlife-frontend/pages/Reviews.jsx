@@ -4,6 +4,8 @@ import { useAuth } from "../context/AuthContext";
 import { fetchHitlQueue } from "../src/services/hitlApi";
 import { useTranslation } from "react-i18next";
 import { buildSseStreamUrl } from "../src/services/sseStream";
+import { formatRelativeTime } from "../src/utils/relativeTime";
+import { useRelativeClock } from "../src/hooks/useRelativeClock";
 
 const queueTabs = [
   { key: "pending", label: "Pending" },
@@ -26,21 +28,8 @@ const gateFilters = [
 
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
 
-const formatAge = (iso) => {
-  if (!iso) return "";
-  const dt = new Date(iso);
-  const ms = Date.now() - dt.getTime();
-  if (!Number.isFinite(ms)) return "";
-  const mins = Math.floor(ms / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
-};
-
 const Reviews = () => {
+  useRelativeClock(30000);
   const navigate = useNavigate();
   const { token } = useAuth();
   const { t } = useTranslation();
@@ -337,7 +326,9 @@ const Reviews = () => {
                   <span className="hidden rounded-full bg-indigo-50 px-3 py-1 text-[11px] font-semibold text-indigo-700 sm:inline-flex dark:bg-indigo-500/15 dark:text-indigo-300">
                     {step}
                   </span>
-                  <span className="text-xs text-gray-400 dark:text-volt-muted2">{formatAge(item.created_at)}</span>
+                  <span className="text-xs text-gray-400 dark:text-volt-muted2" title={item.created_at ? new Date(item.created_at).toLocaleString() : undefined}>
+                    {formatRelativeTime(item.created_at) || "—"}
+                  </span>
                   <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 text-gray-300 dark:text-volt-muted2" aria-hidden="true">
                     <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>

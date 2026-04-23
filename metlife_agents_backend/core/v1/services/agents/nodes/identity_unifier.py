@@ -90,11 +90,13 @@ async def identity_unifier(state: dict, *, db: AsyncSession) -> dict:
         select(ConsultationRequest).where(ConsultationRequest.lead_id == lead_id)
     )
     consult = consult_result.scalar_one_or_none()
+    state["consult_request_type"] = None
     if consult:
         state["memo"] = consult.memo
         state["email_captured"] = bool(consult.email)
         if not state["registration_source"]:
             state["registration_source"] = consult.request_type
+        state["consult_request_type"] = consult.request_type
         state["consult_request_id"] = consult.request_id
         state["prefecture"] = consult.prefecture
         state["zip_code"] = consult.zip_code

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, Navigate, useParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import { approveHitl, fetchHitlDetail } from "../src/services/hitlApi";
 
@@ -34,6 +35,8 @@ const PencilIcon = (props) => (
 
 const ReviewDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { t } = useTranslation();
   const { token } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -47,6 +50,8 @@ const ReviewDetail = () => {
   const [actionError, setActionError] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
   const [actionOk, setActionOk] = useState("");
+  /** Prevents double-submit while success message is showing / redirect pending. */
+  const [decisionLocked, setDecisionLocked] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -116,7 +121,13 @@ const ReviewDetail = () => {
           ? { action, edited_subject: editedSubject, edited_body: editedBody, reviewer_notes: reviewerNotes }
           : { action, reviewer_notes: reviewerNotes };
       await approveHitl(token, id, body);
-      setActionOk(`Saved: ${action}`);
+      const okMsg =
+        action === "edited" ? t("reviews.detail.successEdited") : t("reviews.detail.successApproved");
+      setDecisionLocked(true);
+      setActionOk(okMsg);
+      window.setTimeout(() => {
+        navigate("/reviews", { replace: true });
+      }, 1400);
     } catch (e) {
       setActionError(e.message || "Action failed.");
     } finally {
@@ -223,7 +234,9 @@ const ReviewDetail = () => {
               <p className="mt-1 font-medium text-gray-700 dark:text-volt-text">{data.gate_type}</p>
             </div>
             <div className="col-span-2">
-              <p className="text-[11px] text-gray-400 dark:text-volt-muted2">Mode</p>
+              <p className="text-[11px] text-gray-400 dark:text-volt-muted2">
+                {t("reviews.detail.fieldReviewStatus")}
+              </p>
               <p className="mt-1 font-medium text-gray-700 dark:text-volt-text">{data.review_status}</p>
             </div>
             {data.persona_confidence != null ? (
@@ -257,8 +270,9 @@ const ReviewDetail = () => {
 
             <button
               type="button"
+              disabled={decisionLocked}
               onClick={() => setEditMode((v) => !v)}
-              className="inline-flex h-8 items-center gap-2 rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 hover:border-indigo-200 hover:text-indigo-700 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted dark:hover:border-volt-border dark:hover:text-white"
+              className="inline-flex h-8 items-center gap-2 rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 hover:border-indigo-200 hover:text-indigo-700 disabled:opacity-60 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted dark:hover:border-volt-border dark:hover:text-white"
             >
               <PencilIcon className="h-4 w-4" />
               {editMode ? "Close edit" : "Edit"}
@@ -307,7 +321,12 @@ const ReviewDetail = () => {
             />
 
             {actionError ? <p className="mt-2 text-xs font-semibold text-rose-700">{actionError}</p> : null}
-            {actionOk ? <p className="mt-2 text-xs font-semibold text-emerald-700">{actionOk}</p> : null}
+            {actionOk ? (
+              <div className="mt-2 space-y-1">
+                <p className="text-xs font-semibold text-emerald-700">{actionOk}</p>
+                <p className="text-[11px] text-gray-500 dark:text-volt-muted2">{t("reviews.detail.redirecting")}</p>
+              </div>
+            ) : null}
 
           </div>
         </article>
@@ -333,7 +352,7 @@ const ReviewDetail = () => {
         {editMode ? (
           <button
             type="button"
-            disabled={actionLoading}
+            disabled={actionLoading || decisionLocked}
             onClick={() => handleDecision("edited")}
             className="inline-flex h-9 items-center gap-2 rounded-full bg-[#0b4aa2] px-5 text-xs font-semibold text-white shadow-[0_10px_25px_rgba(11,74,162,0.18)] transition hover:brightness-110 disabled:opacity-60"
           >
@@ -342,7 +361,7 @@ const ReviewDetail = () => {
         ) : (
           <button
             type="button"
-            disabled={actionLoading}
+            disabled={actionLoading || decisionLocked}
             onClick={() => handleDecision("approved")}
             className="inline-flex h-9 items-center gap-2 rounded-full bg-[#0b4aa2] px-5 text-xs font-semibold text-white shadow-[0_10px_25px_rgba(11,74,162,0.18)] transition hover:brightness-110 disabled:opacity-60"
           >

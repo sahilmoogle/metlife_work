@@ -6,7 +6,9 @@ import logging
 from datetime import datetime, timezone
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -54,16 +56,35 @@ def _g1_checkpoint_patch(request: HITLApproveRequest) -> dict | None:
 async def get_hitl_queue(
     gate_type: str | None = None,
     queue: Literal["pending", "resolved"] = "pending",
+    batch_id: UUID | None = Query(
+        None,
+        description=(
+            "When set, only rows tagged with this batch run id (from batch workflow starts). "
+            "Omits legacy rows where batch_id was never stored."
+        ),
+    ),
+    thread_id: str | None = Query(
+        None,
+        description="When set, only the HITL row(s) for this LangGraph thread_id (e.g. lead detail).",
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """Fetch HITL queue rows joined with lead profile.
+
+    Returns the **global** pending/resolved queue unless ``batch_id`` is passed.
 
     * ``queue=pending`` (default): ``review_status == Awaiting``.
     * ``queue=resolved``: terminal review outcomes (Approved / Edited / Rejected).
 
     Optional ``gate_type`` filter: G1, G2, G3, G4, G5.
+    Optional ``batch_id``: restrict to reviews opened during that ``batch_runs`` execution.
+    Optional ``thread_id``: single-thread lookup for lead detail / operator actions.
     """
     query = select(HITLQueue, Lead).join(Lead, HITLQueue.lead_id == Lead.id)
+    if thread_id:
+        query = query.where(HITLQueue.thread_id == thread_id)
+    if batch_id is not None:
+        query = query.where(HITLQueue.batch_id == batch_id)
     if queue == "resolved":
         query = query.where(
             HITLQueue.review_status.in_(["Approved", "Edited", "Rejected"])
@@ -81,6 +102,7 @@ async def get_hitl_queue(
         HITLQueueItem(
             id=str(r.HITLQueue.id),
             lead_id=str(r.HITLQueue.lead_id),
+            batch_id=str(r.HITLQueue.batch_id) if r.HITLQueue.batch_id else None,
             first_name=r.Lead.first_name,
             last_name=r.Lead.last_name,
             scenario_id=r.Lead.scenario_id,
@@ -142,6 +164,7 @@ async def get_hitl_detail(
     item = HITLQueueItem(
         id=str(row.HITLQueue.id),
         lead_id=str(row.HITLQueue.lead_id),
+        batch_id=str(row.HITLQueue.batch_id) if row.HITLQueue.batch_id else None,
         first_name=row.Lead.first_name,
         last_name=row.Lead.last_name,
         scenario_id=row.Lead.scenario_id,

@@ -2,8 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { fetchLeadsList } from "../src/services/leadsApi";
+import { fetchHitlQueue } from "../src/services/hitlApi";
 import { downloadBlob, leadsToCsv } from "../src/utils/exportFile";
 import { useTranslation } from "react-i18next";
+import { formatRelativeTime } from "../src/utils/relativeTime";
+import { useRelativeClock } from "../src/hooks/useRelativeClock";
 
 const leadFilters = ["All", "Active", "HITL", "Converted", "Dormant"];
 
@@ -28,16 +31,30 @@ const scenarioStyles = {
   S7: "text-rose-700",
 };
 
-const matchesFilter = (status, filter) => {
+/** Backend keeps most HITL pauses as ``workflow_status=Active``; queue membership defines HITL filter. */
+const DORMANCY_NODE = "A10_Dormancy";
+
+const matchesFilter = (lead, filter, pendingHitlLeadIds) => {
+  const status = lead.workflow_status || "New";
+  const id = lead.id ? String(lead.id) : "";
   if (filter === "All") return true;
   if (filter === "Active") return status === "Active" || status === "Processing";
-  if (filter === "HITL") return status === "Pending_HITL" || status === "HITL";
+  if (filter === "HITL") {
+    return (
+      status === "Pending_HITL" ||
+      status === "HITL" ||
+      (id && pendingHitlLeadIds.has(id))
+    );
+  }
   if (filter === "Converted") return status === "Converted";
-  if (filter === "Dormant") return status === "Dormant";
+  if (filter === "Dormant") {
+    return status === "Dormant" || lead.current_agent_node === DORMANCY_NODE;
+  }
   return true;
 };
 
 const Leads = () => {
+  useRelativeClock(30000);
   const navigate = useNavigate();
   const { token } = useAuth();
   const { t } = useTranslation();
@@ -50,6 +67,7 @@ const Leads = () => {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState(() => new Set());
   const [refreshKey, setRefreshKey] = useState(0);
+  const [pendingHitlLeadIds, setPendingHitlLeadIds] = useState(() => new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -57,14 +75,31 @@ const Leads = () => {
       setLoadError("");
       setLoading(true);
       try {
-        const data = await fetchLeadsList(token);
+        const [listRes, hitlRes] = await Promise.allSettled([fetchLeadsList(token), fetchHitlQueue(token)]);
         if (!cancelled) {
-          setLeads(Array.isArray(data) ? data : []);
-          setSelected(new Set());
+          if (listRes.status !== "fulfilled") {
+            setLeads([]);
+            setPendingHitlLeadIds(new Set());
+            const err = listRes.reason;
+            setLoadError(err?.message || String(err || "Failed to load leads."));
+          } else {
+            const data = listRes.value;
+            setLeads(Array.isArray(data) ? data : []);
+            if (hitlRes.status === "fulfilled") {
+              const rows = Array.isArray(hitlRes.value) ? hitlRes.value : [];
+              setPendingHitlLeadIds(
+                new Set(rows.map((r) => (r.lead_id != null ? String(r.lead_id) : "")).filter(Boolean)),
+              );
+            } else {
+              setPendingHitlLeadIds(new Set());
+            }
+            setSelected(new Set());
+          }
         }
       } catch (e) {
         if (!cancelled) {
           setLeads([]);
+          setPendingHitlLeadIds(new Set());
           setLoadError(e.message || "Failed to load leads.");
         }
       } finally {
@@ -79,7 +114,7 @@ const Leads = () => {
   const filteredLeads = useMemo(() => {
     const q = query.trim().toLowerCase();
     return leads
-      .filter((lead) => matchesFilter(lead.workflow_status || "New", activeFilter))
+      .filter((lead) => matchesFilter(lead, activeFilter, pendingHitlLeadIds))
       .filter((lead) => {
         if (!q) return true;
         const hay = [
@@ -95,7 +130,7 @@ const Leads = () => {
           .toLowerCase();
         return hay.includes(q);
       });
-  }, [activeFilter, leads, query]);
+  }, [activeFilter, leads, pendingHitlLeadIds, query]);
 
   const totalRows = filteredLeads.length;
   const totalPages = Math.max(1, Math.ceil(totalRows / rowsPerPage));
@@ -306,7 +341,16 @@ const Leads = () => {
                           {status}
                         </span>
                       </td>
-                      <td className="px-3 py-3 text-gray-500 dark:text-volt-muted2">{lead.last_activity || "—"}</td>
+                      <td
+                        className="px-3 py-3 text-gray-500 dark:text-volt-muted2"
+                        title={
+                          lead.last_activity && Number.isFinite(new Date(lead.last_activity).getTime())
+                            ? new Date(lead.last_activity).toLocaleString()
+                            : undefined
+                        }
+                      >
+                        {lead.last_activity ? formatRelativeTime(lead.last_activity) || lead.last_activity : "—"}
+                      </td>
                     </tr>
                   );
                 })

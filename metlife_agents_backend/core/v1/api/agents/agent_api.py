@@ -306,10 +306,18 @@ async def run_batch_orchestrator(
 ):
     """Batch Orchestrator — single entry point for the Work Flow Engine 'Run' button.
 
-    Handles two lead populations in one call:
-    - workflow_status='New'      → standard flow starting at identity_unifier (A1)
-    - workflow_status='Dormant'  → S4 revival flow starting at dormancy_agent (A10)
-      (cooldown_flag=False only)
+    Lead selection uses **facts**, not ``workflow_status`` buckets:
+    - Runnable: ``opt_in`` is false (not suppressed), not converted, and either no
+      LangGraph ``thread_id`` yet or ``workflow_completed`` is true (does not disturb an
+      in-flight thread).
+    - **Standard** start (default graph): not cold by the rules below.
+    - **S4 revival** (cold / dormant-style re-entry at A10): ``cooldown_flag`` is false,
+      and either ``last_active_at <= cutoff``, or ``last_active_at`` is null and
+      ``commit_time <= cutoff`` (registration / Oracle COMMIT_TIME as clock when no
+      engagement timestamps exist yet).
+
+    Batch stats still expose ``total_new`` / ``total_dormant`` as counts of standard vs
+    revival rows (field names unchanged for API compatibility).
 
     Creates a ``BatchRun`` record immediately and returns its ``batch_id``.
     Progress is tracked per-lead in the background and broadcast via SSE
@@ -317,64 +325,45 @@ async def run_batch_orchestrator(
 
     Poll GET /agents/batch/{batch_id} or watch SSE for live updates.
     """
-    # Select only the id column — returns plain Python UUID values, never ORM objects.
-    # This avoids the MissingGreenlet crash that occurs when a commit() expires
-    # ORM objects and SQLAlchemy tries to lazy-reload them outside a greenlet.
-    new_id_result = await db.execute(
-        select(Lead.id).where(
-            Lead.workflow_status == "New",
-            Lead.opt_in == False,  # noqa: E712  (opted-out suppressed leads are excluded)
-        )
-    )
-    new_lead_ids: list[str] = [str(row[0]) for row in new_id_result.all()]
-
-    # Auto-promote stale leads to Dormant per spec:
-    # "Not active since 180 days" — use last_active_at if populated,
-    # fall back to commit_time (Oracle registration date) when it is null.
     dormancy_cutoff = datetime.now(timezone.utc) - timedelta(days=180)
-    stale_id_result = await db.execute(
-        select(Lead.id).where(
-            Lead.workflow_status.in_(["Active", "New"]),
+
+    def _naive_utc(dt: datetime | None) -> datetime | None:
+        if dt is None:
+            return None
+        if getattr(dt, "tzinfo", None) is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt
+
+    eligible_result = await db.execute(
+        select(Lead.id, Lead.last_active_at, Lead.cooldown_flag, Lead.commit_time)
+        .where(
             Lead.opt_in == False,  # noqa: E712
-            Lead.cooldown_flag == False,  # noqa: E712
             Lead.is_converted == False,  # noqa: E712
             sa.or_(
-                sa.and_(
-                    Lead.last_active_at.isnot(None),
-                    Lead.last_active_at <= dormancy_cutoff,
-                ),
-                sa.and_(
-                    Lead.last_active_at.is_(None),
-                    Lead.commit_time.isnot(None),
-                    Lead.commit_time <= dormancy_cutoff,
-                ),
+                Lead.thread_id.is_(None),
+                Lead.workflow_completed.is_(True),
             ),
         )
+        .order_by(Lead.id.asc())
     )
-    stale_ids = [row[0] for row in stale_id_result.all()]
-    if stale_ids:
-        await db.execute(
-            sa_update(Lead)
-            .where(Lead.id.in_(stale_ids))
-            .values(workflow_status="Dormant")
-        )
-        await db.commit()
-        logger.info(
-            "Auto-promoted %d stale lead(s) to Dormant (180d rule)", len(stale_ids)
-        )
-        # Newly promoted leads are now eligible for dormant revival;
-        # re-fetch the full dormant pool after the commit.
 
-    dormant_id_result = await db.execute(
-        select(Lead.id).where(
-            Lead.workflow_status == "Dormant",
-            Lead.opt_in == False,  # noqa: E712
-            Lead.cooldown_flag == False,  # noqa: E712
-            Lead.is_converted == False,  # noqa: E712
+    standard_lead_ids: list[str] = []
+    dormant_lead_ids: list[str] = []
+    for lid, la, cooldown, commit_t in eligible_result.all():
+        lid_str = str(lid)
+        la_u = _naive_utc(la)
+        commit_u = _naive_utc(commit_t)
+        stale_by_activity = la_u is not None and la_u <= dormancy_cutoff
+        stale_by_commit_only = (
+            la_u is None and commit_u is not None and commit_u <= dormancy_cutoff
         )
-    )
-    dormant_lead_ids: list[str] = [str(row[0]) for row in dormant_id_result.all()]
+        revival = cooldown is not True and (stale_by_activity or stale_by_commit_only)
+        if revival:
+            dormant_lead_ids.append(lid_str)
+        else:
+            standard_lead_ids.append(lid_str)
 
+    new_lead_ids = standard_lead_ids
     total = len(new_lead_ids) + len(dormant_lead_ids)
     if total == 0:
         return APIResponse(
@@ -391,7 +380,7 @@ async def run_batch_orchestrator(
                 failed_count=0,
                 pct=0,
             ),
-            message="No leads found to process (neither New nor eligible Dormant).",
+            message="No eligible leads for batch (opt-out, converted, or in-flight thread without completion).",
         )
 
     batch = BatchRun(
@@ -544,7 +533,7 @@ async def run_batch_orchestrator(
         ),
         message=(
             f"Batch started (id={batch_id}): "
-            f"{len(new_lead_ids)} new lead(s), {len(dormant_lead_ids)} dormant revival(s). "
+            f"{len(new_lead_ids)} standard path(s), {len(dormant_lead_ids)} S4 revival(s). "
             f"Watch SSE batch_progress events or poll GET /agents/batch/{batch_id}."
         ),
     )

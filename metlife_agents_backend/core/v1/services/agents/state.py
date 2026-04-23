@@ -15,6 +15,7 @@ from langgraph.graph.message import add_messages
 
 
 def create_log_entry(title: str, description: str, badges: list[str]) -> dict:
+    """Append a UI log row. Timestamp is wall-clock so repeat runs differ in logs even when logic is deterministic."""
     return {
         "title": title,
         "description": description,
@@ -172,6 +173,7 @@ def create_initial_state(
         "zip_code": None,
         "consult_campaign_code": None,
         "contract_status": None,
+        "consult_request_type": None,
         "latest_event_campaign_id": None,
         # Context
         "context_block": None,

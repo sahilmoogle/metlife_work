@@ -40,6 +40,7 @@ class HITLApproveRequest(BaseModel):
 class HITLQueueItem(BaseModel):
     id: str
     lead_id: str
+    batch_id: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     scenario_id: Optional[str] = None

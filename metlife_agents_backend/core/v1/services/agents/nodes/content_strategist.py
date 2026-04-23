@@ -31,7 +31,9 @@ async def content_strategist(state: dict, *, db=None) -> dict:
     """Decide the email content strategy for the current sequence step."""
     lead_id = state["lead_id"]
     await event_manager.publish(
-        node_transition_event(lead_id, NODE_ID, "started", batch_id=state.get("batch_id"))
+        node_transition_event(
+            lead_id, NODE_ID, "started", batch_id=state.get("batch_id")
+        )
     )
     start = time.perf_counter()
 
@@ -49,8 +51,10 @@ async def content_strategist(state: dict, *, db=None) -> dict:
         state["current_node"] = NODE_ID
         await event_manager.publish(
             node_transition_event(
-                lead_id, NODE_ID, "completed", f"email#{email_number} rejected→LLM"
-                ,
+                lead_id,
+                NODE_ID,
+                "completed",
+                f"email#{email_number} rejected→LLM",
                 batch_id=state.get("batch_id"),
             )
         )
@@ -98,7 +102,9 @@ async def content_strategist(state: dict, *, db=None) -> dict:
 
     state["current_node"] = NODE_ID
     if db is not None:
-        await sync_lead_state(db, lead_id, current_agent_node=NODE_ID, workflow_status="Active")
+        await sync_lead_state(
+            db, lead_id, current_agent_node=NODE_ID, workflow_status="Active"
+        )
 
     latency_ms = int((time.perf_counter() - start) * 1000)
     logger.info(

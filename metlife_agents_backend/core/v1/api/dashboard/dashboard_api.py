@@ -27,9 +27,12 @@ async def get_dashboard_stats(
 ):
     """Get aggregated metrics for the orchestration dashboard.
 
-    Returns counts grouping leads by workflow_status, current_agent_node,
-    and scenario_id so the frontend funnel, stat cards, and scenario bars
-    all have real data.
+    All rollups are **system-wide** (not filtered to a single ``batch_runs`` row):
+
+    * ``node_counts`` — ``Active`` + ``Processing`` leads by ``current_agent_node`` (live pipeline).
+    * ``scenario_breakdown`` / ``scenario_unknown`` — all leads in the database.
+    * ``hitl_leads`` — size of the **global** human review queue (``GET /hitl/queue`` without ``batch_id``),
+      not "HITL for one batch" (use ``/hitl/queue?batch_id=`` for that).
     """
     # 1. Total Status Counts
     status_query = select(Lead.workflow_status, func.count(Lead.id)).group_by(
@@ -58,6 +61,11 @@ async def get_dashboard_stats(
         k: v for k, v in dict(scenario_res.all()).items() if k is not None
     }
 
+    unk_scenario_q = await db.execute(
+        select(func.count(Lead.id)).where(Lead.scenario_id.is_(None))
+    )
+    scenario_unknown = int(unk_scenario_q.scalar() or 0)
+
     # Pending human review lives in ``hitl_queue`` (same source as GET /hitl/queue).
     # Lead.workflow_status is rarely set to Pending_HITL/HITL by the graph — paused
     # threads usually keep workflow_status='Active', so counting by Lead alone showed 0.
@@ -65,6 +73,12 @@ async def get_dashboard_stats(
         select(func.count(HITLQueue.id)).where(HITLQueue.review_status == "Awaiting")
     )
     hitl_from_queue = hitl_pending_q.scalar() or 0
+    hitl_distinct_q = await db.execute(
+        select(func.count(func.distinct(HITLQueue.lead_id))).where(
+            HITLQueue.review_status == "Awaiting"
+        )
+    )
+    hitl_distinct_leads = int(hitl_distinct_q.scalar() or 0)
     hitl_legacy = status_counts.get("Pending_HITL", 0) + status_counts.get("HITL", 0)
 
     stats = DashboardStatsResponse(
@@ -72,11 +86,13 @@ async def get_dashboard_stats(
         active_leads=status_counts.get("Active", 0)
         + status_counts.get("Processing", 0),
         hitl_leads=max(hitl_from_queue, hitl_legacy),
+        hitl_distinct_leads=hitl_distinct_leads,
         converted_leads=status_counts.get("Converted", 0),
         dormant_leads=status_counts.get("Dormant", 0),
         suppressed_leads=status_counts.get("Suppressed", 0),
         node_counts=node_counts,
         scenario_breakdown=scenario_breakdown,
+        scenario_unknown=scenario_unknown,
     )
 
     return APIResponse(

@@ -11,6 +11,8 @@ import {
   updateAdminUser,
   updateAdminUserPermissions,
 } from "../src/services/adminApi";
+import { formatRelativeTime } from "../src/utils/relativeTime";
+import { useRelativeClock } from "../src/hooks/useRelativeClock";
 
 const roles = [
   {
@@ -138,8 +140,51 @@ const Dash = () => (
 );
 
 const Settings = () => {
+  useRelativeClock(30000);
   const { token, user: currentUser } = useAuth();
   const { t } = useTranslation();
+
+  const [accessAuditLog] = useState(() => {
+    const now = Date.now();
+    return [
+      {
+        dot: "bg-emerald-500",
+        text: "Singh Sahil started workflow S1 for Masaki Tanaka",
+        at: new Date(now - 2 * 60 * 1000).toISOString(),
+        role: "Admin",
+      },
+      {
+        dot: "bg-amber-500",
+        text: "Nakamura Aiko approved G1 - Content Compliance for Kana Suzuki",
+        at: new Date(now - 8 * 60 * 1000).toISOString(),
+        role: "Reviewer",
+      },
+      {
+        dot: "bg-violet-500",
+        text: "Kobayashi Mei clicked “Run from A3” on lead Tomoko Sato",
+        at: new Date(now - 15 * 60 * 1000).toISOString(),
+        role: "Manager",
+      },
+      {
+        dot: "bg-sky-500",
+        text: "Suzuki Hiro paused workflow for Riku Endo at G4",
+        at: new Date(now - 22 * 60 * 1000).toISOString(),
+        role: "Manager",
+      },
+      {
+        dot: "bg-rose-500",
+        text: "Ito Takeshi rejected G1 for Kenji Yamada — tone mismatch",
+        at: new Date(now - 34 * 60 * 1000).toISOString(),
+        role: "Reviewer",
+      },
+      {
+        dot: "bg-gray-400",
+        text: "Tanaka Yoshi added Yamada Fumiko as Viewer",
+        at: new Date(now - 48 * 60 * 1000).toISOString(),
+        role: "Admin",
+      },
+    ];
+  });
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -1022,38 +1067,7 @@ const Settings = () => {
           </div>
 
           <div className="space-y-2">
-            {[
-              {
-                dot: "bg-emerald-500",
-                text: "Singh Sahil started workflow S1 for Masaki Tanaka",
-                meta: "2 min ago • Admin",
-              },
-              {
-                dot: "bg-amber-500",
-                text: "Nakamura Aiko approved G1 - Content Compliance for Kana Suzuki",
-                meta: "8 min ago • Reviewer",
-              },
-              {
-                dot: "bg-violet-500",
-                text: "Kobayashi Mei clicked “Run from A3” on lead Tomoko Sato",
-                meta: "15 min ago • Manager",
-              },
-              {
-                dot: "bg-sky-500",
-                text: "Suzuki Hiro paused workflow for Riku Endo at G4",
-                meta: "22 min ago • Manager",
-              },
-              {
-                dot: "bg-rose-500",
-                text: "Ito Takeshi rejected G1 for Kenji Yamada — tone mismatch",
-                meta: "34 min ago • Reviewer",
-              },
-              {
-                dot: "bg-gray-400",
-                text: "Tanaka Yoshi added Yamada Fumiko as Viewer",
-                meta: "48 min ago • Admin",
-              },
-            ].map((item) => (
+            {accessAuditLog.map((item) => (
               <div
                 key={item.text}
                 className="flex items-start gap-3 rounded-2xl border border-gray-100 bg-white px-3 py-3 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:shadow-none"
@@ -1061,7 +1075,12 @@ const Settings = () => {
                 <span className={`mt-1.5 h-2 w-2 flex-none rounded-full ${item.dot}`} />
                 <div className="min-w-0">
                   <p className="text-xs font-semibold text-gray-800 dark:text-white">{item.text}</p>
-                  <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">{item.meta}</p>
+                  <p
+                    className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2"
+                    title={new Date(item.at).toLocaleString()}
+                  >
+                    {formatRelativeTime(item.at)} • {item.role}
+                  </p>
                 </div>
               </div>
             ))}

@@ -1,8 +1,14 @@
 """
 Analytics API — aggregates KPIs from leads, communications, email_events, hitl_queue.
 
-Many UI metrics are approximations where the DB does not store per-agent latency
-or LLM token usage; those fields are explicitly marked or returned empty.
+**Cohort consistency:** The headline *Conversion Rate*, *Avg Handoff Score*, and
+*Avg Days to Convert* use the same lead cohort — leads *created* in the selected
+time window (``30d`` / ``90d`` / ``all``). That matches *Scenario conversion* rows.
+
+**Throughput-style metrics** (e.g. agent row A9 count, weekly *converted* bars)
+use *when the event happened* (e.g. ``updated_at`` for conversions in that week).
+
+Per-agent latency and LLM token usage are not persisted; those fields stay empty / placeholder.
 """
 
 from __future__ import annotations
@@ -11,7 +17,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy import case, func, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from model.api.v1 import APIResponse
@@ -76,11 +82,21 @@ def _prev_window_start(start: datetime | None, range_key: str) -> datetime | Non
 
 
 async def _count_converted_leads(db: AsyncSession, start: datetime | None) -> int:
+    """Leads whose conversion was recorded in the window (``updated_at``), for throughput-style counts."""
     q = select(func.count(Lead.id)).where(
         Lead.is_converted.is_(True),  # noqa: E712
     )
     if start is not None:
         q = q.where(Lead.updated_at >= start)
+    r = await db.execute(q)
+    return int(r.scalar() or 0)
+
+
+async def _count_converted_in_cohort(db: AsyncSession, start: datetime | None) -> int:
+    """Leads created in the cohort window that ever converted (cohort conversion numerator)."""
+    q = select(func.count(Lead.id)).where(Lead.is_converted.is_(True))  # noqa: E712
+    if start is not None:
+        q = q.where(Lead.created_at >= start)
     r = await db.execute(q)
     return int(r.scalar() or 0)
 
@@ -97,14 +113,14 @@ async def _count_leads_in_cohort(db: AsyncSession, start: datetime | None) -> in
 async def _conversion_rate_pair(
     db: AsyncSession, start: datetime | None, prev_start: datetime | None
 ) -> tuple[float, Optional[float]]:
-    """Current period rate vs previous period rate (%)."""
+    """Cohort conversion rate: among leads *created* in the period, share that ever converted."""
     total = await _count_leads_in_cohort(db, start)
-    conv = await _count_converted_leads(db, start)
+    conv = await _count_converted_in_cohort(db, start)
     cur = (conv / total * 100.0) if total else 0.0
 
     prev_rate: Optional[float] = None
     if prev_start is not None and start is not None:
-        # previous window [prev_start, start)
+        # previous window [prev_start, start) — same cohort semantics
         q_prev_total = select(func.count(Lead.id)).where(
             Lead.created_at >= prev_start,
             Lead.created_at < start,
@@ -114,8 +130,8 @@ async def _conversion_rate_pair(
 
         q_prev_conv = select(func.count(Lead.id)).where(
             Lead.is_converted.is_(True),  # noqa: E712
-            Lead.updated_at >= prev_start,
-            Lead.updated_at < start,
+            Lead.created_at >= prev_start,
+            Lead.created_at < start,
         )
         c2 = await db.execute(q_prev_conv)
         prev_conv = int(c2.scalar() or 0)
@@ -127,12 +143,13 @@ async def _conversion_rate_pair(
 async def _avg_engagement_converted(
     db: AsyncSession, start: datetime | None
 ) -> Optional[float]:
+    """Mean engagement score among converted leads in the same cohort as the conversion-rate KPI."""
     q = select(func.avg(Lead.engagement_score)).where(
         Lead.is_converted.is_(True),  # noqa: E712
         Lead.engagement_score.isnot(None),
     )
     if start is not None:
-        q = q.where(Lead.updated_at >= start)
+        q = q.where(Lead.created_at >= start)
     r = await db.execute(q)
     v = r.scalar()
     return float(v) if v is not None else None
@@ -168,7 +185,11 @@ async def _hitl_review_minutes_avg(
 async def _email_rates(
     db: AsyncSession, start: datetime | None
 ) -> tuple[float, float, float, float]:
-    """delivered%, open%, click%, unsub% among comms with sent_at in window."""
+    """delivered%, open%, click%, unsub% among communications with ``sent_at`` in the window.
+
+    * Delivered — share of sends with an explicit ``delivered_at`` timestamp (not "sent implies delivered").
+    * Open / click / unsub — share of sends with that engagement signal (standard email analytics).
+    """
     base = select(Communication).where(Communication.sent_at.isnot(None))
     if start is not None:
         base = base.where(Communication.sent_at >= start)
@@ -177,7 +198,7 @@ async def _email_rates(
     if not comms:
         return 0.0, 0.0, 0.0, 0.0
     n = len(comms)
-    delivered = sum(1 for c in comms if c.delivered_at or c.sent_at)
+    delivered = sum(1 for c in comms if c.delivered_at is not None)
     opens = sum(1 for c in comms if c.opened_at)
     clicks = sum(1 for c in comms if c.clicked_at)
     unsubs = sum(1 for c in comms if c.unsubscribed_at)
@@ -192,11 +213,12 @@ async def _email_rates(
 async def _avg_days_to_convert(
     db: AsyncSession, start: datetime | None
 ) -> tuple[Optional[float], Optional[float]]:
+    """Mean / median days from lead creation to last update, for converted leads in the cohort."""
     q = select(Lead.created_at, Lead.updated_at).where(
         Lead.is_converted.is_(True),  # noqa: E712
     )
     if start is not None:
-        q = q.where(Lead.updated_at >= start)
+        q = q.where(Lead.created_at >= start)
     r = await db.execute(q)
     rows = r.all()
     days: list[float] = []
@@ -373,8 +395,17 @@ async def _hitl_gate_rows(
 
 async def _score_distribution(
     db: AsyncSession,
+    start: datetime | None,
 ) -> tuple[list[ScoreBucket], dict[str, int]]:
+    """Histogram of engagement scores; when ``start`` is set, only leads touched or created in that window."""
     q = select(Lead.engagement_score).where(Lead.opt_in.is_(False))  # noqa: E712
+    if start is not None:
+        q = q.where(
+            or_(
+                Lead.updated_at >= start,
+                Lead.created_at >= start,
+            )
+        )
     r = await db.execute(q)
     scores = [float(x[0] or 0) for x in r.all()]
     range_labels = ["0-0.2", "0.2-0.4", "0.4-0.6", "0.6-0.8", "0.8-1.0"]
@@ -484,12 +515,13 @@ async def get_analytics_overview(
         AnalyticsKPI(
             title="Conversion Rate",
             value=f"{conv_rate:.1f}%",
-            sub=delta_txt or "vs prior period (when available)",
+            sub=delta_txt
+            or "Cohort: converted ÷ leads created in period · vs prior cohort when available",
         ),
         AnalyticsKPI(
             title="Avg Handoff Score",
             value=f"{avg_score:.2f}" if avg_score is not None else "—",
-            sub="Converted leads · engagement_score · threshold ≥ 0.80",
+            sub="Converted leads in cohort · engagement_score · threshold ≥ 0.80",
         ),
         AnalyticsKPI(
             title="HITL Avg Review",
@@ -652,7 +684,7 @@ async def get_analytics_overview(
         auto_q = auto_q.where(HITLQueue.reviewed_at >= start)
     auto_n = int((await db.execute(auto_q)).scalar() or 0)
 
-    score_buckets, score_insights = await _score_distribution(db)
+    score_buckets, score_insights = await _score_distribution(db, start)
 
     llm_rows = [
         LLMUsageRow(

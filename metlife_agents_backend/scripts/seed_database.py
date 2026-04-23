@@ -245,7 +245,26 @@ async def _seed_consolidated_workbooks(db: AsyncSession) -> dict[str, int]:
         for _, row in df.iterrows():
             lead_pk = uuid.uuid4()
             email = _truncate(_str_val(row.get("EMAIL_ADDRESS")), 255)
-            f2f = _bool_val(row.get("FACE_TO_FACE"))
+            raw_f2f = row.get("FACE_TO_FACE")
+            f2f = _bool_val(raw_f2f)
+            form_id_override = None
+            # Export often stores form family (W011 / W022 / W033) instead of boolean.
+            if (
+                f2f is None
+                and raw_f2f is not None
+                and not (isinstance(raw_f2f, float) and pd.isna(raw_f2f))
+            ):
+                code = str(raw_f2f).strip().upper()
+                if len(code) >= 4 and code.startswith("W") and code[1:4].isdigit():
+                    form_id_override = code[:4]
+                    # Heuristic aligned with PAN-style split: W022/W033 → S6 path;
+                    # W011 → web-to-call (S7) for workflow classification.
+                    f2f = code in ("W022", "W033")
+                else:
+                    f2f = False
+            if f2f is None:
+                f2f = False
+            effective_form_id = form_id_override or "W011"
             dob = _str_val(row.get("DOB"))
             lead = Lead(
                 id=lead_pk,
@@ -267,7 +286,7 @@ async def _seed_consolidated_workbooks(db: AsyncSession) -> dict[str, int]:
                     id=uuid.uuid4(),
                     lead_id=lead_pk,
                     request_type="face_to_face" if f2f is True else "web_to_call",
-                    form_id="W011",
+                    form_id=effective_form_id,
                     request_id=_truncate(_str_val(row.get("REQUEST_ID")), 100),
                     email=email,
                     phone=lead.phone,

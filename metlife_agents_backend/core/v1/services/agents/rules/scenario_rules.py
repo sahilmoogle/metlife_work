@@ -85,6 +85,29 @@ SCENARIO_DEFAULTS: dict[str, dict] = {
 }
 
 
+def _survey_ans4_is_yes(ans4: Optional[str]) -> bool:
+    """True if ANS4 is an affirmative life-event answer (Oracle / Excel variants).
+
+    Consolidated exports often use ``Y``, ``TRUE``, ``1`` rather than ``Yes``.
+    """
+    if ans4 is None:
+        return False
+    v = str(ans4).strip().upper()
+    if not v:
+        return False
+    return v in (
+        "YES",
+        "Y",
+        "TRUE",
+        "T",
+        "1",
+        "ON",
+        "X",
+        "はい",
+        "イエス",
+    )
+
+
 def classify_scenario(
     ans3: Optional[str],
     ans4: Optional[str],
@@ -92,19 +115,30 @@ def classify_scenario(
     age: Optional[int],
     registration_source: Optional[str] = None,
     banner_code: Optional[str] = None,
+    *,
+    consultation_request_type: Optional[str] = None,
 ) -> str:
     """Deterministic scenario assignment per the blueprint decision tree.
 
     Priority order:
-      1. registration_source = f2f_form       → S6
-      2. registration_source = web_callback   → S7
-      3. BANNER_CODE position 3 (0-indexed) = '7' → S7 (Web-to-Call inbound)
-      4. ANS3 = A or B                        → S5 (Active Buyer)
-      5. ANS3 = C + ANS4 = Yes               → S2 (Life Event)
-      6. ANS3 = C + ANS4 = No + Age ≥ 35    → S3 (Senior)
-      7. ANS3 = C + ANS4 = No + Age < 35    → S1 (Young Professional)
-      8. Fallback                             → S1
+      1. Linked ``ConsultationRequest``: face_to_face → S6 | web_to_call → S7 | seminar → S7
+      2. registration_source = f2f_form       → S6
+      3. registration_source = web_callback   → S7
+      4. BANNER_CODE position 3 (0-indexed) = '7' → S7 (Web-to-Call inbound)
+      5. ANS3 = A or B                        → S5 (Active Buyer)
+      6. ANS3 = C + affirmative ANS4           → S2 (Life Event / Recently Married path)
+      7. ANS3 = C + non-affirmative ANS4 + Age ≥ 35    → S3 (Senior)
+      8. ANS3 = C + non-affirmative ANS4 + Age < 35    → S1 (Young Professional)
+      9. Fallback                             → S1
     """
+    # T_CONSULT_REQ / PAN forms — sourced from ConsultationRequest.request_type after A1.
+    if consultation_request_type == "face_to_face":
+        return "S6"
+    if consultation_request_type == "web_to_call":
+        return "S7"
+    if consultation_request_type == "seminar":
+        return "S7"
+
     # S6 / S7 come from different entry forms, not from T_YEC_QUOTE_MST
     if registration_source == "f2f_form":
         return "S6"
@@ -122,7 +156,7 @@ def classify_scenario(
 
     # ANS3 = C → newsletter survey path
     if ans3 and ans3.upper() == "C":
-        if ans4 and ans4.upper() == "YES":
+        if _survey_ans4_is_yes(ans4):
             return "S2"
         # ANS4 = No (or missing)
         if age is not None and age >= 35:

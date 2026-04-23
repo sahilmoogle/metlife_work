@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { fetchDashboardStats } from "../src/services/dashboardApi";
 import { useTranslation } from "react-i18next";
@@ -144,10 +144,23 @@ const Dashboard = () => {
 
   const total = stats?.total_leads ?? 0;
   const active = stats?.active_leads ?? 0;
-  const hitl = stats?.hitl_leads ?? 0;
+  const hitlRows = stats?.hitl_leads ?? 0;
+  const hitlDistinct =
+    stats?.hitl_distinct_leads ??
+    Math.min(hitlRows, typeof stats?.total_leads === "number" ? stats.total_leads : hitlRows);
   const converted = stats?.converted_leads ?? 0;
   const dormant = stats?.dormant_leads ?? 0;
   const suppressed = stats?.suppressed_leads ?? 0;
+
+  const kpiShareOfTotal = useCallback(
+    (num, den) => {
+      if (!den || den <= 0) return "—";
+      const rawPct = (num / den) * 100;
+      if (num > 0 && rawPct < 0.1) return t("dashboard.kpi.ltTenthPct");
+      return t("dashboard.kpi.ofTotal", { pct: Math.round(rawPct * 10) / 10 });
+    },
+    [t],
+  );
 
   const scenarioRows = useMemo(() => {
     const breakdown = stats?.scenario_breakdown || {};
@@ -160,6 +173,7 @@ const Dashboard = () => {
 
   const funnelBars = useMemo(() => {
     const totalCount = total || 0;
+    const hitlBarPct = Math.min(100, pct(hitlDistinct, totalCount));
     return [
       {
         label: `${t("dashboard.funnel.totalLeads")} ${formatInt(totalCount)}`,
@@ -174,8 +188,11 @@ const Dashboard = () => {
         track: "bg-emerald-50",
       },
       {
-        label: `${t("dashboard.funnel.hitlQueue")} ${formatInt(hitl)}`,
-        value: pct(hitl, totalCount),
+        label: `${t("dashboard.funnel.hitlQueue")} · ${t("dashboard.funnel.hitlQueueBar", {
+          items: formatInt(hitlRows),
+          leads: formatInt(hitlDistinct),
+        })}`,
+        value: hitlBarPct,
         color: "bg-amber-500",
         track: "bg-amber-50",
       },
@@ -192,7 +209,7 @@ const Dashboard = () => {
         track: "bg-blue-50",
       },
     ];
-  }, [active, converted, dormant, hitl, t, total]);
+  }, [active, converted, dormant, hitlDistinct, hitlRows, t, total]);
 
   const kpiCards = useMemo(
     () => [
@@ -207,7 +224,7 @@ const Dashboard = () => {
       {
         title: t("dashboard.kpi.activeWorkflows"),
         value: formatInt(active),
-        change: total ? t("dashboard.kpi.ofTotal", { pct: pct(active, total) }) : "—",
+        change: total ? kpiShareOfTotal(active, total) : "—",
         icon: "workflows",
         chip: "bg-emerald-50 text-emerald-700 ring-emerald-100",
         iconWrap: "bg-emerald-50 text-emerald-700",
@@ -215,22 +232,24 @@ const Dashboard = () => {
       {
         title: t("dashboard.kpi.converted"),
         value: formatInt(converted),
-        change: total ? t("dashboard.kpi.ofTotal", { pct: pct(converted, total) }) : "—",
+        change: total ? kpiShareOfTotal(converted, total) : "—",
         icon: "converted",
         chip: "bg-amber-50 text-amber-700 ring-amber-100",
         iconWrap: "bg-amber-50 text-amber-700",
       },
       {
         title: t("dashboard.kpi.pendingHitl"),
-        value: formatInt(hitl),
-        change: total ? t("dashboard.kpi.ofTotal", { pct: pct(hitl, total) }) : "—",
+        value: formatInt(hitlDistinct),
+        change: t("dashboard.kpi.pendingHitlCaption", {
+          items: formatInt(hitlRows),
+          leads: formatInt(hitlDistinct),
+        }),
         icon: "pending",
         chip: "bg-rose-50 text-rose-700 ring-rose-100",
         iconWrap: "bg-rose-50 text-rose-700",
       },
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [active, converted, hitl, suppressed, total]
+    [active, converted, hitlDistinct, hitlRows, kpiShareOfTotal, suppressed, t, total]
   );
 
   const feedItems = useMemo(() => {

@@ -235,7 +235,7 @@ const AppLayout = () => {
                 <img
                   alt="icon"
                   src="/src/assets/images/light.jpg"
-                  class="rounded-full"
+                  className="rounded-full"
                 />
               </button>
               <img src={userIcon} alt="icon" className="w-9 h-9 rounded-full" />              <div className="hidden items-center gap-2  bg-gray-10 px-3 py-1.5 sm:flex">

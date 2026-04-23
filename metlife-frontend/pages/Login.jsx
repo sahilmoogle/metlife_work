@@ -64,111 +64,147 @@ const Login = () => {
     }
   };
 
+  const inputClass =
+    "relative z-[1] h-12 w-full rounded-xl border border-gray-200 bg-white pl-12 pr-4 text-sm text-gray-900 shadow-sm outline-none transition placeholder:text-gray-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 dark:border-volt-borderSoft dark:bg-volt-panel dark:text-volt-text dark:placeholder:text-volt-muted2 dark:focus:ring-indigo-500/15";
+
   return (
-    <div className="min-h-screen bg-white dark:bg-gradient-to-b dark:from-volt-bg1 dark:via-volt-bg0 dark:to-volt-bg0">
-      <div className="mx-auto flex min-h-screen max-w-[1600px]">
-        <section className="relative hidden w-1/2 overflow-hidden bg-gradient-to-b from-[#2f21c7] via-[#2a1bb3] to-[#21179a] text-white lg:flex lg:flex-col">
-          <div className="absolute inset-0 opacity-30">
-            <div className="absolute -left-24 -top-24 h-72 w-72 rounded-full bg-white/15 blur-3xl" />
-            <div className="absolute -right-24 bottom-10 h-72 w-72 rounded-full bg-white/15 blur-3xl" />
+    <div className="min-h-screen min-h-[100dvh] bg-white dark:bg-gradient-to-b dark:from-volt-bg1 dark:via-volt-bg0 dark:to-volt-bg0">
+      <div className="mx-auto flex min-h-[100dvh] max-w-[1600px]">
+        {/* Brand panel */}
+        <section className="relative hidden w-1/2 overflow-hidden rounded-r-[32px] bg-gradient-to-br from-[#3228d4] via-[#2a20b8] to-[#1e1688] text-white lg:flex lg:flex-col">
+          <div className="pointer-events-none absolute inset-0 opacity-40">
+            <div className="absolute -left-20 -top-20 h-80 w-80 rounded-full bg-white/20 blur-3xl" />
+            <div className="absolute -bottom-16 -right-16 h-96 w-96 rounded-full bg-indigo-400/25 blur-3xl" />
           </div>
 
-          {/* <div className="relative flex items-center gap-3 px-10 pt-8">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/15 ring-1 ring-white/25">
-              <div className="h-5 w-5 rounded bg-white/70" />
-            </div>
-            <div className="leading-tight">
-              <p className="text-sm font-semibold">Lead Nurturing</p>
-              <p className="text-xs text-white/70">Your Intelligence Platform</p>
-            </div>
-          </div> */}
-
-          <div className="relative flex flex-1 flex-col items-center justify-center px-10">
-            <div className="w-full max-w-[520px]">
-
-              <div className="mx-auto w-full max-w-[520px]">
-               
-                <div className="relative mx-auto mb-10 aspect-[4/3] w-full overflow-hidden rounded-3xl bg-white/10 ring-1 ring-white/20">
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,rgba(255,255,255,0.20),transparent_50%),radial-gradient(circle_at_80%_70%,rgba(255,255,255,0.18),transparent_55%)]" />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                     <img src={loginIcon} alt="" />
-                  </div>
+          <div className="relative flex flex-1 flex-col justify-center px-12 py-16 xl:px-16">
+            <div className="mx-auto w-full max-w-[480px]">
+              <div className="relative overflow-hidden rounded-[28px] bg-white/[0.08] p-6 shadow-inner ring-1 ring-white/20 backdrop-blur-[2px]">
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_20%,rgba(255,255,255,0.22),transparent)]" />
+                <div className="relative flex aspect-[4/3] max-h-[min(52vh,380px)] items-center justify-center">
+                  <img
+                    src={loginIcon}
+                    alt=""
+                    className="max-h-full max-w-full object-contain object-center drop-shadow-lg"
+                  />
                 </div>
+              </div>
 
-                <div className="text-center">
-                  <h2 className="text-3xl font-semibold">{t("brand.name")}</h2>
-                  <p className="mt-2 text-sm text-white/80">
-                    protecting your information is a top priority
-                  </p>
-                </div>
+              <div className="mt-10 text-center">
+                <h2 className="text-3xl font-semibold tracking-tight xl:text-[2rem]">{t("brand.name")}</h2>
+                <p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-white/85">
+                  Protecting your information is our top priority.
+                </p>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="flex w-full flex-col bg-white px-6 py-8 sm:px-10 lg:w-1/2 lg:px-16 dark:bg-volt-bg1">
-          <header className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 text-lg font-bold text-indigo-700">
-              <img src={mainIcon} alt="icon" className="w-8 h-8" /> 
-            </div>
-            <div>
-              <h1 className="text-base font-bold text-indigo-700">{t("brand.name")}</h1>
-              <p className="text-xs text-gray-500 dark:text-volt-muted">{t("brand.tagline")}</p>
-            </div>
-          </header>
+        {/* Form panel */}
+        <section className="flex w-full flex-1 flex-col bg-gradient-to-b from-slate-50 to-white lg:w-1/2 dark:from-volt-bg1 dark:to-volt-bg0">
+          <div className="flex flex-1 flex-col justify-center px-6 py-12 sm:px-10 lg:px-14 xl:px-20">
+            <div className="mx-auto w-full max-w-[420px]">
+              <header className="flex items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-indigo-200/80 bg-white shadow-sm dark:border-volt-borderSoft dark:bg-volt-panel">
+                  <img src={mainIcon} alt="" className="h-9 w-9 object-contain" />
+                </div>
+                <div className="min-w-0 leading-tight">
+                  <h1 className="truncate text-base font-bold text-indigo-700 dark:text-indigo-400">{t("brand.name")}</h1>
+                  <p className="truncate text-xs text-gray-500 dark:text-volt-muted">{t("brand.tagline")}</p>
+                </div>
+              </header>
 
-          <div className="mx-auto flex w-full max-w-[460px] flex-1 flex-col justify-center">
-            <h3 className="text-sm font-medium text-gray-600 dark:text-volt-muted">Log in to</h3>
-            <p className="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">
-              <span className="text-indigo-700">{t("brand.name")}</span>
-            </p>
-
-            <form onSubmit={handleSubmit} className="mt-8">
-              <label className="mb-2 block text-xs font-medium text-gray-600 dark:text-volt-muted">{t("login.email")}</label>
-              <div className="relative mb-4">
-                <MailIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-indigo-500/70" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder={t("login.email")}
-                  autoComplete="email"
-                  required
-                  className="h-11 w-full rounded-full border border-gray-200 bg-white pl-11 pr-4 text-sm text-gray-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-volt-borderSoft dark:bg-volt-panel dark:text-volt-text dark:focus:ring-indigo-500/20"
-                />
+              <div className="mt-10">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-indigo-600 dark:text-indigo-400">
+                  {t("login.subtitle")}
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">
+                  {t("login.welcomeLine")}
+                </h2>
+                <p className="mt-1 text-sm text-gray-500 dark:text-volt-muted">
+                  {t("login.welcomeHint")}
+                </p>
               </div>
 
-              <label className="mb-2 block text-xs font-medium text-gray-600 dark:text-volt-muted">{t("login.password")}</label>
-              <div className="relative mb-4">
-                <LockIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-indigo-500/70" />
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  placeholder={t("login.password")}
-                  autoComplete="current-password"
-                  required
-                  className="h-11 w-full rounded-full border border-gray-200 bg-white pl-11 pr-4 text-sm text-gray-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-volt-borderSoft dark:bg-volt-panel dark:text-volt-text dark:focus:ring-indigo-500/20"
-                />
+              <div className="mt-8 rounded-2xl border border-gray-200/90 bg-white p-6 shadow-[0_4px_32px_rgba(15,23,42,0.06)] sm:p-8 dark:border-volt-borderSoft dark:bg-volt-panel/80 dark:shadow-none">
+                <form onSubmit={handleSubmit} className="isolate space-y-5">
+                  <div>
+                    <label
+                      htmlFor="login-email"
+                      className="mb-2 block text-xs font-semibold text-gray-700 dark:text-volt-text"
+                    >
+                      {t("login.email")}
+                    </label>
+                    <div className="relative">
+                      <MailIcon className="pointer-events-none absolute left-4 top-1/2 z-[2] h-[18px] w-[18px] -translate-y-1/2 text-indigo-500/80" />
+                      <input
+                        id="login-email"
+                        type="email"
+                        value={email}
+                        onChange={(event) => setEmail(event.target.value)}
+                        placeholder={t("login.email")}
+                        autoComplete="email"
+                        required
+                        className={inputClass}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-1">
+                    <label
+                      htmlFor="login-password"
+                      className="mb-2 block text-xs font-semibold text-gray-700 dark:text-volt-text"
+                    >
+                      {t("login.password")}
+                    </label>
+                    <div className="relative">
+                      <LockIcon className="pointer-events-none absolute left-4 top-1/2 z-[2] h-[18px] w-[18px] -translate-y-1/2 text-indigo-500/80" />
+                      <input
+                        id="login-password"
+                        type="password"
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
+                        placeholder={t("login.password")}
+                        autoComplete="current-password"
+                        required
+                        className={inputClass}
+                      />
+                    </div>
+                  </div>
+
+                  {error ? (
+                    <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:bg-rose-500/10 dark:text-rose-200">
+                      {error}
+                    </p>
+                  ) : null}
+
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#3d32d8] to-[#2a20b8] text-sm font-semibold text-white shadow-[0_8px_24px_rgba(45,32,184,0.35)] transition hover:brightness-[1.05] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 dark:shadow-[0_8px_24px_rgba(0,0,0,0.35)]"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                        {t("login.loggingIn")}
+                      </>
+                    ) : (
+                      t("login.loginNow")
+                    )}
+                  </button>
+                </form>
               </div>
 
-              {error ? <p className="mb-3 text-sm text-red-500">{error}</p> : null}
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="mt-2 h-11 w-full rounded-full bg-gradient-to-r from-[#3b2fd6] to-[#2a1bb3] text-sm font-semibold text-white shadow-[0_10px_25px_rgba(59,47,214,0.25)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                {isSubmitting ? t("login.loggingIn") : t("login.loginNow")}
-              </button>
-            </form>
-
-            <p className="mt-10 text-center text-xs text-gray-500 dark:text-volt-muted2">
-              Don&apos;t have an account?{" "}
-              <Link to="/signup" className="font-semibold text-indigo-700 hover:underline">
-                Sign up
-              </Link>
-            </p>
+              <p className="mt-8 text-center text-sm text-gray-500 dark:text-volt-muted2">
+                Don&apos;t have an account?{" "}
+                <Link
+                  to="/signup"
+                  className="font-semibold text-indigo-700 underline-offset-4 hover:text-indigo-800 hover:underline dark:text-indigo-400 dark:hover:text-indigo-300"
+                >
+                  Sign up
+                </Link>
+              </p>
+            </div>
           </div>
         </section>
       </div>

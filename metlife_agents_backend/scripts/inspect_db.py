@@ -19,7 +19,9 @@ def main() -> None:
     print("tables_sample:", tables[:25])
 
     if "leads" in tables:
-        cur.execute("SELECT workflow_status, COUNT(*) FROM leads GROUP BY workflow_status")
+        cur.execute(
+            "SELECT workflow_status, COUNT(*) FROM leads GROUP BY workflow_status"
+        )
         print("leads_by_status:", cur.fetchall())
         cur.execute(
             "SELECT COUNT(*) FROM leads WHERE workflow_status='Dormant' "
@@ -52,4 +54,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

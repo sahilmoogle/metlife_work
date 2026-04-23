@@ -20,6 +20,9 @@ class HITLQueue(Base):
     id = Column(GUID(), primary_key=True, default=uuid.uuid4)
     lead_id = Column(GUID(), nullable=False, index=True)
 
+    # When the workflow was started from ``POST /agents/batch/run`` — enables batch-scoped HITL counts.
+    batch_id = Column(GUID(), nullable=True, index=True)
+
     # LangGraph checkpointer thread for resume
     thread_id = Column(String(100), nullable=False, index=True)
 

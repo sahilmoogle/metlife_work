@@ -29,9 +29,18 @@ async def persist_hitl_record(
     if db is None:
         return
 
+    raw_bid = state.get("batch_id")
+    batch_uuid = None
+    if raw_bid:
+        try:
+            batch_uuid = uuid.UUID(str(raw_bid))
+        except (ValueError, TypeError, AttributeError):
+            batch_uuid = None
+
     record = HITLQueue(
         id=uuid.uuid4(),
         lead_id=state["lead_id"],
+        batch_id=batch_uuid,
         thread_id=state.get("thread_id", ""),
         gate_type=gate_type,
         gate_description=description,

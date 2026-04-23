@@ -44,7 +44,9 @@ async def send_engine(state: dict, *, db: AsyncSession | None = None) -> dict:
     """Execute the email send (simulated) with compliance checks."""
     lead_id = state["lead_id"]
     await event_manager.publish(
-        node_transition_event(lead_id, NODE_ID, "started", batch_id=state.get("batch_id"))
+        node_transition_event(
+            lead_id, NODE_ID, "started", batch_id=state.get("batch_id")
+        )
     )
     start = time.perf_counter()
 
@@ -67,7 +69,11 @@ async def send_engine(state: dict, *, db: AsyncSession | None = None) -> dict:
             await db.commit()
         await event_manager.publish(
             node_transition_event(
-                lead_id, NODE_ID, "completed", "OPT_IN → suppressed", batch_id=state.get("batch_id")
+                lead_id,
+                NODE_ID,
+                "completed",
+                "OPT_IN → suppressed",
+                batch_id=state.get("batch_id"),
             )
         )
         return state
@@ -154,7 +160,11 @@ async def send_engine(state: dict, *, db: AsyncSession | None = None) -> dict:
     latency_ms = int((time.perf_counter() - start) * 1000)
     await event_manager.publish(
         node_transition_event(
-            lead_id, NODE_ID, "completed", f"sent {latency_ms}ms", batch_id=state.get("batch_id")
+            lead_id,
+            NODE_ID,
+            "completed",
+            f"sent {latency_ms}ms",
+            batch_id=state.get("batch_id"),
         )
     )
     await event_manager.publish(

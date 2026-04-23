@@ -32,7 +32,9 @@ async def persona_classifier(state: dict, *, db=None) -> dict:
     """Classify the lead into a scenario and assign persona."""
     lead_id = state["lead_id"]
     await event_manager.publish(
-        node_transition_event(lead_id, NODE_ID, "started", batch_id=state.get("batch_id"))
+        node_transition_event(
+            lead_id, NODE_ID, "started", batch_id=state.get("batch_id")
+        )
     )
     start = time.perf_counter()
 
@@ -51,7 +53,11 @@ async def persona_classifier(state: dict, *, db=None) -> dict:
             )
         await event_manager.publish(
             node_transition_event(
-                lead_id, NODE_ID, "completed", "OPT_IN=1 → suppressed", batch_id=state.get("batch_id")
+                lead_id,
+                NODE_ID,
+                "completed",
+                "OPT_IN=1 → suppressed",
+                batch_id=state.get("batch_id"),
             )
         )
         state["execution_log"] = [
@@ -71,6 +77,7 @@ async def persona_classifier(state: dict, *, db=None) -> dict:
         age=state.get("age"),
         registration_source=state.get("registration_source"),
         banner_code=state.get("banner_code"),
+        consultation_request_type=state.get("consult_request_type"),
     )
 
     config = get_scenario_config(scenario)

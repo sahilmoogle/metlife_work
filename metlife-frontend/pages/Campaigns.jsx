@@ -7,6 +7,8 @@ import { getBatchStatus, getLatestBatch, runBatch } from "../src/services/agents
 import { buildSseStreamUrl } from "../src/services/sseStream";
 import { useTranslation } from "react-i18next";
 
+const SCENARIO_IDS = ["S1", "S2", "S3", "S4", "S5", "S6", "S7"];
+
 const scenarioCards = [
   { id: "S1", label: "Young Prof", tone: "text-indigo-700 bg-indigo-50 ring-indigo-100" },
   { id: "S2", label: "Married", tone: "text-emerald-700 bg-emerald-50 ring-emerald-100" },
@@ -48,6 +50,36 @@ function aggregatePipelineCounts(nodeCounts) {
   return base;
 }
 
+/** S1–S7 totals from GET /dashboard/stats ``scenario_breakdown`` (same query as funnel). */
+function aggregateScenarioCounts(scenarioBreakdown) {
+  const out = { S1: 0, S2: 0, S3: 0, S4: 0, S5: 0, S6: 0, S7: 0, unknown: 0 };
+  if (!scenarioBreakdown || typeof scenarioBreakdown !== "object") return out;
+  for (const id of SCENARIO_IDS) {
+    const n = Number(scenarioBreakdown[id]);
+    if (!Number.isNaN(n)) out[id] = n;
+  }
+  return out;
+}
+
+/** Merge ``scenario_breakdown`` + ``scenario_unknown`` from dashboard stats. */
+function mergeScenarioState(scenarioBreakdown, scenarioUnknown) {
+  const out = aggregateScenarioCounts(scenarioBreakdown);
+  if (typeof scenarioUnknown === "number" && !Number.isNaN(scenarioUnknown)) {
+    out.unknown = scenarioUnknown;
+  }
+  return out;
+}
+
+function unknownScenarioCountFromLeads(rows) {
+  let unknown = 0;
+  for (const r of rows) {
+    const s = r?.scenario_id;
+    if (s && SCENARIO_IDS.includes(s)) continue;
+    unknown += 1;
+  }
+  return unknown;
+}
+
 const pipelineStages = [
   { key: "a1", label: "A1 - Identity", accent: "text-cyan-700", icon: "id" },
   { key: "a2", label: "A2 - Persona", accent: "text-cyan-700", icon: "users" },
@@ -58,7 +90,12 @@ const pipelineStages = [
   { key: "a9", label: "A9 - Handoff", accent: "text-emerald-700", icon: "handoff" },
   { key: "a10", label: "A10 - Dormancy", accent: "text-rose-700", icon: "clock" },
   { key: "hitl", label: "HITL Gates", accent: "text-amber-700", icon: "shield" },
-  { key: "conv", label: "✓ Converted", accent: "text-emerald-700", icon: "check" },
+  {
+    key: "conv",
+    label: "✓ Batch run OK",
+    accent: "text-emerald-700",
+    icon: "check",
+  },
 ];
 
 const emptyExecutedCounts = () =>
@@ -303,7 +340,10 @@ const Campaigns = () => {
   const [loadError, setLoadError] = useState("");
   const [runError, setRunError] = useState("");
   const [loading, setLoading] = useState(true);
+  /** Pending HITL rows for legend + tiles (scoped to ``batch.batch_id`` when present). */
   const [awaitingHitl, setAwaitingHitl] = useState(0);
+  /** Full-queue count for footnotes when a batch scope is active. */
+  const [awaitingHitlGlobal, setAwaitingHitlGlobal] = useState(0);
   /** Per-stage counts from GET /dashboard/stats → ``node_counts`` (Active/Processing leads). */
   const [pipelineCounts, setPipelineCounts] = useState(() => aggregatePipelineCounts(null));
   /** Per-stage executed counts from SSE node_transition events (per active batch). */
@@ -318,6 +358,8 @@ const Campaigns = () => {
     S7: 0,
     unknown: 0,
   }));
+  /** ``converted_leads`` from GET /dashboard/stats (CRM-style converted count, all leads). */
+  const [dashConvertedLeads, setDashConvertedLeads] = useState(0);
 
   const timerRef = useRef(null);
   /** Batch row currently shown — used to ignore other users' ``batch_progress`` events on shared SSE. */
@@ -350,21 +392,39 @@ const Campaigns = () => {
     setStatus("idle");
   };
 
-  const refreshHitl = useCallback(async () => {
-    try {
-      const q = await fetchHitlQueue(token);
-      setAwaitingHitl(Array.isArray(q) ? q.length : 0);
-    } catch {
-      // Queue count is secondary; ignore errors here.
-    }
-  }, [token]);
+  /**
+   * @param {string} [batchIdOverride]  Use right after starting a run (state may not have flushed yet).
+   */
+  const refreshHitl = useCallback(
+    async (batchIdOverride) => {
+      const bid = batchIdOverride ?? batch?.batch_id;
+      try {
+        const globalQ = await fetchHitlQueue(token);
+        const globalLen = Array.isArray(globalQ) ? globalQ.length : 0;
+        setAwaitingHitlGlobal(globalLen);
+        if (bid) {
+          const scoped = await fetchHitlQueue(token, { batchId: bid });
+          setAwaitingHitl(Array.isArray(scoped) ? scoped.length : 0);
+        } else {
+          setAwaitingHitl(globalLen);
+        }
+      } catch {
+        // Queue count is secondary; ignore errors here.
+      }
+    },
+    [token, batch?.batch_id],
+  );
 
-  const refreshPipelineFromDashboard = useCallback(async () => {
+  /** Single stats fetch: pipeline node counts + S1–S7 scenario bar (authoritative DB aggregates). */
+  const refreshDashboardAggregates = useCallback(async () => {
     try {
       const stats = await fetchDashboardStats(token);
       setPipelineCounts(aggregatePipelineCounts(stats?.node_counts));
+      setScenarioCounts(mergeScenarioState(stats?.scenario_breakdown, stats?.scenario_unknown));
+      const c = stats?.converted_leads;
+      setDashConvertedLeads(typeof c === "number" && !Number.isNaN(c) ? c : 0);
     } catch {
-      // Keep previous pipeline counts on failure.
+      // Keep previous counts on failure.
     }
   }, [token]);
 
@@ -374,8 +434,8 @@ const Campaigns = () => {
       try {
         const b = await getBatchStatus(token, batchId);
         setBatch(b);
-        await refreshHitl();
-        await refreshPipelineFromDashboard();
+        await refreshHitl(b?.batch_id);
+        await refreshDashboardAggregates();
         if (b?.status && b.status !== "running") {
           stopTimer();
           setStatus("complete");
@@ -405,8 +465,8 @@ const Campaigns = () => {
       }
       const b = payload?.data;
       setBatch(b);
-      await refreshHitl();
-      await refreshPipelineFromDashboard();
+      await refreshHitl(b?.batch_id);
+      await refreshDashboardAggregates();
       if (b?.batch_id) pollBatch(b.batch_id);
     } catch (e) {
       setStatus("error");
@@ -421,15 +481,27 @@ const Campaigns = () => {
       setLoading(true);
       setLoadError("");
       try {
-        const [leads, latest, hitl, dash] = await Promise.allSettled([
+        const [leads, latest, dash] = await Promise.allSettled([
           fetchLeadsList(token),
           getLatestBatch(token),
-          fetchHitlQueue(token),
           fetchDashboardStats(token),
         ]);
 
         if (!cancelled) {
-          if (leads.status === "fulfilled") {
+          if (dash.status === "fulfilled" && dash.value) {
+            const base = mergeScenarioState(
+              dash.value.scenario_breakdown,
+              dash.value.scenario_unknown,
+            );
+            if (
+              dash.value.scenario_unknown === undefined &&
+              leads.status === "fulfilled"
+            ) {
+              const rows = Array.isArray(leads.value) ? leads.value : [];
+              base.unknown = unknownScenarioCountFromLeads(rows);
+            }
+            setScenarioCounts(base);
+          } else if (leads.status === "fulfilled") {
             const rows = Array.isArray(leads.value) ? leads.value : [];
             const counts = { S1: 0, S2: 0, S3: 0, S4: 0, S5: 0, S6: 0, S7: 0, unknown: 0 };
             rows.forEach((r) => {
@@ -440,12 +512,12 @@ const Campaigns = () => {
             setScenarioCounts(counts);
           }
 
-          if (hitl.status === "fulfilled") {
-            setAwaitingHitl(Array.isArray(hitl.value) ? hitl.value.length : 0);
-          }
-
           if (dash.status === "fulfilled" && dash.value?.node_counts) {
             setPipelineCounts(aggregatePipelineCounts(dash.value.node_counts));
+          }
+
+          if (dash.status === "fulfilled" && dash.value && typeof dash.value.converted_leads === "number") {
+            setDashConvertedLeads(dash.value.converted_leads);
           }
 
           if (latest.status === "fulfilled") {
@@ -536,6 +608,7 @@ const Campaigns = () => {
       if (d.status && d.status !== "running") {
         setStatus("complete");
         stopTimer();
+        void refreshDashboardAggregates();
       } else {
         setStatus("running");
       }
@@ -563,7 +636,7 @@ const Campaigns = () => {
       if (t - lastLiveRefresh < 2000) return;
       lastLiveRefresh = t;
       void refreshHitl();
-      void refreshPipelineFromDashboard();
+      void refreshDashboardAggregates();
     };
 
     es.addEventListener("batch_progress", onBatchProgress);
@@ -573,30 +646,26 @@ const Campaigns = () => {
     return () => {
       es.close();
     };
-  }, [token, refreshHitl, refreshPipelineFromDashboard, stopTimer]);
+  }, [token, refreshHitl, refreshDashboardAggregates, stopTimer]);
+
+  // After load, and when the active batch id changes, resync HITL (batch-scoped when possible).
+  useEffect(() => {
+    if (!token || loading) return;
+    void refreshHitl();
+  }, [token, loading, batch?.batch_id, refreshHitl]);
 
   // When a batch finishes, the 1.2s poller stops — HITL approvals would not update the top
-  // “awaiting HITL” number. Keep HITL + pipeline stats fresh even with no running batch.
+  // “awaiting HITL” number. Keep HITL + dashboard aggregates fresh even with no running batch.
   useEffect(() => {
     if (!token) return;
     const id = setInterval(() => {
       void (async () => {
-        try {
-          const q = await fetchHitlQueue(token);
-          setAwaitingHitl(Array.isArray(q) ? q.length : 0);
-        } catch {
-          /* ignore */
-        }
-        try {
-          const stats = await fetchDashboardStats(token);
-          setPipelineCounts(aggregatePipelineCounts(stats?.node_counts));
-        } catch {
-          /* ignore */
-        }
+        await refreshHitl();
+        await refreshDashboardAggregates();
       })();
     }, 4000);
     return () => clearInterval(id);
-  }, [token]);
+  }, [token, refreshHitl, refreshDashboardAggregates]);
 
   return (
     <section className="space-y-3">
@@ -612,7 +681,7 @@ const Campaigns = () => {
           <div className="flex flex-wrap items-center gap-2">
             {status === "complete" ? (
               <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
-                ✓ Complete
+                {t("campaigns.status.complete")}
               </span>
             ) : status === "running" ? (
               <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 ring-1 ring-amber-100">
@@ -671,24 +740,51 @@ const Campaigns = () => {
                 {t("campaigns.batch.leads")}
               </p>
               <div className="flex flex-wrap items-center gap-3 text-[11px] text-gray-500 dark:text-volt-muted2">
-                <span className="inline-flex items-center gap-2">
+                <span
+                  className="inline-flex items-center gap-2"
+                  title={t("campaigns.batch.scopeSucceeded")}
+                >
                   <span className="h-2 w-2 rounded-full bg-emerald-500" />
                   {formatInt(success)} {t("campaigns.batch.succeeded")}
                 </span>
-                <span className="inline-flex items-center gap-2">
+                <span
+                  className="inline-flex items-center gap-2"
+                  title={
+                    batch?.batch_id
+                      ? t("campaigns.batch.scopeAwaitingHitl")
+                      : t("campaigns.batch.scopeAwaitingHitlGlobal")
+                  }
+                >
                   <span className="h-2 w-2 rounded-full bg-amber-500" />
-                  {awaitingHitl} {t("campaigns.batch.awaitingHitl")}
+                  {awaitingHitl}{" "}
+                  {batch?.batch_id
+                    ? t("campaigns.batch.awaitingHitlScoped")
+                    : t("campaigns.batch.awaitingHitlAll")}
                 </span>
-                <span className="inline-flex items-center gap-2">
+                <span
+                  className="inline-flex items-center gap-2"
+                  title={t("campaigns.batch.scopeRemaining")}
+                >
                   <span className="h-2 w-2 rounded-full bg-blue-500" />
                   {formatInt(remaining)} {t("campaigns.batch.remaining")}
                 </span>
-                <span className="inline-flex items-center gap-2">
+                <span
+                  className="inline-flex items-center gap-2"
+                  title={t("campaigns.batch.scopeFailed")}
+                >
                   <span className="h-2 w-2 rounded-full bg-rose-500" />
                   {formatInt(failed)} {t("campaigns.batch.failed")}
                 </span>
               </div>
             </div>
+            <p className="mt-2 text-[10px] leading-snug text-gray-500 dark:text-volt-muted2">
+              {t("campaigns.batch.legendExplain")}
+            </p>
+            {batch?.batch_id ? (
+              <p className="mt-1 text-[10px] text-gray-400 dark:text-volt-muted2">
+                {t("campaigns.batch.hitlOrgWide", { count: formatInt(awaitingHitlGlobal) })}
+              </p>
+            ) : null}
 
             <div className="mt-3 h-2 rounded-full bg-gray-100 dark:bg-white/10">
               <div
@@ -698,6 +794,9 @@ const Campaigns = () => {
             </div>
           </div>
 
+          <p className="px-1 text-[10px] leading-snug text-gray-500 dark:text-volt-muted2">
+            {t("campaigns.scenarios.subtitle")}
+          </p>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
             {scenarioCards.map((s) => (
               <div
@@ -717,7 +816,7 @@ const Campaigns = () => {
                 </p>
                 <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">{s.label}</p>
                 <p className="mt-2 text-[11px] text-gray-400 dark:text-volt-muted2">
-                  {loading ? "Loading" : "Ready"}
+                  {loading ? t("campaigns.status.loading") : t("campaigns.status.ready")}
                 </p>
               </div>
             ))}
@@ -728,6 +827,9 @@ const Campaigns = () => {
               <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("campaigns.pipeline.title")}</p>
               <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">
                 {t("campaigns.pipeline.subtitle")}
+              </p>
+              <p className="mt-1 text-[10px] text-gray-400 dark:text-volt-muted2">
+                {t("campaigns.pipeline.queueScopeNote")}
               </p>
             </div>
 
@@ -743,6 +845,28 @@ const Campaigns = () => {
                       ? success
                       : pipelineCounts[stage.key] ?? 0;
                 const executed = isAgentStage ? executedCounts[stage.key] ?? 0 : 0;
+
+                let caption = "";
+                if (loading) {
+                  caption = t("campaigns.pipeline.idleCaption");
+                } else if (isHitl) {
+                  caption = awaitingHitl
+                    ? t("campaigns.pipeline.hitlAwaiting", { count: awaitingHitl })
+                    : t("campaigns.pipeline.idleCaption");
+                } else if (isConv) {
+                  caption = t("campaigns.pipeline.batchSuccessCaption", {
+                    crm: formatInt(dashConvertedLeads),
+                  });
+                } else if (executed > 0) {
+                  caption = t("campaigns.pipeline.completionsQueued", {
+                    queued: formatInt(value),
+                  });
+                } else if (value > 0) {
+                  caption = t("campaigns.pipeline.queuedOnly", { queued: formatInt(value) });
+                } else {
+                  caption = t("campaigns.pipeline.emDash");
+                }
+
                 return (
                   <div
                     key={stage.key}
@@ -750,25 +874,39 @@ const Campaigns = () => {
                       isHitl && awaitingHitl > 0 ? "ring-1 ring-amber-200" : ""
                     }`}
                   >
-                    <div className={`text-[11px] font-semibold ${stage.accent}`}>{stage.label}</div>
+                    <div className={`text-[11px] font-semibold ${stage.accent}`}>
+                      {stage.key === "conv"
+                        ? t("campaigns.pipeline.batchSuccessLabel")
+                        : stage.label}
+                    </div>
                     <div className="mt-4 text-center">
-                      <p className={`text-3xl font-semibold tracking-tight ${isConv ? "text-emerald-700" : "text-[#1e2a52] dark:text-white"}`}>
+                      <p
+                        className={`text-3xl font-semibold tracking-tight ${isConv ? "text-emerald-700" : "text-[#1e2a52] dark:text-white"}`}
+                        title={
+                          isAgentStage
+                            ? t("campaigns.pipeline.stageMainHint")
+                            : isConv
+                              ? t("campaigns.pipeline.batchSuccessTitleHint")
+                              : isHitl
+                                ? batch?.batch_id
+                                  ? t("campaigns.pipeline.hitlTileHintBatch")
+                                  : t("campaigns.pipeline.hitlTileHintGlobal")
+                                : undefined
+                        }
+                      >
                         {loading ? 0 : isAgentStage ? executed : value}
                       </p>
-                      <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">
-                        {loading
-                          ? "Idle"
-                          : isHitl
-                            ? awaitingHitl
-                              ? `${awaitingHitl} awaiting`
-                              : "Idle"
+                      <p
+                        className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2"
+                        title={
+                          isAgentStage
+                            ? t("campaigns.pipeline.stageSubHint")
                             : isConv
-                              ? "Succeeded"
-                              : executed
-                                ? `Executed · current ${value}`
-                                : value
-                                  ? `Current ${value}`
-                                  : "—"}
+                              ? t("campaigns.pipeline.batchSuccessSubHint")
+                              : undefined
+                        }
+                      >
+                        {caption}
                       </p>
                     </div>
                   </div>
