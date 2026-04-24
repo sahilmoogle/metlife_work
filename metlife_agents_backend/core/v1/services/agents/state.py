@@ -94,9 +94,11 @@ class LeadState(dict):
     handoff_threshold: float
 
     # ── Email content (A4/A5) ────────────────────────────────────────
-    draft_email_subject: Optional[str]
+    draft_email_subject: Optional[str]  # Japanese subject (sent to lead)
+    draft_email_subject_en: Optional[str]  # English label for operator dashboard
     draft_email_body: Optional[str]
     content_type: Optional[str]  # existing_asset | llm_generated
+    template_name: Optional[str]  # Seed template key
     email_number: int
     max_emails: int
 
@@ -187,8 +189,10 @@ def create_initial_state(
         "handoff_threshold": 0.80,
         # Email
         "draft_email_subject": None,
+        "draft_email_subject_en": None,
         "draft_email_body": None,
         "content_type": None,
+        "template_name": None,
         "email_number": 0,
         "max_emails": 5,
         # HITL

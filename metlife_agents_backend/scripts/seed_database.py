@@ -449,8 +449,8 @@ async def seed_database() -> None:
                 ),
                 ScenarioConfig(
                     scenario_id="S2",
-                    name="Recently Married",
-                    description="ANS3=C, ANS4=Yes (life event). Family protection.",
+                    name="Life Event",
+                    description="ANS3=C, ANS4=Yes (life event: marriage, birth, job change, etc.). Family protection.",
                     handoff_threshold=0.80,
                     base_score=0.45,
                     cadence_days=3,

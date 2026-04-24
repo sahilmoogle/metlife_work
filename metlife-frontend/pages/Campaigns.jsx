@@ -11,7 +11,7 @@ const SCENARIO_IDS = ["S1", "S2", "S3", "S4", "S5", "S6", "S7"];
 
 const scenarioCards = [
   { id: "S1", label: "Young Prof", tone: "text-indigo-700 bg-indigo-50 ring-indigo-100" },
-  { id: "S2", label: "Married", tone: "text-emerald-700 bg-emerald-50 ring-emerald-100" },
+  { id: "S2", label: "Life Event", tone: "text-emerald-700 bg-emerald-50 ring-emerald-100" },
   { id: "S3", label: "Senior", tone: "text-violet-700 bg-violet-50 ring-violet-100" },
   { id: "S4", label: "Dormant", tone: "text-amber-700 bg-amber-50 ring-amber-100" },
   { id: "S5", label: "Buyer", tone: "text-cyan-700 bg-cyan-50 ring-cyan-100" },

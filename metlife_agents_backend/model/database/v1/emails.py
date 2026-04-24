@@ -25,7 +25,10 @@ class EmailTemplate(Base):
     product_code = Column(String(50), nullable=True)  # PRODUCT_CODE filter
 
     template_name = Column(String(200), nullable=False)
-    subject = Column(String(500), nullable=False)
+    subject = Column(String(500), nullable=False)  # Japanese subject (sent to lead)
+    subject_en = Column(
+        String(500), nullable=True
+    )  # English label for operator dashboard
     body_html = Column(Text, nullable=False)
 
     keigo_level = Column(String(20), nullable=True)  # casual / 丁寧語 / 敬語 / 最敬語

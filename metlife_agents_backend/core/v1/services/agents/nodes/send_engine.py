@@ -124,6 +124,10 @@ async def send_engine(state: dict, *, db: AsyncSession | None = None) -> dict:
         comm = Communication(
             lead_id=lead_id,
             subject=subject,
+            subject_en=state.get(
+                "draft_email_subject_en"
+            ),  # English label for operator dashboard
+            template_name=state.get("template_name"),  # Seed template key
             body_preview=body[:500] if body else None,
             email_number=email_num,
             content_type=state.get("content_type", "unknown"),

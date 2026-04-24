@@ -55,6 +55,9 @@ async def generative_writer(
             email_number=state.get("email_number", 1),
             max_emails=state.get("max_emails", 5),
             product_interest=state.get("product_interest", "general"),
+            template_style_reference=state.get(
+                "template_style_reference", "insurance nurturing email"
+            ),
         )
 
         user_msg = A4A5_WRITER_USER.format(

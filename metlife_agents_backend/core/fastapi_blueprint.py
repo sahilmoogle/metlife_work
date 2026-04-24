@@ -11,6 +11,7 @@ from core.v1.api.leads.leads_api import router as leads
 from core.v1.api.dashboard.dashboard_api import router as dashboard
 from core.v1.api.analytics.analytics_api import router as analytics
 from core.v1.api.admin.admin_api import router as admin
+from core.v1.api.templates.email_templates_api import router as templates
 
 # Auth endpoints are public (register / login).
 connect_router.include_router(authentication, prefix="/auth", tags=["Authentication"])
@@ -39,4 +40,7 @@ connect_router.include_router(
 )
 connect_router.include_router(
     admin, prefix="/admin/users", tags=["Admin · Access Control"], dependencies=_auth
+)
+connect_router.include_router(
+    templates, prefix="/templates", tags=["Email Templates"], dependencies=_auth
 )
