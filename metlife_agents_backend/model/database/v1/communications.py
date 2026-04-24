@@ -25,7 +25,13 @@ class Communication(Base):
     channel = Column(String(30), default="email")  # matches DB / Alembic
 
     # Content
-    subject = Column(String(500), nullable=True)
+    subject = Column(String(500), nullable=True)  # Japanese subject (sent to lead)
+    subject_en = Column(
+        String(500), nullable=True
+    )  # English label for operator dashboard
+    template_name = Column(
+        String(200), nullable=True
+    )  # Seed template key (e.g. s4_revival_p1_brand_campaign)
     body_preview = Column(Text, nullable=True)
     email_number = Column(Integer, nullable=True)  # 1–5 within the sequence
     content_type = Column(String(30), nullable=True)  # existing_asset | llm_generated

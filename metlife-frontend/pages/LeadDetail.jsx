@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import { fetchLeadDetail } from "../src/services/leadsApi";
 import { getWorkflowState } from "../src/services/agentsApi";
@@ -19,6 +20,19 @@ const statusStyles = {
   Dormant: "bg-gray-100 text-gray-600",
   Suppressed: "bg-gray-100 text-gray-500",
 };
+
+const SCENARIO_NAMES = {
+  S1: "Young Prof",
+  S2: "Life Event",
+  S3: "Senior",
+  S4: "Dormant Revival",
+  S5: "Active Buyer",
+  S6: "F2F Consult",
+  S7: "Web-to-Call",
+};
+
+const scenarioLabel = (id) =>
+  id ? `${id} · ${SCENARIO_NAMES[id] ?? id}` : "—";
 
 const chip = {
   Low: "bg-gray-100 text-gray-700",
@@ -70,6 +84,8 @@ const LeadDetail = () => {
   useRelativeClock(30000);
   const { id } = useParams();
   const { token } = useAuth();
+  const { i18n } = useTranslation();
+  const isEnglish = i18n.language === "en";
   const [lead, setLead] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -421,7 +437,7 @@ const LeadDetail = () => {
             </span>
           </div>
 
-          <div className="mt-4 flex items-start gap-3">
+            <div className="mt-4 flex items-start gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">
               {initials || "?"}
             </div>
@@ -431,7 +447,7 @@ const LeadDetail = () => {
                 {lead.persona_code || "—"} • age {lead.age ?? "—"}
               </p>
               <p className="truncate text-xs text-gray-400 dark:text-volt-muted2">
-                {lead.scenario_id || "No scenario"} • {lead.workflow_status || "New"}
+                {scenarioLabel(lead.scenario_id)} • {lead.workflow_status || "New"}
               </p>
             </div>
           </div>
@@ -443,7 +459,7 @@ const LeadDetail = () => {
               <p className="text-gray-400 dark:text-volt-muted2">Device</p>
               <p className="text-right font-medium text-gray-700 dark:text-volt-text">{lead.device_type || "—"}</p>
               <p className="text-gray-400 dark:text-volt-muted2">Scenario</p>
-              <p className="text-right font-medium text-gray-700 dark:text-volt-text">{lead.scenario_id || "—"}</p>
+              <p className="text-right font-medium text-gray-700 dark:text-volt-text">{scenarioLabel(lead.scenario_id)}</p>
               <p className="text-gray-400 dark:text-volt-muted2">Persona</p>
               <p className="text-right font-medium text-gray-700 dark:text-volt-text">{lead.persona_code || "—"}</p>
               <p className="text-gray-400 dark:text-volt-muted2">Persona confidence</p>
@@ -483,25 +499,81 @@ const LeadDetail = () => {
           )}
 
           <div className="mt-4 border-t border-gray-100 pt-4 dark:border-volt-borderSoft">
-            <p className="text-xs font-semibold text-indigo-700">Communications</p>
-            <div className="mt-3 max-h-[260px] space-y-3 overflow-auto pr-1">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-indigo-700">Communications</p>
               {lead.communications?.length ? (
-                lead.communications.map((c) => (
-                  <div key={c.id} className="rounded-lg bg-gray-50 p-3 dark:bg-white/5">
-                    <p className="text-xs font-semibold text-gray-800 dark:text-white">{c.subject || `Email #${c.email_number ?? "?"}`}</p>
-                    {c.body_preview ? <p className="mt-1 text-[11px] text-gray-600 dark:text-volt-muted">{c.body_preview}</p> : null}
-                    <p className="mt-1 text-[11px] text-gray-500 dark:text-volt-muted2">
-                      Sent:{" "}
-                      {c.sent_at ? formatRelativeTime(c.sent_at) || c.sent_at : "—"}
-                      {c.opened_at
-                        ? ` · Opened: ${formatRelativeTime(c.opened_at) || c.opened_at}`
-                        : ""}
-                      {c.clicked_at
-                        ? ` · Clicked: ${formatRelativeTime(c.clicked_at) || c.clicked_at}`
-                        : ""}
-                    </p>
-                  </div>
-                ))
+                <span className="text-[11px] text-gray-400 dark:text-volt-muted2">
+                  {lead.communications.length} email{lead.communications.length !== 1 ? "s" : ""}
+                </span>
+              ) : null}
+            </div>
+            <div className="mt-3 max-h-[300px] space-y-3 overflow-auto pr-1">
+              {lead.communications?.length ? (
+                lead.communications.map((c) => {
+                  const isTemplate = c.content_type === "existing_asset";
+                  const isLlm = c.content_type === "llm_generated";
+                  // In English mode: prefer the stored English subject label;
+                  // fall back to sequence label if neither is available.
+                  const displaySubject = isEnglish
+                    ? (c.subject_en || (isLlm ? `AI-Generated Email #${c.email_number ?? "?"}` : c.subject || `Email #${c.email_number ?? "?"}`))
+                    : (c.subject || `Email #${c.email_number ?? "?"}`);
+                  return (
+                    <div key={c.id} className="rounded-lg border border-gray-100 bg-gray-50 p-3 dark:border-volt-borderSoft dark:bg-white/5">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-xs font-semibold text-gray-800 dark:text-white leading-snug">
+                          {displaySubject}
+                        </p>
+                        {c.email_number != null && (
+                          <span className="flex-none rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300">
+                            #{c.email_number}
+                          </span>
+                        )}
+                      </div>
+                      {c.body_preview ? (
+                        <div className="mt-1.5">
+                          <p className="text-[11px] leading-relaxed text-gray-600 dark:text-volt-muted line-clamp-2">
+                            {c.body_preview}
+                          </p>
+                          {isEnglish && (
+                            <p className="mt-0.5 text-[10px] text-gray-400 dark:text-volt-muted2 italic">
+                              Body sent in Japanese to lead
+                            </p>
+                          )}
+                        </div>
+                      ) : null}
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                        {isTemplate && (
+                          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                            Pre-approved template
+                          </span>
+                        )}
+                        {isLlm && (
+                          <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+                            AI-generated
+                          </span>
+                        )}
+                        {c.sent_at && (
+                          <span className="text-[10px] text-gray-400 dark:text-volt-muted2">
+                            Sent {formatRelativeTime(c.sent_at) || c.sent_at}
+                          </span>
+                        )}
+                        {!c.sent_at && (
+                          <span className="text-[10px] text-gray-400 dark:text-volt-muted2">Not sent yet</span>
+                        )}
+                        {c.opened_at && (
+                          <span className="text-[10px] font-semibold text-sky-600 dark:text-sky-300">
+                            ✓ Opened
+                          </span>
+                        )}
+                        {c.clicked_at && (
+                          <span className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-300">
+                            ✓ Clicked
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
               ) : (
                 <p className="text-[11px] text-gray-500 dark:text-volt-muted2">No communications recorded yet.</p>
               )}
@@ -516,7 +588,7 @@ const LeadDetail = () => {
                 <p className="text-xs font-semibold text-indigo-700">Workflow</p>
                 <p className="mt-1 text-sm leading-snug text-gray-700 dark:text-volt-text">{workflowOneLiner}</p>
                 <p className="mt-1 text-[11px] text-gray-500 dark:text-volt-muted2">
-                  Scenario <span className="font-semibold text-gray-700 dark:text-volt-text">{lead.scenario_id || "—"}</span>
+                  Scenario <span className="font-semibold text-gray-700 dark:text-volt-text">{scenarioLabel(lead.scenario_id)}</span>
                   {" · "}
                   Persona <span className="font-semibold text-gray-700 dark:text-volt-text">{lead.persona_code || "pending"}</span>
                 </p>

@@ -23,7 +23,7 @@ SCENARIO_DEFAULTS: dict[str, dict] = {
         "tone": "casual",
     },
     "S2": {
-        "name": "Recently Married",
+        "name": "Life Event",
         "persona_code": "E",
         "base_score": 0.45,
         "handoff_threshold": 0.80,
@@ -126,7 +126,7 @@ def classify_scenario(
       3. registration_source = web_callback   → S7
       4. BANNER_CODE position 3 (0-indexed) = '7' → S7 (Web-to-Call inbound)
       5. ANS3 = A or B                        → S5 (Active Buyer)
-      6. ANS3 = C + affirmative ANS4           → S2 (Life Event / Recently Married path)
+      6. ANS3 = C + affirmative ANS4           → S2 (Life Event — marriage, birth, job change, etc.)
       7. ANS3 = C + non-affirmative ANS4 + Age ≥ 35    → S3 (Senior)
       8. ANS3 = C + non-affirmative ANS4 + Age < 35    → S1 (Young Professional)
       9. Fallback                             → S1

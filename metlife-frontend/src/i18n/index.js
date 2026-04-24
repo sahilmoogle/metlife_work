@@ -159,7 +159,7 @@ const resources = {
         },
         scenarioLabels: {
           S1: "Young Prof",
-          S2: "Married",
+          S2: "Life Event",
           S3: "Senior",
           S4: "Dormant",
           S5: "Buyer",
@@ -494,7 +494,7 @@ const resources = {
         },
         scenarioLabels: {
           S1: "若手プロ",
-          S2: "既婚",
+          S2: "ライフイベント",
           S3: "シニア",
           S4: "休眠",
           S5: "購入意向",

@@ -15,14 +15,22 @@ You MUST respect the following constraints:
 4. Scenario theme: {scenario_name}
 5. This is Email #{email_number} of a maximum {max_emails} email sequence
 6. Product focus: {product_interest}
+7. Template style reference (theme of this email in the sequence): {template_style_reference}
 
 If JA and keigo_level is 敬語 or 最敬語, use appropriate honorific
 vocabulary throughout. Never mix formality levels.
 
+Follow the MetLife Japan brand asset style:
+- Professional yet approachable tone matching the keigo level
+- Clear value proposition in the subject line (question or insight format preferred)
+- Body: greeting → problem/insight → solution hint → clear CTA
+- Include 配信停止 (unsubscribe) link placeholder at the footer
+- Subject lines should mirror the style of the template reference (informative, slightly conversational)
+
 Respond ONLY with valid JSON:
 {{
   "subject": "Email subject line",
-  "body": "Full email body with appropriate greeting and closing. (MUST include 'Unsubscribe' link representation)",
+  "body": "Full email body with appropriate greeting and closing. (MUST include '配信停止はこちら' link representation)",
   "content_themes": ["theme1", "theme2"],
   "cta_text": "Call-to-action button text",
   "compliance_checklist": [

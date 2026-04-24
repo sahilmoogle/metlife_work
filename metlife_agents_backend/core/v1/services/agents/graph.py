@@ -546,7 +546,18 @@ def build_graph(*, db_session=None, checkpointer=None):
     graph.add_edge("g4_pause", END)
 
     # ── S4 dormancy path: A10 → G3 → A1 ────────────────────────────
-    graph.add_edge("dormancy_agent", "prep_g3")
+    # A10 may mark a lead suppressed (opted-out, cooldown, not yet 180 days).
+    # In that case skip G3 and end the workflow immediately.
+    def _route_after_dormancy(state: dict) -> str:
+        if state.get("workflow_status") in ("suppressed", "dormant"):
+            return "end"
+        return "prep_g3"
+
+    graph.add_conditional_edges(
+        "dormancy_agent",
+        _route_after_dormancy,
+        {"end": END, "prep_g3": "prep_g3"},
+    )
     graph.add_edge("prep_g3", "g3_pause")
     graph.add_edge("g3_pause", "identity_unifier")
 
