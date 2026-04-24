@@ -669,7 +669,7 @@ const Campaigns = () => {
 
   return (
     <section className="space-y-3">
-      <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
+      <div className="app-surface-card p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold text-[#1e2a52] dark:text-white">{t("campaigns.title")}</h2>
@@ -680,11 +680,11 @@ const Campaigns = () => {
 
           <div className="flex flex-wrap items-center gap-2">
             {status === "complete" ? (
-              <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
+              <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-200 dark:ring-emerald-500/20">
                 {t("campaigns.status.complete")}
               </span>
             ) : status === "running" ? (
-              <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 ring-1 ring-amber-100">
+              <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 ring-1 ring-amber-100 dark:bg-amber-500/10 dark:text-amber-200 dark:ring-amber-500/20">
                 {t("campaigns.status.batchRunning")}
               </span>
             ) : (
@@ -700,11 +700,7 @@ const Campaigns = () => {
                   ? t("campaigns.runButton.runningTitle")
                   : undefined
               }
-              className={`inline-flex h-9 items-center gap-2 rounded-full px-4 text-xs font-semibold text-white shadow-[0_10px_25px_rgba(16,185,129,0.20)] transition disabled:cursor-not-allowed disabled:opacity-90 ${
-                status === "complete"
-                  ? "bg-emerald-600 hover:bg-emerald-700"
-                  : "bg-emerald-600 hover:bg-emerald-700"
-              }`}
+              className="inline-flex h-10 items-center gap-2 rounded-full bg-gradient-to-r from-[#0b4aa6] via-[#004EB2] to-[#003B86] px-5 text-xs font-semibold text-white shadow-[0_12px_30px_rgba(0,78,178,0.22)] transition hover:brightness-[1.05] disabled:cursor-not-allowed disabled:opacity-60 dark:shadow-[0_12px_30px_rgba(0,0,0,0.35)]"
             >
               {status === "complete" ? t("common.complete") : status === "running" ? t("common.running") : t("campaigns.runButton.runAll")}
               <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/20" aria-hidden>
@@ -730,7 +726,7 @@ const Campaigns = () => {
             </div>
           ) : null}
 
-          <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:shadow-none">
+          <div className="app-surface-nested p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-xs font-semibold text-gray-700 dark:text-volt-text">
                 {t("campaigns.batch.processing")}{" "}
@@ -777,14 +773,6 @@ const Campaigns = () => {
                 </span>
               </div>
             </div>
-            <p className="mt-2 text-[10px] leading-snug text-gray-500 dark:text-volt-muted2">
-              {t("campaigns.batch.legendExplain")}
-            </p>
-            {batch?.batch_id ? (
-              <p className="mt-1 text-[10px] text-gray-400 dark:text-volt-muted2">
-                {t("campaigns.batch.hitlOrgWide", { count: formatInt(awaitingHitlGlobal) })}
-              </p>
-            ) : null}
 
             <div className="mt-3 h-2 rounded-full bg-gray-100 dark:bg-white/10">
               <div
@@ -801,7 +789,7 @@ const Campaigns = () => {
             {scenarioCards.map((s) => (
               <div
                 key={s.id}
-                className="rounded-2xl border border-gray-100 bg-white p-3 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:shadow-none"
+                className="app-surface-nested p-3"
               >
                 <div className="flex items-center justify-between">
                   <span className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ring-1 ${s.tone}`}>
@@ -814,23 +802,17 @@ const Campaigns = () => {
                 <p className="mt-3 text-xl font-semibold tracking-tight text-[#1e2a52] dark:text-white">
                   {loading ? "—" : formatInt(scenarioCounts[s.id] || 0)}
                 </p>
-                <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">{s.label}</p>
-                <p className="mt-2 text-[11px] text-gray-400 dark:text-volt-muted2">
+                <p className="mt-1 text-xs font-medium text-gray-500 dark:text-volt-muted2">{s.label}</p>
+                <p className="mt-2 text-[11px] text-gray-800 dark:text-volt-muted2">
                   {loading ? t("campaigns.status.loading") : t("campaigns.status.ready")}
                 </p>
               </div>
             ))}
           </div>
 
-          <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
+          <div className="app-surface-card p-4">
             <div className="mb-3">
               <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("campaigns.pipeline.title")}</p>
-              <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">
-                {t("campaigns.pipeline.subtitle")}
-              </p>
-              <p className="mt-1 text-[10px] text-gray-400 dark:text-volt-muted2">
-                {t("campaigns.pipeline.queueScopeNote")}
-              </p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
@@ -854,9 +836,7 @@ const Campaigns = () => {
                     ? t("campaigns.pipeline.hitlAwaiting", { count: awaitingHitl })
                     : t("campaigns.pipeline.idleCaption");
                 } else if (isConv) {
-                  caption = t("campaigns.pipeline.batchSuccessCaption", {
-                    crm: formatInt(dashConvertedLeads),
-                  });
+                  caption = "";
                 } else if (executed > 0) {
                   caption = t("campaigns.pipeline.completionsQueued", {
                     queued: formatInt(value),
@@ -870,7 +850,7 @@ const Campaigns = () => {
                 return (
                   <div
                     key={stage.key}
-                    className={`rounded-2xl border border-gray-100 bg-white p-4 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:shadow-none ${
+                    className={`app-surface-nested p-4 ${
                       isHitl && awaitingHitl > 0 ? "ring-1 ring-amber-200" : ""
                     }`}
                   >
@@ -886,7 +866,7 @@ const Campaigns = () => {
                           isAgentStage
                             ? t("campaigns.pipeline.stageMainHint")
                             : isConv
-                              ? t("campaigns.pipeline.batchSuccessTitleHint")
+                              ? undefined
                               : isHitl
                                 ? batch?.batch_id
                                   ? t("campaigns.pipeline.hitlTileHintBatch")
@@ -896,18 +876,20 @@ const Campaigns = () => {
                       >
                         {loading ? 0 : isAgentStage ? executed : value}
                       </p>
-                      <p
-                        className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2"
-                        title={
-                          isAgentStage
-                            ? t("campaigns.pipeline.stageSubHint")
-                            : isConv
-                              ? t("campaigns.pipeline.batchSuccessSubHint")
-                              : undefined
-                        }
-                      >
-                        {caption}
-                      </p>
+                      {caption ? (
+                        <p
+                          className="mt-1 text-xs font-medium text-gray-600 dark:text-volt-muted2"
+                          title={
+                            isAgentStage
+                              ? t("campaigns.pipeline.stageSubHint")
+                              : isConv
+                                ? t("campaigns.pipeline.batchSuccessSubHint")
+                                : undefined
+                          }
+                        >
+                          {caption}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                 );

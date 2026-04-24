@@ -267,7 +267,7 @@ const Dashboard = () => {
   return (
     <>
       {error ? (
-        <div className="mb-3 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+        <div className="mb-3 rounded-3xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
           {error}{" "}
           <button type="button" className="ml-2 font-semibold underline" onClick={refresh}>
             {t("common.retry")}
@@ -276,7 +276,7 @@ const Dashboard = () => {
       ) : null}
 
       {loading ? (
-        <div className="mb-3 rounded-2xl border border-gray-100 bg-white px-4 py-3 text-sm text-gray-500">
+        <div className="app-surface-card mb-3 px-4 py-3 text-sm text-gray-500 dark:text-volt-muted">
           {t("dashboard.loading")}
         </div>
       ) : null}
@@ -285,7 +285,7 @@ const Dashboard = () => {
         {kpiCards.map((item) => (
           <article
             key={item.title}
-            className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none"
+            className="app-surface-card p-4"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
@@ -297,7 +297,7 @@ const Dashboard = () => {
                   <p className="mt-1 text-2xl font-semibold tracking-tight text-[#1e2a52] dark:text-white">{item.value}</p>
                 </div>
               </div>
-              <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ring-1 ${item.chip}`}>
+              <span className={`rounded px-2.5 py-1 text-[10px] font-semibold ring-1 ${item.chip}`}>
                 {item.change}
               </span>
             </div>
@@ -306,9 +306,9 @@ const Dashboard = () => {
       </section>
 
       <section className="mt-4 grid gap-3 xl:grid-cols-2">
-        <article className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
+        <article className="app-surface-card p-4">
           <h3 className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("dashboard.funnel.title")}</h3>
-          <p className="mb-4 text-[11px] text-gray-400 dark:text-volt-muted2">{t("dashboard.funnel.subtitle")}</p>
+          <p className="mb-4 text-xs font-medium text-gray-500 dark:text-volt-muted2">{t("dashboard.funnel.subtitle")}</p>
           <div className="space-y-3">
             {funnelBars.map((bar) => (
               <div key={bar.label}>
@@ -327,21 +327,21 @@ const Dashboard = () => {
           </div>
         </article>
 
-        <article className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
+        <article className="app-surface-card p-4">
           <h3 className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("dashboard.scenarios.title")}</h3>
-          <p className="mb-4 text-[11px] text-gray-400 dark:text-volt-muted2">{t("dashboard.scenarios.subtitle")}</p>
+          <p className="mb-4 text-[11px] text-gray-500 dark:text-volt-muted2">{t("dashboard.scenarios.subtitle")}</p>
           <div className="grid gap-2 sm:grid-cols-2">
             {scenarioRows.map((scenario) => (
               <div
                 key={scenario.id}
-                className="flex items-center gap-3 rounded-xl border border-gray-100 bg-white p-3 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:shadow-none"
+                className="flex items-center gap-3 rounded-2xl border border-gray-200/90 bg-white p-3 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-volt-borderSoft dark:bg-[linear-gradient(180deg,rgba(18,34,68,0.78),rgba(10,18,38,0.72))] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.045)]"
               >
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-50 text-xs font-semibold text-indigo-700 ring-1 ring-indigo-100">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#eaf2ff] text-xs font-semibold text-[#004EB2] ring-1 ring-[#cfe0ff]">
                   {scenario.id}
                 </span>
                 <div>
                   <p className="text-sm font-semibold text-gray-800 dark:text-white">{scenario.value}</p>
-                  <p className="text-xs text-gray-400 dark:text-volt-muted2">{scenario.label}</p>
+                  <p className="text-xs text-gray-500 dark:text-volt-muted2">{scenario.label}</p>
                 </div>
               </div>
             ))}
@@ -349,7 +349,7 @@ const Dashboard = () => {
         </article>
       </section>
 
-      <section className="mt-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
+      <section className="app-surface-card mt-4 p-4">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("dashboard.feed.title")}</h3>
           <span className="inline-flex items-center gap-2 text-xs text-gray-400 dark:text-volt-muted2">
@@ -367,7 +367,7 @@ const Dashboard = () => {
                 <span className="mt-1.5 h-2 w-2 flex-none rounded-full bg-violet-500" />
                 <div className="min-w-0">
                   <p className="truncate text-sm text-gray-700 dark:text-volt-text">{item.title}</p>
-                  <p className="mt-0.5 text-[11px] text-gray-400 dark:text-volt-muted2">{item.meta}</p>
+                  <p className="mt-0.5  text-xs font-medium text-gray-500 dark:text-volt-muted">{item.meta}</p>
                 </div>
               </div>
             ))

@@ -2,10 +2,80 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Shared “glass / neon” surfaces in dark mode (reference dashboard). */
+@layer components {
+  .app-surface-card {
+    @apply rounded-3xl border border-gray-200/90 bg-white shadow-[0_10px_50px_rgba(15,23,42,0.06)];
+  }
+
+  .dark .app-surface-card {
+    border-color: rgba(56, 90, 158, 0.42);
+    background: linear-gradient(165deg, rgba(22, 40, 78, 0.94), rgba(11, 22, 46, 0.9));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      0 0 0 1px rgba(124, 158, 255, 0.08),
+      0 22px 55px rgba(0, 0, 0, 0.52);
+  }
+
+  .app-surface-panel {
+    @apply rounded-2xl border border-gray-100 bg-white shadow-[0_1px_0_rgba(0,0,0,0.03)];
+  }
+
+  .dark .app-surface-panel {
+    border-color: rgba(56, 90, 158, 0.38);
+    background: linear-gradient(165deg, rgba(18, 34, 68, 0.94), rgba(10, 18, 38, 0.9));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.05),
+      0 0 0 1px rgba(124, 158, 255, 0.06),
+      0 16px 42px rgba(0, 0, 0, 0.48);
+  }
+
+  .app-surface-dialog {
+    @apply rounded-2xl border border-gray-100 bg-white shadow-xl;
+  }
+
+  .dark .app-surface-dialog {
+    border-color: rgba(56, 90, 158, 0.45);
+    background: linear-gradient(165deg, rgba(24, 44, 84, 0.96), rgba(12, 22, 46, 0.94));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      0 0 0 1px rgba(124, 158, 255, 0.1),
+      0 28px 70px rgba(0, 0, 0, 0.65);
+  }
+
+  /* Main canvas behind page content (matches auth + app shell in dark). */
+  .dark .app-dark-main-fill {
+    background: radial-gradient(ellipse 120% 70% at 50% -25%, rgba(124, 158, 255, 0.09), transparent 52%),
+      linear-gradient(180deg, rgba(10, 18, 36, 0.98) 0%, rgba(7, 11, 22, 1) 55%, #060914 100%);
+  }
+
+  /* Nested tiles inside a surface card (scenario tiles, pipeline cards, etc.). */
+  .app-surface-nested {
+    @apply rounded-3xl border border-gray-200/90 bg-white shadow-[inset_0_1px_0_rgba(0,0,0,0.02)];
+  }
+
+  .dark .app-surface-nested {
+    border-color: rgba(56, 90, 158, 0.38);
+    background: linear-gradient(180deg, rgba(18, 34, 68, 0.78), rgba(10, 18, 38, 0.72));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  }
+}
+
 /* Scrollbar theming (dark mode only) */
 .dark {
   scrollbar-width: thin; /* Firefox */
-  scrollbar-color: rgba(124, 92, 255, 0.55) rgba(15, 10, 44, 0.35);
+  scrollbar-color: rgba(124, 158, 255, 0.5) rgba(12, 22, 46, 0.45);
+  color-scheme: dark;
+}
+
+/* Native <select> dropdown list (OS varies; this helps Linux/WebKit). */
+.dark select {
+  color-scheme: dark;
+}
+
+.dark select option {
+  background-color: #101f3d;
+  color: #f1f5ff;
 }
 
 .dark ::-webkit-scrollbar {
@@ -14,20 +84,20 @@
 }
 
 .dark ::-webkit-scrollbar-track {
-  background: rgba(15, 10, 44, 0.35);
+  background: rgba(12, 22, 46, 0.45);
   border-radius: 999px;
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, rgba(124, 92, 255, 0.75), rgba(53, 167, 255, 0.55));
+  background: linear-gradient(180deg, rgba(124, 158, 255, 0.7), rgba(56, 189, 248, 0.55));
   border-radius: 999px;
-  border: 2px solid rgba(15, 10, 44, 0.35);
+  border: 2px solid rgba(12, 22, 46, 0.45);
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, rgba(124, 92, 255, 0.92), rgba(53, 167, 255, 0.72));
+  background: linear-gradient(180deg, rgba(140, 170, 255, 0.88), rgba(56, 189, 248, 0.75));
 }
 
 .dark ::-webkit-scrollbar-corner {
-  background: rgba(15, 10, 44, 0.35);
+  background: rgba(12, 22, 46, 0.45);
 }

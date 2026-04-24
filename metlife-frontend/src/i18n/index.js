@@ -27,7 +27,7 @@ const resources = {
         },
         campaigns: {
           title: "All Agents",
-          subtitle: "2 of 6 agents complete - 33% progress - Hybrid Mode",
+          subtitle: "Batch workflows with auto-run agents & HITL pauses",
         },
         analytics: {
           title: "Analytics",
@@ -192,8 +192,7 @@ const resources = {
           awaitingHitlAll: "awaiting HITL (all batches)",
           remaining: "remaining",
           failed: "failed",
-          legendExplain:
-            "Green, blue, and red numbers are for this batch run only. Amber shows HITL rows tagged with this batch (new items only); legacy rows without a batch tag are omitted. Do not add the chips together—they measure different scopes.",
+          // 
           hitlOrgWide: "Full pending queue (all batches): {{count}}",
           scopeSucceeded: "Successfully processed leads in this batch.",
           scopeAwaitingHitl:

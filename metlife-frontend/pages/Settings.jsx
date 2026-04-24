@@ -19,37 +19,37 @@ const roles = [
     key: "admin",
     label: "Admins",
     subtitle: "Full access",
-    tone: "bg-rose-50 text-rose-700 ring-rose-100",
+    tone: "bg-rose-50 text-rose-700 ring-rose-100 dark:bg-rose-500/10 dark:text-rose-200 dark:ring-rose-500/20",
     topBar: "bg-rose-500",
   },
   {
     key: "manager",
     label: "Managers",
     subtitle: "Run + HITL",
-    tone: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+    tone: "bg-emerald-50 text-emerald-700 ring-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-200 dark:ring-emerald-500/20",
     topBar: "bg-emerald-500",
   },
   {
     key: "reviewer",
     label: "Reviewers",
     subtitle: "HITL only",
-    tone: "bg-violet-50 text-violet-700 ring-violet-100",
+    tone: "bg-violet-50 text-violet-700 ring-violet-100 dark:bg-violet-500/10 dark:text-fuchsia-200 dark:ring-violet-500/20",
     topBar: "bg-violet-500",
   },
   {
     key: "viewer",
     label: "Viewers",
     subtitle: "Read-only",
-    tone: "bg-amber-50 text-amber-700 ring-amber-100",
+    tone: "bg-amber-50 text-amber-700 ring-amber-100 dark:bg-amber-500/10 dark:text-amber-200 dark:ring-amber-500/20",
     topBar: "bg-amber-500",
   },
 ];
 
 const roleBadge = {
-  admin: "bg-rose-50 text-rose-700 ring-rose-100",
-  manager: "bg-violet-50 text-violet-700 ring-violet-100",
-  reviewer: "bg-amber-50 text-amber-700 ring-amber-100",
-  viewer: "bg-gray-100 text-gray-700 ring-gray-200",
+  admin: "bg-rose-50 text-rose-700 ring-rose-100 dark:bg-rose-500/10 dark:text-rose-200 dark:ring-rose-500/20",
+  manager: "bg-violet-50 text-violet-700 ring-violet-100 dark:bg-violet-500/10 dark:text-fuchsia-200 dark:ring-violet-500/20",
+  reviewer: "bg-amber-50 text-amber-700 ring-amber-100 dark:bg-amber-500/10 dark:text-amber-200 dark:ring-amber-500/20",
+  viewer: "bg-gray-100 text-gray-700 ring-gray-200 dark:bg-white/10 dark:text-volt-text dark:ring-volt-borderSoft",
 };
 
 const avatarTone = {
@@ -113,7 +113,7 @@ const Toggle = ({ checked, onChange, ariaLabel }) => {
 };
 
 const Check = () => (
-  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
+  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-200 dark:ring-emerald-500/20">
     <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
       <path
         d="M20 6 9 17l-5-5"
@@ -127,7 +127,7 @@ const Check = () => (
 );
 
 const Dash = () => (
-  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-gray-50 text-gray-400 ring-1 ring-gray-200">
+  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-gray-50 text-gray-400 ring-1 ring-gray-200 dark:bg-white/5 dark:text-volt-muted2 dark:ring-volt-borderSoft">
     <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
       <path
         d="M6 12h12"
@@ -487,7 +487,7 @@ const Settings = () => {
         </div>
       ) : null}
 
-      <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
+      <div className="app-surface-panel p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold text-[#1e2a52] dark:text-white">{t("settings.accessControlTitle")}</h2>
@@ -500,7 +500,7 @@ const Settings = () => {
             type="button"
             disabled={!canManage || actionLoading}
             onClick={openAdd}
-            className="inline-flex h-9 items-center gap-2 rounded-full bg-indigo-600 px-4 text-xs font-semibold text-white shadow-[0_10px_25px_rgba(79,70,229,0.18)] transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-9 items-center gap-2 rounded-full bg-[#004EB2] px-4 text-xs font-semibold text-white shadow-[0_10px_25px_rgba(0,78,178,0.16)] transition hover:bg-[#003B86] disabled:cursor-not-allowed disabled:opacity-60"
             title={canManage ? "Add user" : "You do not have permission to manage users"}
           >
             {t("settings.addUser")}
@@ -526,7 +526,7 @@ const Settings = () => {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
+      <div className="app-surface-panel p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-amber-50 text-amber-700 ring-1 ring-amber-100 dark:bg-amber-500/15 dark:text-amber-200 dark:ring-amber-500/20">
@@ -612,7 +612,7 @@ const Settings = () => {
                         type="button"
                         onClick={() => openView(u)}
                         title="View user"
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted2 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition hover:border-[#a7c4f2] hover:bg-[#eaf2ff] hover:text-[#004EB2] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted2 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
                       >
                         <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
                           <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -695,7 +695,7 @@ const Settings = () => {
                   type="button"
                   disabled={safePage === 1}
                   onClick={() => setPage((p) => p - 1)}
-                  className="inline-flex h-8 items-center justify-center rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition hover:border-indigo-200 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-40 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
+                  className="inline-flex h-8 items-center justify-center rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition hover:border-[#a7c4f2] hover:text-[#004EB2] disabled:cursor-not-allowed disabled:opacity-40 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
                 >
                   {t("common.prev")}
                 </button>
@@ -706,7 +706,7 @@ const Settings = () => {
                   type="button"
                   disabled={safePage === totalPages}
                   onClick={() => setPage((p) => p + 1)}
-                  className="inline-flex h-8 items-center justify-center rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition hover:border-indigo-200 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-40 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
+                  className="inline-flex h-8 items-center justify-center rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition hover:border-[#a7c4f2] hover:text-[#004EB2] disabled:cursor-not-allowed disabled:opacity-40 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
                 >
                   {t("common.next")}
                 </button>
@@ -718,16 +718,16 @@ const Settings = () => {
 
       {isViewOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-[560px] rounded-2xl border border-gray-100 bg-white p-4 shadow-xl dark:border-volt-borderSoft dark:bg-volt-panel">
+          <div className="w-full max-w-[560px] app-surface-dialog p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("settings.userDetail")}</p>
-                <p className="mt-1 text-xs text-gray-500 dark:text-volt-muted2">User ID: {viewUserId}</p>
+                <p className="mt-1 text-xs text-gray-500 font-medium dark:text-volt-muted2">User ID: {viewUserId}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsViewOpen(false)}
-                className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-600 hover:border-indigo-200 hover:text-indigo-700 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
+                className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-600 hover:border-[#a7c4f2] hover:text-[#004EB2] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
               >
                 {t("common.close")}
               </button>
@@ -753,7 +753,7 @@ const Settings = () => {
 
       {isEditOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-[560px] rounded-2xl border border-gray-100 bg-white p-4 shadow-xl dark:border-volt-borderSoft dark:bg-volt-panel">
+          <div className="w-full max-w-[560px] app-surface-dialog p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("settings.editUser")}</p>
@@ -762,7 +762,7 @@ const Settings = () => {
               <button
                 type="button"
                 onClick={() => setIsEditOpen(false)}
-                className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-600 hover:border-indigo-200 hover:text-indigo-700 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
+                className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-600 hover:border-[#a7c4f2] hover:text-[#004EB2] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
               >
                 {t("common.close")}
               </button>
@@ -799,7 +799,7 @@ const Settings = () => {
               <button
                 type="button"
                 onClick={() => setIsEditOpen(false)}
-                className="inline-flex h-9 items-center justify-center rounded-full border border-gray-200 bg-white px-4 text-xs font-semibold text-gray-700 hover:border-indigo-200 hover:text-indigo-700 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text"
+                className="inline-flex h-9 items-center justify-center rounded-full border border-gray-200 bg-white px-4 text-xs font-semibold text-gray-700 hover:border-[#a7c4f2] hover:text-[#004EB2] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text"
               >
                 {t("common.cancel")}
               </button>
@@ -807,7 +807,7 @@ const Settings = () => {
                 type="button"
                 disabled={!canManage || actionLoading}
                 onClick={submitEdit}
-                className="inline-flex h-9 items-center justify-center rounded-full bg-indigo-600 px-4 text-xs font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-9 items-center justify-center rounded-full bg-[#004EB2] px-4 text-xs font-semibold text-white hover:bg-[#003B86] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {actionLoading ? "Saving…" : "Save changes"}
               </button>
@@ -818,7 +818,7 @@ const Settings = () => {
 
       {isPermOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-[760px] rounded-2xl border border-gray-100 bg-white p-4 shadow-xl dark:border-volt-borderSoft dark:bg-volt-panel">
+          <div className="w-full max-w-[760px] app-surface-dialog p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("settings.userPermissions")}</p>
@@ -827,7 +827,7 @@ const Settings = () => {
               <button
                 type="button"
                 onClick={() => setIsPermOpen(false)}
-                className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-600 hover:border-indigo-200 hover:text-indigo-700 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
+                className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-600 hover:border-[#a7c4f2] hover:text-[#004EB2] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
               >
                 {t("common.close")}
               </button>
@@ -893,7 +893,7 @@ const Settings = () => {
                     <button
                       type="button"
                       onClick={() => setIsPermOpen(false)}
-                      className="inline-flex h-9 items-center justify-center rounded-full border border-gray-200 bg-white px-4 text-xs font-semibold text-gray-700 hover:border-indigo-200 hover:text-indigo-700 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text"
+                      className="inline-flex h-9 items-center justify-center rounded-full border border-gray-200 bg-white px-4 text-xs font-semibold text-gray-700 hover:border-[#a7c4f2] hover:text-[#004EB2] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text"
                     >
                       Cancel
                     </button>
@@ -901,7 +901,7 @@ const Settings = () => {
                       type="button"
                       disabled={!canManage || actionLoading}
                       onClick={submitPermissions}
-                      className="inline-flex h-9 items-center justify-center rounded-full bg-indigo-600 px-4 text-xs font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="inline-flex h-9 items-center justify-center rounded-full bg-[#004EB2] px-4 text-xs font-semibold text-white hover:bg-[#003B86] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {actionLoading ? "Saving…" : "Save permissions"}
                     </button>
@@ -919,7 +919,7 @@ const Settings = () => {
 
       {isAddOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-[520px] rounded-2xl border border-gray-100 bg-white p-4 shadow-xl dark:border-volt-borderSoft dark:bg-volt-panel">
+          <div className="w-full max-w-[520px] app-surface-dialog p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">Add user</p>
@@ -928,7 +928,7 @@ const Settings = () => {
               <button
                 type="button"
                 onClick={() => setIsAddOpen(false)}
-                className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-600 hover:border-indigo-200 hover:text-indigo-700 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
+                className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-600 hover:border-[#a7c4f2] hover:text-[#004EB2] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
               >
                 Close
               </button>
@@ -983,7 +983,7 @@ const Settings = () => {
               <button
                 type="button"
                 onClick={() => setIsAddOpen(false)}
-                className="inline-flex h-9 items-center justify-center rounded-full border border-gray-200 bg-white px-4 text-xs font-semibold text-gray-700 hover:border-indigo-200 hover:text-indigo-700 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text"
+                className="inline-flex h-9 items-center justify-center rounded-full border border-gray-200 bg-white px-4 text-xs font-semibold text-gray-700 hover:border-[#a7c4f2] hover:text-[#004EB2] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text"
               >
                 Cancel
               </button>
@@ -991,7 +991,7 @@ const Settings = () => {
                 type="button"
                 disabled={actionLoading}
                 onClick={submitAdd}
-                className="inline-flex h-9 items-center justify-center rounded-full bg-indigo-600 px-4 text-xs font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-9 items-center justify-center rounded-full bg-[#004EB2] px-4 text-xs font-semibold text-white hover:bg-[#003B86] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {actionLoading ? "Creating…" : "Create user"}
               </button>
@@ -1001,7 +1001,7 @@ const Settings = () => {
       ) : null}
 
       <div className="grid gap-3 lg:grid-cols-2">
-        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
+        <div className="app-surface-panel p-4">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">Role Definitions</p>
           </div>
@@ -1014,7 +1014,7 @@ const Settings = () => {
                 </span>
                 <p className="text-xs font-semibold text-gray-700 dark:text-volt-text">Full platform access</p>
               </div>
-              <p className="mt-2 text-xs text-gray-500 dark:text-volt-muted2">
+              <p className="mt-2 text-xs text-gray-500 font-medium dark:text-volt-muted2">
                 Run/stop workflows, start any agent, approve all HITL gates, manage users, export data,
                 configure scenarios. Can modify RBAC roles.
               </p>
@@ -1027,7 +1027,7 @@ const Settings = () => {
                 </span>
                 <p className="text-xs font-semibold text-gray-700 dark:text-volt-text">Workflow + HITL</p>
               </div>
-              <p className="mt-2 text-xs text-gray-500 dark:text-volt-muted2">
+              <p className="mt-2 text-xs text-gray-500 font-medium dark:text-volt-muted2">
                 Start/pause/resume workflows, click “Run from here” on agents, approve G1–G5 gates,
                 edit leads. Cannot manage users.
               </p>
@@ -1040,7 +1040,7 @@ const Settings = () => {
                 </span>
                 <p className="text-xs font-semibold text-gray-700 dark:text-volt-text">HITL only</p>
               </div>
-              <p className="mt-2 text-xs text-gray-500 dark:text-volt-muted2">
+              <p className="mt-2 text-xs text-gray-500 font-medium dark:text-volt-muted2">
                 Review and approve/reject HITL gates (G1–G5). Can view lead details and edit content.
                 Cannot start workflows or agents.
               </p>
@@ -1053,14 +1053,14 @@ const Settings = () => {
                 </span>
                 <p className="text-xs font-semibold text-gray-700 dark:text-volt-text">Read-only</p>
               </div>
-              <p className="mt-2 text-xs text-gray-500 dark:text-volt-muted2">
+              <p className="mt-2 text-xs text-gray-500 font-medium dark:text-volt-muted2">
                 View dashboard, lead list, workflow status, analytics. No edit or action permissions.
               </p>
             </div>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
+        <div className="app-surface-panel p-4">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">Access Audit Log</p>
             <span className="text-xs text-gray-400 dark:text-volt-muted2">Last 24h</span>
@@ -1076,7 +1076,7 @@ const Settings = () => {
                 <div className="min-w-0">
                   <p className="text-xs font-semibold text-gray-800 dark:text-white">{item.text}</p>
                   <p
-                    className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2"
+                    className="mt-1  text-xs font-medium text-gray-500 dark:text-volt-muted2"
                     title={new Date(item.at).toLocaleString()}
                   >
                     {formatRelativeTime(item.at)} • {item.role}

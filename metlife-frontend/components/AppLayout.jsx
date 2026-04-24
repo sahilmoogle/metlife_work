@@ -2,9 +2,10 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import mainIcon from "../src/assets/images/main-icon.jpg";
-import lightIcon from "../src/assets/images/light.jpg";
 import userIcon from "../src/assets/images/user.jpg";
 import { useTranslation } from "react-i18next";
+import sidebarPhoto from "../src/assets/images/sidebar-japan-art.png";
+
 import {
   LayoutDashboard,
   BarChart3,
@@ -16,9 +17,10 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  Sun,
+  Moon,
 } from "lucide-react";
-
-
 
 const navItems = [
   { key: "dashboard", path: "/dashboard", icon: LayoutDashboard },
@@ -100,10 +102,10 @@ const AppLayout = () => {
 
   return (
     <div
-      className="h-screen overflow-hidden bg-[#f6f8fc] dark:bg-gradient-to-b dark:from-volt-bg1 dark:via-volt-bg0 dark:to-volt-bg0"
+      className="h-screen overflow-hidden bg-[#f3f6fb] dark:bg-volt-bg0"
     >
       <div
-        className="flex h-screen w-full overflow-hidden bg-white shadow-sm dark:bg-volt-panel dark:shadow-volt-card dark:ring-1 dark:ring-volt-borderSoft"
+        className="flex h-screen w-full overflow-hidden bg-white shadow-sm dark:bg-volt-bg1 dark:shadow-[0_18px_60px_rgba(0,0,0,0.55)] dark:ring-1 dark:ring-volt-borderSoft"
       >
         {/* Mobile overlay */}
         {sidebarOpen ? (
@@ -115,28 +117,42 @@ const AppLayout = () => {
           />
         ) : null}
 
-        {/* Sidebar */}
+        {/* Sidebar — photo layer + gradient so the skyline stays visible and sharp */}
         <aside
-          className={`fixed left-0 top-0 z-50 h-full w-[280px] overflow-y-auto border-r border-gray-100 bg-white p-4 transition-[transform,width] duration-200 lg:static lg:z-auto lg:h-full lg:flex-none lg:translate-x-0 lg:overflow-y-auto lg:block dark:border-volt-borderSoft dark:bg-volt-panel ${
+          className={`fixed left-0 top-0 z-50 h-full w-[280px] overflow-x-hidden overflow-y-hidden border-r border-white/10 bg-[#0b1830] text-white transition-[transform,width] duration-200 lg:static lg:z-auto lg:h-full lg:flex-none lg:translate-x-0 lg:block dark:border-volt-borderSoft dark:text-volt-text ${
             sidebarCollapsed ? "lg:w-[84px]" : "lg:w-[255px]"
           } ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
         >
-          <div className={`mb-8 ${sidebarCollapsed ? "lg:flex lg:flex-col lg:items-center lg:gap-2" : "flex items-center gap-3"}`}>
+          <div className="pointer-events-none absolute inset-0 z-0">
+            <img
+              src={sidebarPhoto}
+              alt=""
+              className="h-full w-full object-cover object-center dark:brightness-[0.95] dark:contrast-[1.06]"
+              decoding="async"
+              fetchPriority="high"
+            />
+          </div>
+          <div
+            className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-b from-[#050f1f]/78 from-0% via-[#050f1f]/38 via-[40%] to-transparent to-[100%] dark:from-[#020617]/56 dark:via-[#020617]/18 dark:to-transparent"
+            aria-hidden
+          />
+          <div className="relative z-10 flex h-full min-h-0 flex-col overflow-y-auto p-4 [text-shadow:0_1px_2px_rgba(0,0,0,0.45)]">
+            <div className={`mb-8 ${sidebarCollapsed ? "lg:flex lg:flex-col lg:items-center lg:gap-2" : "flex items-center gap-3"}`}>
             <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 text-sm font-bold text-indigo-700">
               <img src={mainIcon} alt="icon" className="w-8 h-8" />
             </div>
 
             {!sidebarCollapsed ? (
               <div className="min-w-0">
-                <h1 className="truncate text-sm font-bold text-indigo-700">{t("brand.name")}</h1>
-                <p className="truncate text-[11px] text-gray-400 dark:text-volt-muted">{t("brand.tagline")}</p>
+                <h1 className="truncate text-sm font-semibold text-white dark:text-volt-text">{t("brand.name")}</h1>
+                <p className="truncate text-[11px] text-white/70 dark:text-volt-muted">{t("brand.tagline")}</p>
               </div>
             ) : null}
 
             {/* Mobile close */}
             <button
               type="button"
-              className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition hover:border-indigo-200 hover:text-indigo-700 lg:hidden dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
+              className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/10 text-white/80 transition hover:bg-white/15 hover:text-white lg:hidden dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
               aria-label="Close sidebar"
               onClick={() => setSidebarOpen(false)}
             >
@@ -146,9 +162,8 @@ const AppLayout = () => {
             {/* Desktop collapse/expand */}
             <button
               type="button"
-              className={`hidden h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition hover:border-indigo-200 hover:text-indigo-700 lg:inline-flex dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted ${
-                sidebarCollapsed ? "lg:ml-0" : "ml-auto"
-              }`}
+              className={`hidden h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/10 text-white/80 transition hover:bg-white/15 hover:text-white lg:inline-flex dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted ${sidebarCollapsed ? "lg:ml-0" : "ml-auto"
+                }`}
               aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               onClick={() => setSidebarCollapsed((v) => !v)}
@@ -166,11 +181,10 @@ const AppLayout = () => {
                   to={item.path}
                   title={sidebarCollapsed ? t(`nav.${item.key}`, { defaultValue: item.key }) : undefined}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 rounded-lg px-3 py-2 transition ${
-                      sidebarCollapsed ? "lg:justify-center" : ""
+                    `flex items-center gap-3 rounded-xl px-3 py-2 transition ${sidebarCollapsed ? "lg:justify-center" : ""
                     } ${isActive
-                      ? "bg-indigo-50 font-medium text-indigo-700 dark:bg-white/10 dark:text-volt-text"
-                      : "text-gray-500 hover:bg-gray-50 hover:text-gray-700 dark:text-volt-muted dark:hover:bg-white/10 dark:hover:text-volt-text"
+                      ? "bg-white/15 font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_0_28px_rgba(124,158,255,0.22)] ring-1 ring-white/20 dark:bg-white/12 dark:text-volt-text dark:ring-[rgba(124,158,255,0.35)]"
+                      : "text-white/80 hover:bg-white/10 hover:text-white dark:text-volt-muted dark:hover:bg-white/10 dark:hover:text-volt-text"
                     }`
                   }
                 >
@@ -182,10 +196,11 @@ const AppLayout = () => {
               );
             })}
           </nav>
+          </div>
         </aside>
 
         <main className="flex-1 flex flex-col">
-          <header className="flex flex-none flex-wrap items-start justify-between gap-3 border-b border-gray-100 bg-white px-4 py-3 shadow-sm dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-[0_10px_30px_rgba(7,4,26,0.45)] sm:px-6">
+          <header className="flex flex-none flex-wrap items-start justify-between gap-3 border-b border-gray-100 bg-white px-4 py-3 shadow-sm sm:px-6 dark:border-volt-borderSoft/70 dark:bg-[linear-gradient(165deg,rgba(22,40,78,0.94),rgba(11,22,46,0.9))] dark:backdrop-blur-md dark:shadow-[0_18px_55px_rgba(0,0,0,0.58)]">
             <div>
               <button
                 type="button"
@@ -201,51 +216,39 @@ const AppLayout = () => {
               <p className="text-xs text-gray-500 dark:text-volt-muted">{t(meta.subtitleKey)}</p>
             </div>
             <div className="flex items-center gap-3">
-
-              <div className="rounded-md border border-indigo-200 p-0.5 text-xs dark:border-volt-borderSoft dark:bg-white/5">
-                <button
-                  type="button"
-                  onClick={() => i18n.changeLanguage("en")}
-                  className={`rounded px-2 py-1 ${i18n.language === "en"
-                    ? "bg-indigo-600 text-white"
-                    : "text-gray-500 hover:bg-indigo-50 dark:text-volt-muted dark:hover:bg-white/10"
-                    }`}
+              <div className="relative inline-flex items-center rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs shadow-sm dark:border-volt-borderSoft/80 dark:bg-[linear-gradient(180deg,rgba(20,38,74,0.9),rgba(12,22,46,0.88))] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                <span className="mr-2 inline-block h-2 w-2 rounded-full bg-indigo-500/80" />
+                <select
+                  value={i18n.language}
+                  onChange={(e) => i18n.changeLanguage(e.target.value)}
+                  className="cursor-pointer appearance-none bg-transparent pr-6 text-xs font-semibold text-gray-900 outline-none dark:text-white"
+                  aria-label="Language"
                 >
-                  {t("language.en")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => i18n.changeLanguage("jp")}
-                  className={`rounded px-2 py-1 ${i18n.language === "jp"
-                    ? "bg-indigo-600 text-white"
-                    : "text-gray-500 hover:bg-indigo-50 dark:text-volt-muted dark:hover:bg-white/10"
-                    }`}
-                >
-                  {t("language.jp")}
-                </button>
-
+                  <option value="en">{t("language.en")}</option>
+                  <option value="jp">{t("language.jp")}</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2 h-4 w-4 text-gray-500 dark:text-volt-muted" />
               </div>
               <button
                 type="button"
                 onClick={() => setIsDark((v) => !v)}
-                className="rounded-md ring-1 ring-transparent transition hover:ring-indigo-200 dark:hover:ring-volt-borderSoft"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm transition hover:border-indigo-200 hover:text-[#004EB2] dark:border-volt-borderSoft/80 dark:bg-[linear-gradient(180deg,rgba(20,38,74,0.9),rgba(12,22,46,0.88))] dark:text-white dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
                 aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
                 title={isDark ? "Light mode" : "Dark mode"}
               >
-                <img
-                  alt="icon"
-                  src="/src/assets/images/light.jpg"
-                  className="rounded-full"
-                />
+                {isDark ? <Sun className="h-4.5 w-4.5" /> : <Moon className="h-4.5 w-4.5" />}
               </button>
-              <img src={userIcon} alt="icon" className="w-9 h-9 rounded-full" />              <div className="hidden items-center gap-2  bg-gray-10 px-3 py-1.5 sm:flex">
-                {/* <div className="h-8 w-8 rounded-full bg-indigo-600" /> */}
-
-                <div>
-                  <p className="text-xs font-medium text-gray-800 dark:text-volt-text">
+              <div className="hidden items-center gap-2 sm:flex">
+                <img
+                  src={userIcon}
+                  alt="User avatar"
+                  className="h-9 w-9 rounded-full object-cover ring-1 ring-gray-200 dark:ring-volt-borderSoft"
+                />
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-medium text-gray-800 dark:text-volt-text">
                     {user?.name || "Authenticated User"}
                   </p>
-                  <p className="text-[11px] text-gray-400 dark:text-volt-muted">
+                  <p className="truncate text-[11px] text-gray-400 dark:text-volt-muted">
                     {user?.email || "user@domain.com"}
                   </p>
                 </div>
@@ -254,14 +257,14 @@ const AppLayout = () => {
               <button
                 type="button"
                 onClick={logout}
-                className="rounded-full border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-indigo-300 hover:text-indigo-700 dark:border-volt-borderSoft dark:text-volt-muted dark:hover:border-volt-border dark:hover:text-volt-text"
+                className="rounded-full border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-indigo-300 hover:text-indigo-700 dark:border-[#122046] dark:text-slate-200 dark:hover:border-[#243a72] dark:hover:text-white"
               >
                 {t("common.logout")}
               </button>
             </div>
           </header>
 
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+          <div className="app-dark-main-fill flex-1 overflow-y-auto bg-transparent p-4 sm:p-6">
             <Outlet />
           </div>
         </main>
