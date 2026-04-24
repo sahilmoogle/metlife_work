@@ -141,7 +141,7 @@ const ReviewDetail = () => {
 
   if (loading) {
     return (
-      <section className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
+      <section className="app-surface-card p-4">
         <p className="text-sm text-gray-600 dark:text-volt-muted">Loading review…</p>
       </section>
     );
@@ -154,7 +154,7 @@ const ReviewDetail = () => {
           <p className="text-sm text-amber-900 dark:text-amber-100">{loadError}</p>
           <button
             type="button"
-            className="text-sm font-semibold text-indigo-700 underline"
+            className="text-sm font-semibold text-[#004EB2] underline"
             onClick={() => setRefreshKey((k) => k + 1)}
           >
             Retry
@@ -175,11 +175,11 @@ const ReviewDetail = () => {
 
   return (
     <section className="space-y-3">
-      <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
+      <div className="app-surface-card p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <Link to="/reviews" className="text-xs font-semibold text-indigo-700 hover:underline">
+              <Link to="/reviews" className="text-xs font-semibold text-[#004EB2] hover:underline">
                 ← Back
               </Link>
               <span className="text-[11px] font-semibold text-gray-400">/</span>
@@ -192,11 +192,11 @@ const ReviewDetail = () => {
       </div>
 
       <div className="grid gap-3 lg:grid-cols-[320px_1fr]">
-        <aside className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
+        <aside className="app-surface-card p-4">
           <p className="text-xs font-semibold text-[#1e2a52] dark:text-white">Lead Information</p>
 
-          <div className="mt-3 flex items-center gap-3 rounded-xl bg-indigo-50/60 p-3 dark:bg-indigo-500/10">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-xs font-bold text-indigo-700 ring-1 ring-indigo-100 dark:bg-volt-card/60 dark:text-indigo-200 dark:ring-volt-borderSoft">
+          <div className="mt-3 flex items-center gap-3 rounded-xl bg-[#eaf2ff]/70 p-3 dark:bg-indigo-500/10">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-xs font-bold text-[#004EB2] ring-1 ring-[#cfe0ff] dark:bg-volt-card/60 dark:text-indigo-200 dark:ring-volt-borderSoft">
               {initials}
             </div>
             <div className="min-w-0">
@@ -254,7 +254,7 @@ const ReviewDetail = () => {
           </div>
         </aside>
 
-        <article className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
+        <article className="app-surface-card p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-xs font-semibold text-[#1e2a52] dark:text-white">Draft preview</p>

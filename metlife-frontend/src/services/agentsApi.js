@@ -79,6 +79,24 @@ export const getWorkflowStatus = async (token, threadId) => {
   return payload?.data;
 };
 
+/** GET /agents/{thread_id}/history — LangGraph execution_log audit trail. */
+export const getWorkflowHistory = async (token, threadId) => {
+  const safeId = encodeURIComponent(threadId);
+  const response = await fetch(`${buildUrl(envConfig.agentsPath)}/${safeId}/history`, {
+    method: "GET",
+    headers: authedHeaders(token),
+  });
+
+  if (!response.ok) {
+    const message = await parseApiError(response, "Failed to load workflow history.");
+    const err = new Error(message);
+    err.status = response.status;
+    throw err;
+  }
+  const payload = await response.json();
+  return payload?.data;
+};
+
 export const getLatestBatch = async (token) => {
   const response = await fetch(`${buildUrl(envConfig.agentsPath)}/batch/latest`, {
     method: "GET",

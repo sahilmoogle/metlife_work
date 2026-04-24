@@ -11,14 +11,14 @@ import { formatRelativeTime } from "../src/utils/relativeTime";
 import { useRelativeClock } from "../src/hooks/useRelativeClock";
 
 const statusStyles = {
-  Active: "bg-emerald-50 text-emerald-700",
-  Processing: "bg-sky-50 text-sky-700",
-  New: "bg-amber-50 text-amber-700",
-  Pending_HITL: "bg-rose-50 text-rose-700",
-  HITL: "bg-rose-50 text-rose-700",
-  Converted: "bg-indigo-50 text-indigo-700",
-  Dormant: "bg-gray-100 text-gray-600",
-  Suppressed: "bg-gray-100 text-gray-500",
+  Active: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200",
+  Processing: "bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-200",
+  New: "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-200",
+  Pending_HITL: "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-200",
+  HITL: "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-200",
+  Converted: "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-200",
+  Dormant: "bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-volt-muted2",
+  Suppressed: "bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-volt-muted2",
 };
 
 const SCENARIO_NAMES = {
@@ -35,29 +35,29 @@ const scenarioLabel = (id) =>
   id ? `${id} · ${SCENARIO_NAMES[id] ?? id}` : "—";
 
 const chip = {
-  Low: "bg-gray-100 text-gray-700",
-  Medium: "bg-amber-50 text-amber-700",
-  High: "bg-rose-50 text-rose-700",
-  Rising: "bg-emerald-50 text-emerald-700",
-  Steady: "bg-indigo-50 text-indigo-700",
+  Low: "bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-volt-text",
+  Medium: "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-200",
+  High: "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-200",
+  Rising: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200",
+  Steady: "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-200",
 };
 
 const StepStateIcon = ({ state }) => {
   const base = "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[11px] font-bold";
   if (state === "completed") {
-    return <div className={`${base} border-emerald-200 bg-emerald-50 text-emerald-700`}>✓</div>;
+    return <div className={`${base} border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200`}>✓</div>;
   }
   if (state === "active") {
-    return <div className={`${base} border-sky-200 bg-sky-50 text-sky-700`}>•</div>;
+    return <div className={`${base} border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-200`}>•</div>;
   }
   if (state === "skipped") {
     return (
-      <div className={`${base} border-amber-200 bg-amber-50 text-amber-700`} title="Not reached">
+      <div className={`${base} border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200`} title="Not reached">
         —
       </div>
     );
   }
-  return <div className={`${base} border-gray-200 bg-gray-50 text-gray-400`}>○</div>;
+  return <div className={`${base} border-gray-200 bg-gray-50 text-gray-400 dark:border-volt-borderSoft dark:bg-white/5 dark:text-volt-muted2`}>○</div>;
 };
 
 /** Typical nurture path (S1–S5); S4 revival may insert A10 before this chain. */
@@ -358,7 +358,7 @@ const LeadDetail = () => {
 
   if (loading) {
     return (
-      <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
+      <section className="app-surface-card p-6">
         <p className="text-sm text-gray-600 dark:text-volt-muted">Loading lead…</p>
       </section>
     );
@@ -401,7 +401,7 @@ const LeadDetail = () => {
   const urgencyChip = lead.urgency && chip[lead.urgency] ? chip[lead.urgency] : chip.Medium;
 
   return (
-    <section className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm sm:p-4 dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
+    <section className="app-surface-card p-3 sm:p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">

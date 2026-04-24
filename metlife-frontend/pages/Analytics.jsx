@@ -11,12 +11,12 @@ const ranges = [
 
 /** Visual tokens for KPI cards (API returns data only; styling stays in UI). */
 const KPI_CARD_STYLES = [
-  { bar: "bg-emerald-500", valueTone: "text-emerald-700", subTone: "text-gray-500" },
-  { bar: "bg-blue-500", valueTone: "text-blue-700", subTone: "text-gray-400" },
-  { bar: "bg-amber-500", valueTone: "text-amber-700", subTone: "text-emerald-700" },
-  { bar: "bg-cyan-500", valueTone: "text-cyan-700", subTone: "text-gray-400" },
-  { bar: "bg-violet-500", valueTone: "text-violet-700", subTone: "text-gray-400" },
-  { bar: "bg-teal-500", valueTone: "text-teal-700", subTone: "text-gray-400" },
+  { bar: "bg-emerald-500", valueTone: "text-emerald-700 dark:text-emerald-200", subTone: "text-gray-500 dark:text-volt-muted" },
+  { bar: "bg-blue-500", valueTone: "text-blue-700 dark:text-sky-200", subTone: "text-gray-500 dark:text-volt-muted" },
+  { bar: "bg-amber-500", valueTone: "text-amber-700 dark:text-amber-200", subTone: "text-gray-500 dark:text-volt-muted" },
+  { bar: "bg-cyan-500", valueTone: "text-cyan-700 dark:text-cyan-200", subTone: "text-gray-500 dark:text-volt-muted" },
+  { bar: "bg-violet-500", valueTone: "text-violet-700 dark:text-fuchsia-200", subTone: "text-gray-500 dark:text-volt-muted" },
+  { bar: "bg-teal-500", valueTone: "text-teal-700 dark:text-teal-200", subTone: "text-gray-500 dark:text-volt-muted" },
 ];
 
 const SCENARIO_BAR = {
@@ -30,13 +30,13 @@ const SCENARIO_BAR = {
 };
 
 const AGENT_ROW_TONE = {
-  A1_Identity: "text-cyan-700",
-  A2_Persona: "text-cyan-700",
-  A3_Intent: "text-amber-700",
-  A4_A5_Content: "text-amber-700",
-  A6_Send: "text-blue-700",
-  A8_Scoring: "text-violet-700",
-  A9_Handoff: "text-emerald-700",
+  A1_Identity: "text-cyan-700 dark:text-cyan-200",
+  A2_Persona: "text-cyan-700 dark:text-cyan-200",
+  A3_Intent: "text-amber-700 dark:text-amber-200",
+  A4_A5_Content: "text-amber-700 dark:text-amber-200",
+  A6_Send: "text-blue-700 dark:text-sky-200",
+  A8_Scoring: "text-violet-700 dark:text-fuchsia-200",
+  A9_Handoff: "text-emerald-700 dark:text-emerald-200",
 };
 
 const EMAIL_METRIC_LABEL = {
@@ -129,11 +129,11 @@ const Analytics = () => {
         </div>
       ) : null}
 
-      <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
+      <div className="app-surface-card p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold text-[#1e2a52] dark:text-white">{translate("analytics.title")}</h2>
-            <p className="mt-1 text-xs text-gray-500 dark:text-volt-muted">
+            <p className="mt-1 text-xs text-gray-500 dark:text-volt-muted dark:opacity-95">
               {translate("analytics.subtitle", { range: loading ? translate("common.loading") : rangeLabel })}
             </p>
           </div>
@@ -150,7 +150,7 @@ const Analytics = () => {
                     disabled={loading}
                     className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
                       active
-                        ? "bg-white text-indigo-700 shadow-sm dark:bg-volt-card/60 dark:shadow-none"
+                        ? "bg-white text-[#004EB2] shadow-sm dark:bg-volt-card/60 dark:shadow-none"
                         : "text-gray-600 hover:text-gray-800 dark:text-volt-muted dark:hover:text-volt-text"
                     }`}
                   >
@@ -164,7 +164,7 @@ const Analytics = () => {
               type="button"
               onClick={exportJson}
               disabled={!data}
-              className="inline-flex h-9 items-center gap-2 rounded-full border border-gray-200 bg-white px-4 text-xs font-semibold text-gray-700 hover:border-indigo-200 hover:text-indigo-700 disabled:opacity-50 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text dark:hover:border-volt-border dark:hover:text-white"
+              className="inline-flex h-9 items-center gap-2 rounded-full border border-gray-200 bg-white px-4 text-xs font-semibold text-gray-700 hover:border-[#a7c4f2] hover:text-[#004EB2] disabled:opacity-50 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text dark:hover:border-volt-border dark:hover:text-white"
             >
               {translate("common.export")}
               <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
@@ -193,9 +193,9 @@ const Analytics = () => {
             : kpisWithStyle.map((k) => (
                 <div
                   key={k.title}
-                  className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:shadow-none"
+                  className="relative overflow-hidden rounded-3xl border border-gray-200/90 bg-white p-4 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-volt-borderSoft dark:bg-volt-card/75 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] dark:ring-1 dark:ring-white/[0.06]"
                 >
-                  <div className={`absolute left-0 top-0 h-1 w-full ${k.bar}`} />
+                  <div className={`absolute left-0 top-0 h-1 w-full dark:h-0.5 dark:opacity-90 ${k.bar}`} />
                   <p className="text-xs font-medium text-gray-500 dark:text-volt-muted">{k.title}</p>
                   <p className={`mt-2 text-2xl font-semibold tracking-tight ${k.valueTone}`}>{k.value}</p>
                   <p className={`mt-1 text-[11px] font-medium ${k.subTone}`}>{k.sub}</p>
@@ -205,10 +205,10 @@ const Analytics = () => {
       </div>
 
       <div className="grid gap-3 xl:grid-cols-[2fr_1fr]">
-        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
+        <div className="app-surface-card p-4">
           <div className="mb-3">
             <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{translate("analytics.weekly.title")}</p>
-            <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">{translate("analytics.weekly.subtitle")}</p>
+            <p className="mt-1 text-[11px] font-medium text-gray-500 dark:text-volt-muted2">{translate("analytics.weekly.subtitle")}</p>
           </div>
 
           <div className="flex items-end justify-between gap-3">
@@ -248,10 +248,10 @@ const Analytics = () => {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
+        <div className="app-surface-card p-4">
           <div className="mb-3">
             <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{translate("analytics.scenarioConversion.title")}</p>
-            <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">{translate("analytics.scenarioConversion.subtitle")}</p>
+            <p className="mt-1 text-[11px] text-gray-500 font-medium dark:text-volt-muted2">{translate("analytics.scenarioConversion.subtitle")}</p>
           </div>
 
           <div className="space-y-3">
@@ -273,7 +273,7 @@ const Analytics = () => {
                 <div className="w-10 text-right text-xs font-semibold text-gray-700 dark:text-volt-text">
                   {s.conversion_pct.toFixed(1)}%
                 </div>
-                <div className="w-14 text-right text-xs text-gray-400 dark:text-volt-muted2">
+                <div className="w-14 text-right text-xs text-gray-500  font-medium   dark:text-volt-muted2">
                   {formatInt(s.converted_count)}/{formatInt(s.total_leads_in_period)}
                 </div>
               </div>
@@ -286,10 +286,10 @@ const Analytics = () => {
       </div>
 
       <div className="grid gap-3 xl:grid-cols-3">
-        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
+        <div className="app-surface-card p-4">
           <div className="mb-3">
             <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{translate("analytics.agentPerf.title")}</p>
-            <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">
+            <p className="mt-1 text-[11px]  font-medium text-gray-500 dark:text-volt-muted2">
               {translate("analytics.agentPerf.subtitle")}
             </p>
           </div>
@@ -330,10 +330,10 @@ const Analytics = () => {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
+        <div className="app-surface-card p-4">
           <div className="mb-3">
             <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{translate("analytics.emailPerf.title")}</p>
-            <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">{translate("analytics.emailPerf.subtitle")}</p>
+            <p className="mt-1 text-[11px] text-gray-500 font-medium dark:text-volt-muted2">{translate("analytics.emailPerf.subtitle")}</p>
           </div>
 
           <div className="space-y-3">
@@ -388,10 +388,10 @@ const Analytics = () => {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
+        <div className="app-surface-card p-4">
           <div className="mb-3">
             <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{translate("analytics.hitlGate.title")}</p>
-            <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">{translate("analytics.hitlGate.subtitle")}</p>
+            <p className="mt-1 text-[11px] text-gray-500 font-medium dark:text-volt-muted2">{translate("analytics.hitlGate.subtitle")}</p>
           </div>
 
           <div className="space-y-2">
@@ -418,14 +418,14 @@ const Analytics = () => {
               return (
                 <div
                   key={g.gate}
-                  className="rounded-2xl border border-gray-100 bg-white p-3 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:shadow-none"
+                  className="app-surface-nested p-3"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <span className={`inline-flex rounded-full px-3 py-1 text-[11px] font-semibold ring-1 ${chipTone}`}>
                         {g.title}
                       </span>
-                      <p className="mt-2 text-[11px] text-gray-400 dark:text-volt-muted2">{meta}</p>
+                      <p className="mt-2 text-[11px] text-gray-500 font-medium dark:text-volt-muted2">{meta}</p>
                     </div>
                     <p className={`text-lg font-semibold ${pctTone}`}>{pct}</p>
                   </div>
@@ -442,10 +442,10 @@ const Analytics = () => {
       </div>
 
       <div className="grid gap-3 lg:grid-cols-2">
-        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
+        <div className="app-surface-card p-4">
           <div className="mb-3">
             <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{translate("analytics.scoreDist.title")}</p>
-            <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">{translate("analytics.scoreDist.subtitle")}</p>
+            <p className="mt-1 text-[11px] text-gray-500 font-medium dark:text-volt-muted2">{translate("analytics.scoreDist.subtitle")}</p>
           </div>
 
           <div className="flex h-44 items-end justify-between gap-2 rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-100 dark:bg-white/5 dark:ring-volt-borderSoft">
@@ -462,7 +462,7 @@ const Analytics = () => {
             ) : null}
           </div>
 
-          <div className="mt-3 flex items-center justify-between text-[11px] text-gray-500 dark:text-volt-muted2">
+          <div className="mt-3 flex items-center justify-between text-[11px] text-gray-500 font-medium dark:text-volt-muted2">
             <span>{translate("analytics.scoreDist.below", { count: formatInt(data?.score_insights?.below_0_40 ?? 0) })}</span>
             <span className="font-semibold text-emerald-700">
               {translate("analytics.scoreDist.above", { count: formatInt(data?.score_insights?.above_0_70 ?? 0) })}
@@ -470,10 +470,10 @@ const Analytics = () => {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
+        <div className="app-surface-card p-4">
           <div className="mb-3">
             <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{translate("analytics.llm.title")}</p>
-            <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">{translate("analytics.llm.subtitle")}</p>
+            <p className="mt-1 text-[11px] text-gray-500 font-medium dark:text-volt-muted2">{translate("analytics.llm.subtitle")}</p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">

@@ -13,8 +13,8 @@ const queueTabs = [
 ];
 
 const chipStyles = {
-  pending: "bg-amber-50 text-amber-700",
-  resolved: "bg-emerald-50 text-emerald-700",
+  pending: "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-200",
+  resolved: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200",
 };
 
 const gateFilters = [
@@ -162,18 +162,18 @@ const Reviews = () => {
 
   return (
     <section className="space-y-3">
-      <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-none">
+      <div className="app-surface-card p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h3 className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("reviews.title")}</h3>
-            <p className="mt-0.5 text-xs text-gray-500 dark:text-volt-muted">
+            <p className="mt-0.5 text-xs font-medium text-gray-500 dark:text-volt-muted2">
               {t("reviews.subtitle")}
             </p>
           </div>
           <button
             type="button"
             onClick={() => setRefreshKey((k) => k + 1)}
-            className="inline-flex h-8 items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition hover:border-indigo-200 hover:text-indigo-700 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
+            className="inline-flex h-8 items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition hover:border-[#a7c4f2] hover:text-[#004EB2] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
           >
             <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5" aria-hidden="true">
               <path d="M4 4v5h5M20 20v-5h-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -185,7 +185,7 @@ const Reviews = () => {
       </div>
 
       {/* Pending / Resolved tabs */}
-      <div className="rounded-xl border border-gray-100 bg-white p-3 dark:border-volt-borderSoft dark:bg-volt-panel">
+      <div className="app-surface-card p-3">
         <div className="flex flex-wrap items-center gap-2">
           {queueTabs.map((tab) => {
             const isActive = activeTab === tab.key;
@@ -198,8 +198,8 @@ const Reviews = () => {
                 onClick={() => setActiveTab(tab.key)}
                 className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
                   isActive
-                    ? "bg-indigo-600 text-white shadow-sm"
-                    : "border border-gray-200 bg-white text-gray-600 hover:border-indigo-200 hover:text-indigo-700 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
+                    ? "bg-[#004EB2] text-white shadow-sm"
+                    : "border border-gray-200 bg-white text-gray-600 hover:border-[#a7c4f2] hover:text-[#004EB2] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
                 }`}
               >
                 <span
@@ -217,8 +217,8 @@ const Reviews = () => {
       </div>
 
       {/* Gate filters */}
-      <div className="rounded-xl border border-gray-100 bg-white p-3 dark:border-volt-borderSoft dark:bg-volt-panel">
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-volt-muted2">
+      <div className="app-surface-card p-3">
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-600 dark:text-volt-muted2">
           {t("reviews.filterByGate")}
         </p>
         <div className="flex flex-wrap gap-2">
@@ -232,15 +232,15 @@ const Reviews = () => {
                 onClick={() => setActiveGate(g.key)}
                 className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
                   isActive
-                    ? "border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-500/40 dark:bg-indigo-500/10 dark:text-indigo-300"
-                    : "border-gray-200 bg-white text-gray-600 hover:border-indigo-200 hover:bg-indigo-50/50 hover:text-indigo-700 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted dark:hover:border-indigo-500/30"
+                    ? "border-[#cfe0ff] bg-[#eaf2ff] text-[#004EB2] dark:border-indigo-500/40 dark:bg-indigo-500/10 dark:text-indigo-300"
+                    : "border-gray-200 bg-white text-gray-600 hover:border-[#a7c4f2] hover:bg-[#eaf2ff]/60 hover:text-[#004EB2] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted dark:hover:border-indigo-500/30"
                 }`}
               >
                 {t(g.labelKey)}
                 <span
                   className={`inline-flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[10px] font-bold ${
                     isActive
-                      ? "bg-indigo-200 text-indigo-800 dark:bg-indigo-500/30 dark:text-indigo-200"
+                      ? "bg-[#cfe0ff] text-[#003B86] dark:bg-indigo-500/30 dark:text-indigo-200"
                       : "bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-volt-muted2"
                   }`}
                 >
@@ -253,10 +253,10 @@ const Reviews = () => {
       </div>
 
       {/* List */}
-      <div className="rounded-xl border border-gray-100 bg-white p-3 dark:border-volt-borderSoft dark:bg-volt-panel">
+      <div className="app-surface-card p-3">
         {/* Per-page selector */}
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs text-gray-500 dark:text-volt-muted">
+          <p className="text-xs text-gray-700 dark:text-volt-muted">
             {filtered.length === 0
               ? `${t("common.noItems")}`
               : t("reviews.showing", {
@@ -285,7 +285,7 @@ const Reviews = () => {
               <p className="text-sm text-amber-900 dark:text-amber-100">{loadError}</p>
               <button
                 type="button"
-                className="mt-2 text-sm font-semibold text-indigo-700 underline"
+                className="mt-2 text-sm font-semibold text-[#004EB2] underline"
                 onClick={() => setRefreshKey((k) => k + 1)}
               >
                 {t("common.retry")}
@@ -308,7 +308,7 @@ const Reviews = () => {
             return (
               <article
                 key={item.thread_id}
-              className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-[0_1px_0_rgba(0,0,0,0.02)] transition hover:border-indigo-100 hover:bg-indigo-50/30 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:shadow-none dark:hover:border-indigo-500/20 dark:hover:bg-white/10"
+              className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-[0_1px_0_rgba(0,0,0,0.02)] transition hover:border-[#cfe0ff] hover:bg-[#eaf2ff]/40 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:shadow-none dark:hover:border-indigo-500/20 dark:hover:bg-white/10"
                 onClick={() => navigate(`/reviews/${item.thread_id}`)}
               >
                 <div className="flex min-w-0 items-center gap-3">
@@ -317,13 +317,13 @@ const Reviews = () => {
                   </div>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-gray-800 dark:text-white">{name}</p>
-                    <p className="truncate text-xs text-gray-400 dark:text-volt-muted2">
+                    <p className="truncate text-xs text-gray-600 dark:text-volt-muted2">
                       {item.scenario_id || "—"} • Score: {(item.engagement_score ?? 0).toFixed(2)}
                     </p>
                   </div>
                 </div>
                 <div className="flex flex-none items-center gap-3">
-                  <span className="hidden rounded-full bg-indigo-50 px-3 py-1 text-[11px] font-semibold text-indigo-700 sm:inline-flex dark:bg-indigo-500/15 dark:text-indigo-300">
+                  <span className="hidden rounded-full bg-[#eaf2ff] px-3 py-1 text-[11px] font-semibold text-[#004EB2] sm:inline-flex dark:bg-indigo-500/15 dark:text-indigo-300">
                     {step}
                   </span>
                   <span className="text-xs text-gray-400 dark:text-volt-muted2" title={item.created_at ? new Date(item.created_at).toLocaleString() : undefined}>
@@ -358,7 +358,7 @@ const Reviews = () => {
               type="button"
               disabled={safePage === 1}
               onClick={() => setPage((p) => p - 1)}
-            className="inline-flex h-8 items-center gap-1 rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition hover:border-indigo-200 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-40 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
+            className="inline-flex h-8 items-center gap-1 rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition hover:border-[#a7c4f2] hover:text-[#004EB2] disabled:cursor-not-allowed disabled:opacity-40 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
             >
               <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5" aria-hidden="true">
                 <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -377,8 +377,8 @@ const Reviews = () => {
                     onClick={() => setPage(n)}
                     className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold transition ${
                       n === safePage
-                        ? "bg-indigo-600 text-white shadow-sm"
-                        : "border border-gray-200 bg-white text-gray-600 hover:border-indigo-200 hover:text-indigo-700 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
+                        ? "bg-[#004EB2] text-white shadow-sm"
+                        : "border border-gray-200 bg-white text-gray-600 hover:border-[#a7c4f2] hover:text-[#004EB2] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
                     }`}
                   >
                     {n}
@@ -391,7 +391,7 @@ const Reviews = () => {
               type="button"
               disabled={safePage === totalPages}
               onClick={() => setPage((p) => p + 1)}
-              className="inline-flex h-8 items-center gap-1 rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition hover:border-indigo-200 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-40 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
+              className="inline-flex h-8 items-center gap-1 rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition hover:border-[#a7c4f2] hover:text-[#004EB2] disabled:cursor-not-allowed disabled:opacity-40 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
             >
               {t("common.next")}
               <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5" aria-hidden="true">
