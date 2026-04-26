@@ -283,7 +283,25 @@ const ReviewDetail = () => {
             {!editMode ? (
               <>
                 <p className="font-semibold text-gray-700 dark:text-volt-text">Subject: {data.draft_subject || "—"}</p>
-                <div className="mt-2 whitespace-pre-wrap">{data.draft_body || "—"}</div>
+                {data.draft_body && data.draft_body.trim().startsWith("<") ? (
+                  <div className="mt-2 overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-volt-borderSoft">
+                    <iframe
+                      title="Email preview"
+                      sandbox=""
+                      srcDoc={data.draft_body}
+                      className="w-full border-0"
+                      style={{ minHeight: 420, background: "#fff" }}
+                      onLoad={(e) => {
+                        const doc = e.target.contentDocument;
+                        if (doc?.body) {
+                          e.target.style.height = `${doc.body.scrollHeight + 24}px`;
+                        }
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div className="mt-2 whitespace-pre-wrap">{data.draft_body || "—"}</div>
+                )}
               </>
             ) : (
               <div className="space-y-3">

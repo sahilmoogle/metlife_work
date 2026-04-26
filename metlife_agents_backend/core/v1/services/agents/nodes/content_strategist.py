@@ -41,30 +41,27 @@ async def content_strategist(state: dict, *, db=None) -> dict:
     )
     start = time.perf_counter()
 
-    email_number = state.get("email_number", 0) + 1
+    is_g1_rejection = (
+        state.get("hitl_gate") == "G1"
+        and state.get("hitl_resume_value") == "rejected"
+        and state.get("email_number", 0) > 0
+    )
+    email_number = (
+        state.get("email_number", 0)
+        if is_g1_rejection
+        else state.get("email_number", 0) + 1
+    )
     state["email_number"] = email_number
     scenario = state.get("scenario", "S1")
 
-    # For G1 rejection on an existing asset, force LLM regeneration
-    if (
-        email_number == 1
-        and state.get("content_type") == "existing_asset"
-        and state.get("hitl_resume_value") == "rejected"
-    ):
+    # G1 rejection revises the current email; it must not advance the sequence.
+    if is_g1_rejection:
         state["content_type"] = "llm_generated"
+        state["draft_email_subject"] = None
+        state["draft_email_body"] = None
         state["current_node"] = NODE_ID
-        await event_manager.publish(
-            node_transition_event(
-                lead_id,
-                NODE_ID,
-                "completed",
-                f"email#{email_number} rejected→LLM",
-                batch_id=state.get("batch_id"),
-            )
-        )
-        return state
 
-    if email_number == 1:
+    if not is_g1_rejection and email_number == 1:
         # ── S6/S7: first email is always LLM-generated (MEMO context) ──
         if scenario in LLM_FIRST_EMAIL_SCENARIOS:
             state["content_type"] = "llm_generated"
@@ -143,7 +140,7 @@ async def content_strategist(state: dict, *, db=None) -> dict:
                     )
 
     else:
-        # ── Emails #2–5: LLM-generated content (handled by A5) ───────
+        # ── LLM-generated content path (retries or emails #2-5) ───────
         state["content_type"] = "llm_generated"
         state["draft_email_subject"] = None
         state["draft_email_body"] = None

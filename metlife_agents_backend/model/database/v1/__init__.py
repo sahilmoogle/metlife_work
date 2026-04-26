@@ -21,6 +21,9 @@ from model.database.v1.hitl import HITLQueue  # noqa: F401
 from model.database.v1.emails import EmailTemplate, EmailEvent  # noqa: F401
 from model.database.v1.communications import Communication  # noqa: F401
 from model.database.v1.consultation import ConsultationRequest  # noqa: F401
+from model.database.v1.email_outbox import EmailOutbox  # noqa: F401
+from model.database.v1.workflow_timers import WorkflowTimer  # noqa: F401
+from model.database.v1.sales_handoffs import SalesHandoff  # noqa: F401
 
 # ── Audit ───────────────────────────────────────────────────────────
 from model.database.v1.audit_log import AuditLog  # noqa: F401
@@ -44,6 +47,9 @@ __all__ = [
     "EmailEvent",
     "Communication",
     "ConsultationRequest",
+    "EmailOutbox",
+    "WorkflowTimer",
+    "SalesHandoff",
     "AuditLog",
     "SSEEvent",
     "BatchRun",

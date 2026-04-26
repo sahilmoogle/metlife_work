@@ -16,10 +16,12 @@ from model.api.v1 import APIResponse
 from model.api.v1.agents import HITLApproveRequest, HITLQueueItem
 from model.database.v1.hitl import HITLQueue
 from model.database.v1.leads import Lead
+from model.database.v1.sales_handoffs import SalesHandoff
 from core.v1.services.agents.graph import (
     resume_workflow,
     build_graph,
     get_checkpointer,
+    patch_checkpoint_state,
 )
 from core.v1.services.sse.manager import (
     event_manager,
@@ -87,7 +89,7 @@ async def get_hitl_queue(
         query = query.where(HITLQueue.batch_id == batch_id)
     if queue == "resolved":
         query = query.where(
-            HITLQueue.review_status.in_(["Approved", "Edited", "Rejected"])
+            HITLQueue.review_status.in_(["Approved", "Edited", "Rejected", "Hold"])
         )
     else:
         query = query.where(HITLQueue.review_status == "Awaiting")
@@ -268,21 +270,62 @@ async def approve_hitl(
         lead_update_values["completed_at"] = datetime.now(timezone.utc)
     if gate_type == "G4" and request.action in ("approved", "edited"):
         lead_update_values["is_converted"] = True
+    if gate_type == "G3" and request.action == "rejected":
+        lead_update_values["cooldown_flag"] = True
 
     await db.execute(
         sa_update(Lead).where(Lead.thread_id == thread_id).values(**lead_update_values)
     )
     await db.commit()
 
+    if gate_type == "G4" and request.action in ("approved", "edited"):
+        existing_handoff = await db.execute(
+            select(SalesHandoff).where(SalesHandoff.thread_id == thread_id).limit(1)
+        )
+        if existing_handoff.scalars().first() is None:
+            lead_result = await db.execute(
+                select(Lead).where(Lead.thread_id == thread_id)
+            )
+            handoff_lead = lead_result.scalars().first()
+            db.add(
+                SalesHandoff(
+                    lead_id=lead_id,
+                    thread_id=thread_id,
+                    scenario_id=handoff_lead.scenario_id if handoff_lead else None,
+                    score_snapshot=hitl_record.handoff_score_snapshot,
+                    briefing=hitl_record.handoff_briefing,
+                    source_gate="G4",
+                    status="accepted",
+                    reviewer_notes=request.reviewer_notes,
+                )
+            )
+            await db.commit()
+
     # ── Broadcast SSE event with real lead_id + gate ─────────────────
     resolution = "edited" if request.action == "edited" else request.action
+
+    # Fetch lead name for the audit log display text
+    lead_name_result = await db.execute(select(Lead).where(Lead.id == lead_id))
+    _lead_for_audit = lead_name_result.scalars().first()
+    lead_display = (
+        f"{_lead_for_audit.first_name} {_lead_for_audit.last_name}".strip()
+        if _lead_for_audit
+        else lead_id
+    )
+
     await event_manager.publish(
-        hitl_resolved_event(
-            lead_id=lead_id,
-            thread_id=thread_id,
-            gate=gate_type,
-            resolution=resolution,
-        )
+        {
+            **hitl_resolved_event(
+                lead_id=lead_id,
+                thread_id=thread_id,
+                gate=gate_type,
+                resolution=resolution,
+            ),
+            "actor_name": current_user.get("name", ""),
+            "actor_email": current_user.get("email", ""),
+            "actor_role": current_user.get("role", ""),
+            "lead_name": lead_display,
+        }
     )
 
     # ── Extra SSE event for G4 approval → drives Live Activity Feed ──
@@ -305,7 +348,8 @@ async def approve_hitl(
             async with get_checkpointer() as cp:
                 graph = build_graph(checkpointer=cp)
                 config = {"configurable": {"thread_id": thread_id}}
-                await graph.aupdate_state(
+                await patch_checkpoint_state(
+                    graph,
                     config,
                     {
                         "persona_code": request.persona_override,
@@ -326,8 +370,8 @@ async def approve_hitl(
             logger.warning("G2 persona override update failed: %s", e)
 
     # ── Resume the LangGraph workflow ────────────────────────────────
-    # Rejected G1 → resume with "rejected" so the graph re-routes to generative_writer
-    # Hold G5 → resume with "hold" so the graph routes back to nurture
+    # Rejected G1 -> resume with "rejected" so the graph re-plans via A4/A5.
+    # Hold G5 -> resume with "hold" so the graph schedules more nurture.
     should_resume = request.action != "rejected" or gate_type == "G1"
     # For all gates, resume even on rejection so G1 can re-route; other rejections dead-end
     # G4 rejection: don't resume (handoff not proceeding)

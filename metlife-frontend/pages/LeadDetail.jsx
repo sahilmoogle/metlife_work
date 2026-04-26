@@ -3,7 +3,7 @@ import { Link, Navigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import { fetchLeadDetail } from "../src/services/leadsApi";
-import { getWorkflowState } from "../src/services/agentsApi";
+import { getWorkflowState, trackEvent } from "../src/services/agentsApi";
 import { fetchHitlQueue, approveHitl } from "../src/services/hitlApi";
 import { downloadBlob, leadDetailToJson } from "../src/utils/exportFile";
 import { buildSseStreamUrl } from "../src/services/sseStream";
@@ -98,6 +98,8 @@ const LeadDetail = () => {
   const [decisionBusy, setDecisionBusy] = useState(false);
   const [decisionErr, setDecisionErr] = useState("");
   const [decisionOk, setDecisionOk] = useState("");
+  const [simulateOpen, setSimulateOpen] = useState(false);
+  const [simulateBusy, setSimulateBusy] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -352,6 +354,24 @@ const LeadDetail = () => {
     }
   };
 
+  const handleSimulate = async (eventType, label = null) => {
+    if (!lead?.thread_id || simulateBusy) return;
+    setSimulateBusy(true);
+    setSimulateOpen(false);
+    try {
+      await trackEvent(token, {
+        thread_id: lead.thread_id,
+        event_type: eventType,
+        clicked_label: label,
+      });
+      setRefreshKey((k) => k + 1);
+    } catch (e) {
+      alert(e.message || "Simulation failed.");
+    } finally {
+      setSimulateBusy(false);
+    }
+  };
+
   if (notFound) {
     return <Navigate to="/leads" replace />;
   }
@@ -415,6 +435,42 @@ const LeadDetail = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {lead?.thread_id && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setSimulateOpen(!simulateOpen)}
+                disabled={simulateBusy}
+                className="inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-4 py-2 text-xs font-semibold text-violet-700 shadow-sm hover:border-violet-300 hover:bg-violet-100 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-200 dark:hover:border-violet-400"
+              >
+                {simulateBusy ? "Simulating…" : "⚡ Demo Simulator"}
+                <svg viewBox="0 0 24 24" fill="none" className={`h-3 w-3 transition-transform ${simulateOpen ? "rotate-180" : ""}`}>
+                  <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+              {simulateOpen && (
+                <div className="absolute right-0 top-full z-50 mt-1 w-48 overflow-hidden rounded-xl border border-gray-100 bg-white py-1 shadow-lg dark:border-volt-borderSoft dark:bg-volt-panel">
+                  <p className="px-3 py-1.5 text-[10px] font-semibold uppercase text-gray-400 dark:text-volt-muted2">Simulate Event</p>
+                  <button onClick={() => handleSimulate("email_opened")} className="block w-full px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-50 dark:text-volt-text dark:hover:bg-white/5">
+                    Email Opened (+0.10)
+                  </button>
+                  <button onClick={() => handleSimulate("email_clicked", "Life Insurance")} className="block w-full px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-50 dark:text-volt-text dark:hover:bg-white/5">
+                    Email Clicked (+0.15)
+                  </button>
+                  <button onClick={() => handleSimulate("consult_page_visit")} className="block w-full px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-50 dark:text-volt-text dark:hover:bg-white/5">
+                    Page Visit (+0.40)
+                  </button>
+                  <div className="my-1 border-t border-gray-100 dark:border-volt-borderSoft" />
+                  <button onClick={() => handleSimulate("consultation_booked")} className="block w-full px-3 py-2 text-left text-xs font-semibold text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-500/10">
+                    Consult Booked (+0.50)
+                  </button>
+                  <button onClick={() => handleSimulate("unsubscribe")} className="block w-full px-3 py-2 text-left text-xs text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10">
+                    Unsubscribe (Suppress)
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
           <button
             type="button"
             onClick={handleExport}

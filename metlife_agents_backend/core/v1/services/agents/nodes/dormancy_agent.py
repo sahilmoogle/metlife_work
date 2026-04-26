@@ -34,6 +34,7 @@ from core.v1.services.agents.rules.scoring_rules import classify_dormant_segment
 from core.v1.services.sse.manager import event_manager, node_transition_event
 from core.v1.services.agents.state import create_log_entry
 from utils.v1.db_sync import sync_lead_state
+from model.database.v1.consultation import ConsultationRequest
 from model.database.v1.leads import Lead
 
 logger = logging.getLogger(__name__)
@@ -76,6 +77,25 @@ async def dormancy_agent(state: dict, *, db=None) -> dict:
         lead_row = result.scalars().first()
 
         if lead_row is not None:
+            consult_result = await db.execute(
+                select(ConsultationRequest)
+                .where(ConsultationRequest.lead_id == lead_id)
+                .limit(1)
+            )
+            if consult_result.scalars().first() is not None:
+                logger.info(
+                    "A10 skipped lead %s â€” consultation request exists", lead_id
+                )
+                state["workflow_status"] = "suppressed"
+                state["execution_log"] = [
+                    create_log_entry(
+                        title="A10 - DORMANCY AGENT Â· SKIPPED â€” Consultation exists",
+                        description="Lead has a consultation request and is not eligible for dormant revival.",
+                        badges=["Not Dormant Revival"],
+                    )
+                ]
+                return state
+
             # Rule: OPT_IN = False (opt_in=True means opted-out / suppressed)
             if lead_row.opt_in is True:
                 logger.info("A10 skipped lead %s — opt_in active", lead_id)

@@ -42,6 +42,7 @@ const Reviews = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -80,7 +81,7 @@ const Reviews = () => {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(1);
-  }, [activeTab, activeGate, pageSize]);
+  }, [activeTab, activeGate, pageSize, searchQuery]);
 
   useEffect(() => {
     if (!token || typeof EventSource === "undefined") return;
@@ -130,11 +131,26 @@ const Reviews = () => {
   }, [visible]);
 
   const filtered = useMemo(() => {
-    if (activeGate === "all") return visible;
-    return visible.filter((it) =>
-      String(it.gate_type || "").toUpperCase().startsWith(activeGate)
-    );
-  }, [activeGate, visible]);
+    let result = visible;
+    if (activeGate !== "all") {
+      result = result.filter((it) =>
+        String(it.gate_type || "").toUpperCase().startsWith(activeGate)
+      );
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      result = result.filter((it) => {
+        const name = `${it.first_name || ""} ${it.last_name || ""}`.toLowerCase();
+        return (
+          name.includes(q) ||
+          String(it.thread_id || "").toLowerCase().includes(q) ||
+          String(it.scenario_id || "").toLowerCase().includes(q) ||
+          String(it.gate_description || "").toLowerCase().includes(q)
+        );
+      });
+    }
+    return result;
+  }, [activeGate, visible, searchQuery]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages);
@@ -254,17 +270,35 @@ const Reviews = () => {
 
       {/* List */}
       <div className="app-surface-card p-3">
-        {/* Per-page selector */}
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs text-gray-700 dark:text-volt-muted">
-            {filtered.length === 0
-              ? `${t("common.noItems")}`
-              : t("reviews.showing", {
-                  from: (safePage - 1) * pageSize + 1,
-                  to: Math.min(safePage * pageSize, filtered.length),
-                  total: filtered.length,
-                })}
-          </p>
+        {/* Header: Search and Stats */}
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-3 dark:border-volt-borderSoft">
+          <div className="relative flex-1 min-w-[200px] max-w-sm">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-volt-muted2"
+              aria-hidden="true"
+            >
+              <path d="M21 21l-4.35-4.35M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by name, thread ID, or scenario..."
+              className="h-9 w-full rounded-full border border-gray-200 bg-gray-50 pl-9 pr-4 text-xs text-gray-800 outline-none transition focus:border-indigo-300 focus:bg-white dark:border-volt-borderSoft dark:bg-white/5 dark:text-volt-text dark:focus:border-indigo-500/40 dark:focus:bg-volt-card"
+            />
+          </div>
+          <div className="flex items-center gap-4">
+            <p className="text-xs text-gray-500 dark:text-volt-muted2">
+              {filtered.length === 0
+                ? `${t("common.noItems")}`
+                : t("reviews.showing", {
+                    from: (safePage - 1) * pageSize + 1,
+                    to: Math.min(safePage * pageSize, filtered.length),
+                    total: filtered.length,
+                  })}
+            </p>
           <div className="flex items-center gap-2">
             <span className="text-xs text-gray-500 dark:text-volt-muted">{t("common.perPage")}</span>
             <select
@@ -276,6 +310,7 @@ const Reviews = () => {
                 <option key={n} value={n}>{n}</option>
               ))}
             </select>
+          </div>
           </div>
         </div>
 

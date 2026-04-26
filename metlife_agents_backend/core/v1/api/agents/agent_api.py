@@ -26,13 +26,21 @@ from model.database.v1.leads import Lead
 from model.database.v1.communications import Communication
 from model.database.v1.emails import EmailEvent
 from model.database.v1.batch_runs import BatchRun
+from model.database.v1.hitl import HITLQueue
+from model.database.v1.email_outbox import EmailOutbox
+from model.database.v1.workflow_timers import WorkflowTimer
 from core.v1.services.agents.graph import (
     start_workflow,
     resume_workflow,
     build_graph,
     get_checkpointer,
+    patch_checkpoint_state,
+    jump_to_node,
 )
+from core.v1.services.agents.nodes.hitl_gates import persist_hitl_record
+from core.v1.services.agents.nodes.sales_handoff import sales_handoff
 from core.v1.services.sse.manager import event_manager, batch_progress_event
+from config.v1.llm_config import get_llm
 from utils.v1.connections import get_db
 from utils.v1.permissions import require_permission
 from config.v1.database_config import db_config
@@ -626,6 +634,198 @@ def _batch_to_response(batch: BatchRun) -> "BatchRunResponse":
     )
 
 
+def _payload_value(payload: str | None, key: str) -> str | None:
+    """Read a simple key=value entry from a semicolon-delimited timer payload."""
+    for chunk in str(payload or "").split(";"):
+        if "=" not in chunk:
+            continue
+        k, value = chunk.split("=", 1)
+        if k.strip() == key:
+            return value.strip() or None
+    return None
+
+
+@router.post(
+    "/scheduler/process-due",
+    response_model=APIResponse[dict],
+    status_code=status.HTTP_200_OK,
+)
+async def process_due_workflow_timers(
+    limit: int = 25,
+    _: dict = Depends(require_permission("run_workflow")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Process due internal timers for no-external-service operation.
+
+    Handles quiet-hour held emails and cadence / S4 response-window resumes.
+    This endpoint can be called manually in local/demo mode or by a lightweight
+    cron later.
+    """
+    now = datetime.now(timezone.utc)
+    result = await db.execute(
+        select(WorkflowTimer)
+        .where(WorkflowTimer.status == "pending")
+        .where(WorkflowTimer.due_at <= now)
+        .order_by(WorkflowTimer.due_at.asc())
+        .limit(limit)
+    )
+    timers = list(result.scalars().all())
+
+    processed: list[dict] = []
+    failed: list[dict] = []
+
+    for timer in timers:
+        timer_id = str(timer.id)
+        try:
+            await db.execute(
+                sa_update(WorkflowTimer)
+                .where(WorkflowTimer.id == timer.id)
+                .where(WorkflowTimer.status == "pending")
+                .values(status="processing")
+            )
+            await db.commit()
+
+            target_node = "content_strategist"
+            state_patch: dict = {
+                "workflow_status": "active",
+                "send_deferred": False,
+            }
+
+            if timer.timer_type == "quiet_hours":
+                outbox_id = _payload_value(timer.payload, "outbox_id")
+                outbox = None
+                if outbox_id:
+                    outbox_result = await db.execute(
+                        select(EmailOutbox).where(EmailOutbox.id == outbox_id).limit(1)
+                    )
+                    outbox = outbox_result.scalars().first()
+
+                if outbox is None:
+                    outbox_result = await db.execute(
+                        select(EmailOutbox)
+                        .where(EmailOutbox.thread_id == timer.thread_id)
+                        .where(EmailOutbox.status == "held")
+                        .order_by(EmailOutbox.scheduled_for.asc())
+                        .limit(1)
+                    )
+                    outbox = outbox_result.scalars().first()
+
+                if outbox is None:
+                    raise ValueError("No held outbox item found for quiet-hours timer")
+
+                target_node = "send_engine"
+                state_patch.update(
+                    {
+                        "held_outbox_id": str(outbox.id),
+                        "draft_email_subject": outbox.subject,
+                        "draft_email_subject_en": outbox.subject_en,
+                        "draft_email_body": outbox.body,
+                        "template_name": outbox.template_name,
+                        "email_number": outbox.email_number or 0,
+                        "content_type": outbox.content_type or "unknown",
+                    }
+                )
+            elif timer.timer_type not in ("cadence", "s4_response_window"):
+                raise ValueError(f"Unsupported timer_type={timer.timer_type}")
+
+            run_result = await jump_to_node(
+                timer.thread_id,
+                target_node,
+                db_session=db,
+                state_patch=state_patch,
+            )
+            state = run_result.get("state", {})
+
+            await db.execute(
+                sa_update(WorkflowTimer)
+                .where(WorkflowTimer.id == timer.id)
+                .values(status="fired")
+            )
+            await db.commit()
+
+            processed.append(
+                {
+                    "timer_id": timer_id,
+                    "thread_id": timer.thread_id,
+                    "timer_type": timer.timer_type,
+                    "target_node": target_node,
+                    "workflow_status": state.get("workflow_status"),
+                    "hitl_gate": state.get("hitl_gate"),
+                }
+            )
+        except Exception as exc:
+            await db.rollback()
+            logger.error("Timer %s failed: %s", timer_id, exc, exc_info=True)
+            await db.execute(
+                sa_update(WorkflowTimer)
+                .where(WorkflowTimer.id == timer.id)
+                .values(status="failed")
+            )
+            await db.commit()
+            failed.append(
+                {
+                    "timer_id": timer_id,
+                    "thread_id": timer.thread_id,
+                    "timer_type": timer.timer_type,
+                    "error": str(exc),
+                }
+            )
+
+    return APIResponse(
+        success=len(failed) == 0,
+        status_code=status.HTTP_200_OK,
+        data={
+            "due_count": len(timers),
+            "processed_count": len(processed),
+            "failed_count": len(failed),
+            "processed": processed,
+            "failed": failed,
+        },
+        message=f"Processed {len(processed)} due timer(s); {len(failed)} failed.",
+    )
+
+
+async def _open_event_driven_handoff_if_ready(
+    *,
+    db: AsyncSession,
+    thread_id: str,
+    state: dict,
+    event_type: str,
+    new_score: float,
+) -> bool:
+    """Create A9/G4 handoff when an internal event crosses the threshold."""
+    threshold = float(state.get("handoff_threshold", 0.80) or 0.80)
+    ready = event_type == "consultation_booked" or new_score >= threshold
+    if not ready:
+        return False
+
+    existing = await db.execute(
+        select(HITLQueue)
+        .where(HITLQueue.thread_id == thread_id)
+        .where(HITLQueue.gate_type == "G4")
+        .where(HITLQueue.review_status == "Awaiting")
+        .limit(1)
+    )
+    if existing.scalars().first() is not None:
+        return False
+
+    handoff_state = {
+        **state,
+        "engagement_score": new_score,
+        "consultation_booked": event_type == "consultation_booked"
+        or state.get("consultation_booked", False),
+    }
+    handoff_state = await sales_handoff(handoff_state, llm=get_llm(), db=db)
+    await persist_hitl_record(handoff_state, "G4", "Sales Handoff Review", db=db)
+
+    config = {"configurable": {"thread_id": thread_id}}
+    async with get_checkpointer() as cp:
+        graph = build_graph(db_session=db, checkpointer=cp)
+        await patch_checkpoint_state(graph, config, handoff_state)
+
+    return True
+
+
 @router.post(
     "/events/track",
     response_model=APIResponse[dict],
@@ -642,6 +842,8 @@ async def track_engagement_event(
     timestamp to the Communications table (internal mock event store).
     """
     try:
+        handoff_opened = False
+        patched_state: dict = {}
         config = {"configurable": {"thread_id": request.thread_id}}
 
         # Must use the persistent checkpointer — NOT a fresh MemorySaver
@@ -704,8 +906,9 @@ async def track_engagement_event(
                     new_score,
                 )
 
-            # Inject all updates into the persistent checkpoint
-            await graph.aupdate_state(config, state_patch)
+            # Inject all updates into the persistent checkpoint without
+            # replacing the rest of the dict state.
+            patched_state = await patch_checkpoint_state(graph, config, state_patch)
 
         # Update Communications + create EmailEvent + update Lead score
         if request.event_type in (
@@ -794,6 +997,14 @@ async def track_engagement_event(
                 )
                 await db.commit()
 
+        handoff_opened = await _open_event_driven_handoff_if_ready(
+            db=db,
+            thread_id=request.thread_id,
+            state=patched_state or {**current_state, **state_patch},
+            event_type=request.event_type,
+            new_score=new_score,
+        )
+
         return APIResponse(
             success=True,
             status_code=status.HTTP_200_OK,
@@ -802,6 +1013,7 @@ async def track_engagement_event(
                 "event_logged": request.event_type,
                 "score_boost": score_increment,
                 "new_score": new_score,
+                "handoff_opened": handoff_opened,
             },
             message=f"Event '{request.event_type}' ingested into graph state.",
         )

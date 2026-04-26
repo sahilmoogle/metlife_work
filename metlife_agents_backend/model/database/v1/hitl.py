@@ -50,7 +50,7 @@ class HITLQueue(Base):
     # Review state
     review_status = Column(
         String(20), default="Awaiting", index=True
-    )  # Awaiting | Approved | Edited | Rejected
+    )  # Awaiting | Approved | Edited | Rejected | Hold
     reviewed_by_user_id = Column(GUID(), nullable=True)
     reviewer_notes = Column(Text, nullable=True)
 

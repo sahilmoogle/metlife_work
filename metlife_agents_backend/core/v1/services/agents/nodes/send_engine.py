@@ -16,7 +16,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from model.database.v1.communications import Communication
 from model.database.v1.emails import EmailEvent
+from model.database.v1.email_outbox import EmailOutbox
 from model.database.v1.leads import Lead
+from model.database.v1.workflow_timers import WorkflowTimer
 from core.v1.services.sse.manager import (
     event_manager,
     node_transition_event,
@@ -38,6 +40,15 @@ def _is_quiet_hours() -> bool:
     """Check if current JST time is within quiet hours."""
     now_jst = datetime.now(JST)
     return now_jst.hour >= QUIET_START or now_jst.hour < QUIET_END
+
+
+def _next_quiet_end_utc() -> datetime:
+    """Return the next 08:00 JST as UTC."""
+    now_jst = datetime.now(JST)
+    due_jst = now_jst.replace(hour=QUIET_END, minute=0, second=0, microsecond=0)
+    if now_jst.hour >= QUIET_START:
+        due_jst += timedelta(days=1)
+    return due_jst.astimezone(timezone.utc)
 
 
 async def send_engine(state: dict, *, db: AsyncSession | None = None) -> dict:
@@ -78,17 +89,84 @@ async def send_engine(state: dict, *, db: AsyncSession | None = None) -> dict:
         )
         return state
 
+    if not state.get("email"):
+        state["workflow_status"] = "failed"
+        state["current_node"] = NODE_ID
+        if db is not None:
+            await db.execute(
+                sa_update(Lead)
+                .where(Lead.id == lead_id)
+                .values(workflow_status="Failed", current_agent_node=NODE_ID)
+            )
+            await db.commit()
+        await event_manager.publish(
+            node_transition_event(
+                lead_id,
+                NODE_ID,
+                "failed",
+                "missing recipient email",
+                batch_id=state.get("batch_id"),
+            )
+        )
+        state["execution_log"] = [
+            create_log_entry(
+                title="A6 - SEND ENGINE FAILED",
+                description="No recipient email was available, so no send was recorded.",
+                badges=["No Email", "Blocked"],
+            )
+        ]
+        return state
+
     # ── Quiet hours enforcement (21:00–08:00 JST) ────────────────────
     # Spec: never send during these hours. Critical for S3 seniors.
-    # We log the hold event and mark the state; a scheduler would resume at 08:00.
-    # In this mock, we proceed after recording the hold in the execution_log.
+    # Hold the draft in the internal outbox; a scheduler/manual resume can
+    # process it after the quiet window ends.
     if _is_quiet_hours():
         now_jst = datetime.now(JST)
+        due_at = _next_quiet_end_utc()
         logger.info(
             "A6: Quiet hours active (%02d:%02d JST) — email held until 08:00 JST",
             now_jst.hour,
             now_jst.minute,
         )
+        if db is not None:
+            outbox_item = EmailOutbox(
+                lead_id=lead_id,
+                thread_id=state.get("thread_id"),
+                subject=state.get("draft_email_subject"),
+                subject_en=state.get("draft_email_subject_en"),
+                body=state.get("draft_email_body"),
+                template_name=state.get("template_name"),
+                email_number=state.get("email_number", 0),
+                content_type=state.get("content_type", "unknown"),
+                status="held",
+                hold_reason="quiet_hours",
+                scheduled_for=due_at,
+            )
+            db.add(outbox_item)
+            await db.flush()
+            db.add(
+                WorkflowTimer(
+                    lead_id=lead_id,
+                    thread_id=state.get("thread_id", ""),
+                    timer_type="quiet_hours",
+                    status="pending",
+                    due_at=due_at,
+                    payload=(
+                        f"outbox_id={outbox_item.id};"
+                        f"email_number={state.get('email_number', 0)}"
+                    ),
+                )
+            )
+            await db.execute(
+                sa_update(Lead)
+                .where(Lead.id == lead_id)
+                .values(workflow_status="Paused", current_agent_node=NODE_ID)
+            )
+            await db.commit()
+        state["workflow_status"] = "paused"
+        state["send_deferred"] = True
+        state["current_node"] = NODE_ID
         state["execution_log"] = [
             create_log_entry(
                 title="A6 - SEND ENGINE · QUIET HOURS HOLD",
@@ -107,6 +185,9 @@ async def send_engine(state: dict, *, db: AsyncSession | None = None) -> dict:
         )
 
     # ── Simulate send ────────────────────────────────────────────────
+    if state.get("send_deferred"):
+        return state
+
     subject = state.get("draft_email_subject", "")
     body = state.get("draft_email_body", "")
 
@@ -135,6 +216,35 @@ async def send_engine(state: dict, *, db: AsyncSession | None = None) -> dict:
             delivered_at=now,  # mock delivery confirmation = same timestamp as send
         )
         db.add(comm)
+
+        held_outbox_id = state.get("held_outbox_id")
+        if held_outbox_id:
+            await db.execute(
+                sa_update(EmailOutbox)
+                .where(EmailOutbox.id == held_outbox_id)
+                .values(
+                    status="sent",
+                    hold_reason=None,
+                    scheduled_for=now,
+                    sent_at=now,
+                )
+            )
+        else:
+            db.add(
+                EmailOutbox(
+                    lead_id=lead_id,
+                    thread_id=state.get("thread_id"),
+                    subject=subject,
+                    subject_en=state.get("draft_email_subject_en"),
+                    body=body,
+                    template_name=state.get("template_name"),
+                    email_number=email_num,
+                    content_type=state.get("content_type", "unknown"),
+                    status="sent",
+                    scheduled_for=now,
+                    sent_at=now,
+                )
+            )
 
         # Write an EmailEvent row for the email_sent signal (feeds A8 scoring history)
         email_evt = EmailEvent(

@@ -1,12 +1,12 @@
 """
 LangGraph StateGraph compiler — the orchestration brain.
 
-Wires all 10 agent nodes, 5 HITL gates, and conditional edges
+Wires the agent nodes, 5 HITL gates, cadence timers, and conditional edges
 into a single compiled graph with checkpoint persistence.
 
 Scenario routing summary (per MetLife_JP_Flows.html):
-  S1–S3, S5: A1 → A2 → [G2?] → A4/A5/G1/A6 loop (email nurture) → A8 → [G5?] → A9/G4
-  S4:         A10 → G3 → A1 → A2 → same nurture loop (max 2 emails) → mark_dormant
+  S1–S3, S5: A1 → A2 → [G2?] → A4/A5/G1/A6 → A8 → A11 cadence or A9/G4
+  S4:         A10 → G3 → A1 → A2 → nurture loop + S4 response timer → mark_dormant
   S6:         A1 → A2 → G2(always) → A3(MEMO) → A4/A5/G1/A6(1 email) → A9 → G4
   S7:         A1 → A2 → G2(always) → A3(MEMO) →
               email_captured=True  → A4/A5/G1/A6 → A8 → A9 → G4
@@ -18,7 +18,7 @@ from __future__ import annotations
 import logging
 import uuid
 from functools import partial
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from contextlib import asynccontextmanager
 
 from sqlalchemy import update as sa_update
@@ -29,6 +29,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.types import interrupt, Command
 from config.v1.database_config import db_config
 from model.database.v1.leads import Lead
+from model.database.v1.workflow_timers import WorkflowTimer
 
 from core.v1.services.agents.state import create_initial_state, create_log_entry
 from core.v1.services.agents.nodes.identity_unifier import identity_unifier
@@ -255,6 +256,60 @@ async def mark_dormant(state: dict, *, db=None) -> dict:
     return state
 
 
+CADENCE_NODE_ID = "A11_CadenceTimer"
+
+
+async def schedule_cadence_timer(state: dict, *, db=None) -> dict:
+    """Pause the workflow until the next nurture/send window is due."""
+    lead_id = state["lead_id"]
+    cadence_days = max(int(state.get("cadence_days") or 0), 0)
+    due_at = datetime.now(timezone.utc) + timedelta(days=cadence_days)
+    timer_type = "s4_response_window" if state.get("scenario") == "S4" else "cadence"
+
+    await event_manager.publish(
+        workflow_state_event(
+            lead_id,
+            "paused",
+            f"{timer_type} due at {due_at.isoformat()}",
+        )
+    )
+
+    if db is not None:
+        db.add(
+            WorkflowTimer(
+                lead_id=lead_id,
+                thread_id=state.get("thread_id", ""),
+                timer_type=timer_type,
+                status="pending",
+                due_at=due_at,
+                payload=f"next_email_number={state.get('email_number', 0) + 1}",
+            )
+        )
+        await db.execute(
+            sa_update(Lead)
+            .where(Lead.id == lead_id)
+            .values(workflow_status="Paused", current_agent_node=CADENCE_NODE_ID)
+        )
+        await db.commit()
+
+    state["workflow_status"] = "paused"
+    state["current_node"] = CADENCE_NODE_ID
+    state["cadence_due_at"] = due_at.isoformat()
+    state["hitl_gate"] = None
+    state["hitl_status"] = "idle"
+    state["execution_log"] = [
+        create_log_entry(
+            title="A11 - CADENCE TIMER · PAUSED",
+            description=(
+                f"Next nurture touch is scheduled for {due_at.isoformat()} "
+                f"({timer_type}, cadence_days={cadence_days})."
+            ),
+            badges=["Scheduler", timer_type],
+        )
+    ]
+    return state
+
+
 # ── Conditional edge functions ───────────────────────────────────────
 
 
@@ -296,8 +351,7 @@ def _route_after_intent(state: dict) -> str:
     """Route after A3 Intent Analyser.
 
     S1–S5: feed into propensity_scorer (A8) as normal.
-    S6: always send one LLM email (MEMO-based) before handoff.
-         Routes to content_strategist if email not yet sent.
+    S6: send one LLM email only when email is captured; otherwise handoff.
     S7: if email captured → send one post-call email;
         if no email → skip directly to sales_handoff.
     """
@@ -305,7 +359,7 @@ def _route_after_intent(state: dict) -> str:
     email_number = state.get("email_number", 0)
 
     if scenario == "S6":
-        if email_number == 0:
+        if email_number == 0 and state.get("email_captured", False):
             return "content_strategist"
         return "sales_handoff"
 
@@ -314,14 +368,14 @@ def _route_after_intent(state: dict) -> str:
             return "sales_handoff"
         if email_number == 0:
             return "content_strategist"
-        return "sales_handoff"
+        return "propensity_scorer"
 
     # S1–S5 (and S4) follow the standard scoring path
     return "propensity_scorer"
 
 
 def _route_after_scoring(state: dict) -> str:
-    """Route after A8: continue nurture / G5 edge review / handoff / mark dormant."""
+    """Route after A8: schedule nurture / G5 edge review / handoff / mark dormant."""
     score = state.get("engagement_score", 0)
     threshold = state.get("handoff_threshold", 0.80)
     email_number = state.get("email_number", 0)
@@ -335,7 +389,7 @@ def _route_after_scoring(state: dict) -> str:
         return "prep_g5"
     if email_number >= max_emails:
         return "mark_dormant"
-    return "continue_nurture"
+    return "schedule_cadence"
 
 
 def _route_after_handoff(state: dict) -> str:
@@ -347,12 +401,27 @@ def _route_after_g1(state: dict) -> str:
     """Route after g1_pause resumes.
 
     approved / edited → send engine.
-    rejected → back to generative_writer for a revised draft.
+    rejected -> back through A4 so existing assets become LLM drafts.
     """
     decision = state.get("hitl_resume_value", "approved")
     if decision == "rejected":
-        return "generative_writer"
+        return "content_strategist"
     return "send_engine"
+
+
+def _route_after_send(state: dict) -> str:
+    """Route after A6.
+
+    Deferred, failed, or suppressed sends stop here; a future scheduler/manual
+    action can resume from the durable outbox/timer state.
+    """
+    if state.get("send_deferred") or state.get("workflow_status") in (
+        "failed",
+        "paused",
+        "suppressed",
+    ):
+        return "end"
+    return "intent_analyser"
 
 
 def _route_after_g5(state: dict) -> str:
@@ -363,8 +432,29 @@ def _route_after_g5(state: dict) -> str:
     """
     decision = state.get("hitl_resume_value", "approved")
     if decision == "hold":
-        return "content_strategist"
+        if state.get("email_number", 0) >= state.get("max_emails", 0):
+            return "mark_dormant"
+        return "schedule_cadence"
     return "sales_handoff"
+
+
+def _route_after_g4(state: dict) -> str:
+    """Route after sales handoff review.
+
+    A hold sends nurture-capable leads back for another touch; approval/edit
+    and rejection finish the graph because the API has already persisted the
+    human outcome.
+    """
+    decision = state.get("hitl_resume_value", "approved")
+    if decision == "hold":
+        if state.get("scenario") in ("S6", "S7") and not state.get(
+            "email_captured", False
+        ):
+            return "end"
+        if state.get("email_number", 0) < state.get("max_emails", 0):
+            return "schedule_cadence"
+        return "mark_dormant"
+    return "end"
 
 
 # ── Graph builder ────────────────────────────────────────────────────
@@ -391,6 +481,7 @@ def build_graph(*, db_session=None, checkpointer=None):
     bound_a8 = partial(propensity_scorer, db=db_session)
     bound_a9 = partial(sales_handoff, llm=llm, db=db_session)
     bound_mark_dormant = partial(mark_dormant, db=db_session)
+    bound_schedule_cadence = partial(schedule_cadence_timer, db=db_session)
 
     bound_prep_g1 = partial(prep_g1, db=db_session)
     bound_prep_g2 = partial(prep_g2, db=db_session)
@@ -411,6 +502,7 @@ def build_graph(*, db_session=None, checkpointer=None):
     graph.add_node("sales_handoff", bound_a9)
     graph.add_node("dormancy_agent", partial(dormancy_agent, db=db_session))
     graph.add_node("mark_dormant", bound_mark_dormant)
+    graph.add_node("schedule_cadence", bound_schedule_cadence)
 
     # ── HITL prep nodes ─────────────────────────────────────────────
     graph.add_node("prep_g1", bound_prep_g1)
@@ -494,15 +586,19 @@ def build_graph(*, db_session=None, checkpointer=None):
     graph.add_edge("generative_writer", "prep_g1")
     graph.add_edge("prep_g1", "g1_pause")
 
-    # G1: approved/edited → send; rejected → re-generate
+    # G1: approved/edited -> send; rejected -> re-plan then re-generate
     graph.add_conditional_edges(
         "g1_pause",
         _route_after_g1,
-        {"send_engine": "send_engine", "generative_writer": "generative_writer"},
+        {"send_engine": "send_engine", "content_strategist": "content_strategist"},
     )
 
     # A6 → A3 → routing (S6/S7 go to handoff, others to A8)
-    graph.add_edge("send_engine", "intent_analyser")
+    graph.add_conditional_edges(
+        "send_engine",
+        _route_after_send,
+        {"intent_analyser": "intent_analyser", "end": END},
+    )
     graph.add_conditional_edges(
         "intent_analyser",
         _route_after_intent,
@@ -513,27 +609,33 @@ def build_graph(*, db_session=None, checkpointer=None):
         },
     )
 
-    # A8 → continue | G5 | handoff | mark_dormant
+    # A8 -> cadence wait | G5 | handoff | mark_dormant
     graph.add_conditional_edges(
         "propensity_scorer",
         _route_after_scoring,
         {
-            "continue_nurture": "content_strategist",
+            "schedule_cadence": "schedule_cadence",
             "prep_g5": "prep_g5",
             "sales_handoff": "sales_handoff",
             "mark_dormant": "mark_dormant",
         },
     )
 
+    graph.add_edge("schedule_cadence", END)
+
     # mark_dormant → END
     graph.add_edge("mark_dormant", END)
 
-    # G5: promoted → handoff; hold → back to nurture
+    # G5: promoted -> handoff; hold -> cadence timer / more nurture
     graph.add_edge("prep_g5", "g5_pause")
     graph.add_conditional_edges(
         "g5_pause",
         _route_after_g5,
-        {"content_strategist": "content_strategist", "sales_handoff": "sales_handoff"},
+        {
+            "schedule_cadence": "schedule_cadence",
+            "sales_handoff": "sales_handoff",
+            "mark_dormant": "mark_dormant",
+        },
     )
 
     # A9 → G4 → END
@@ -543,7 +645,15 @@ def build_graph(*, db_session=None, checkpointer=None):
         {"prep_g4": "prep_g4"},
     )
     graph.add_edge("prep_g4", "g4_pause")
-    graph.add_edge("g4_pause", END)
+    graph.add_conditional_edges(
+        "g4_pause",
+        _route_after_g4,
+        {
+            "schedule_cadence": "schedule_cadence",
+            "mark_dormant": "mark_dormant",
+            "end": END,
+        },
+    )
 
     # ── S4 dormancy path: A10 → G3 → A1 ────────────────────────────
     # A10 may mark a lead suppressed (opted-out, cooldown, not yet 180 days).
@@ -573,6 +683,20 @@ def build_graph(*, db_session=None, checkpointer=None):
 
 
 # ── Invocation helpers ───────────────────────────────────────────────
+
+
+async def patch_checkpoint_state(graph, config: dict, state_patch: dict) -> dict:
+    """Merge a partial state patch into a LangGraph dict checkpoint.
+
+    For ``StateGraph(dict)``, ``aupdate_state`` replaces the stored dict with
+    the supplied dict.  Read + merge first so small API patches do not erase
+    required fields such as ``lead_id`` and ``scenario``.
+    """
+    snapshot = await graph.aget_state(config)
+    current = dict(snapshot.values or {}) if snapshot else {}
+    merged = {**current, **state_patch}
+    await graph.aupdate_state(config, merged)
+    return merged
 
 
 async def start_workflow(
@@ -661,11 +785,36 @@ async def resume_workflow(
     async with get_checkpointer() as cp:
         graph = build_graph(db_session=db_session, checkpointer=cp)
         if state_patch:
-            await graph.aupdate_state(config, state_patch)
+            await patch_checkpoint_state(graph, config, state_patch)
         # Command(resume=value) delivers `value` as the return of interrupt().
         # LangGraph loads the full saved checkpoint, runs from the interrupt
         # site, and continues until the next interrupt() or END.
         result = await graph.ainvoke(Command(resume=resume_value), config=config)
+
+    return {
+        "thread_id": thread_id,
+        "state": result,
+    }
+
+
+async def jump_to_node(
+    thread_id: str,
+    node_name: str,
+    *,
+    db_session: AsyncSession | None = None,
+    state_patch: dict | None = None,
+) -> dict:
+    """Resume a completed/paused checkpoint from a specific graph node.
+
+    Used by the internal scheduler for due quiet-hour sends and cadence timers.
+    """
+    config = {"configurable": {"thread_id": thread_id}}
+
+    async with get_checkpointer() as cp:
+        graph = build_graph(db_session=db_session, checkpointer=cp)
+        if state_patch:
+            await patch_checkpoint_state(graph, config, state_patch)
+        result = await graph.ainvoke(Command(goto=node_name), config=config)
 
     return {
         "thread_id": thread_id,
