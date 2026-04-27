@@ -73,15 +73,21 @@ async def persona_classifier(state: dict, *, db=None) -> dict:
         return state
 
     # ── Deterministic classification ─────────────────────────────────
-    scenario = classify_scenario(
-        ans3=state.get("ans3"),
-        ans4=state.get("ans4"),
-        ans5=state.get("ans5"),
-        age=state.get("age"),
-        registration_source=state.get("registration_source"),
-        banner_code=state.get("banner_code"),
-        consultation_request_type=state.get("consult_request_type"),
-    )
+    # S4 dormant revival is approved as a campaign path at G3.  Once locked,
+    # A1/A2 refreshes must not reclassify it back into S1/S2/S3/S5.
+    scenario_lock = state.get("scenario_locked")
+    if scenario_lock in ("S1", "S2", "S3", "S4", "S5", "S6", "S7"):
+        scenario = scenario_lock
+    else:
+        scenario = classify_scenario(
+            ans3=state.get("ans3"),
+            ans4=state.get("ans4"),
+            ans5=state.get("ans5"),
+            age=state.get("age"),
+            registration_source=state.get("registration_source"),
+            banner_code=state.get("banner_code"),
+            consultation_request_type=state.get("consult_request_type"),
+        )
 
     config = get_scenario_config(scenario)
     if db is not None:
@@ -132,6 +138,21 @@ async def persona_classifier(state: dict, *, db=None) -> dict:
 
     if scenario == "S2":
         state["life_event_flag"] = True
+        ans4_value = str(state.get("ans4") or "").strip().lower()
+        state["life_event_type"] = {
+            "marriage": "marriage",
+            "married": "marriage",
+            "birth": "child_birth",
+            "child": "child_birth",
+            "home": "home_purchase",
+            "house": "home_purchase",
+            "job": "job_change",
+            "career": "job_change",
+            "yes": "general_life_event",
+            "y": "general_life_event",
+            "true": "general_life_event",
+            "1": "general_life_event",
+        }.get(ans4_value, "general_life_event")
 
     if scenario == "S5":
         state["active_buyer"] = True

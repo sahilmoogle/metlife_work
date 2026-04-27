@@ -19,6 +19,7 @@ import time
 from sqlalchemy import select
 
 from model.database.v1.emails import EmailTemplate
+from core.v1.services.agents.rules.scoring_rules import classify_dormant_segment
 from core.v1.services.sse.manager import event_manager, node_transition_event
 from core.v1.services.agents.state import create_log_entry
 from utils.v1.db_sync import sync_lead_state
@@ -53,6 +54,28 @@ async def content_strategist(state: dict, *, db=None) -> dict:
     )
     state["email_number"] = email_number
     scenario = state.get("scenario", "S1")
+    language = str(state.get("target_language") or "JA").upper()
+
+    if scenario == "S5" and email_number > 1 and not state.get("product_interest"):
+        state["product_interest"] = "medical_insurance"
+
+    if scenario == "S4" and email_number > 1:
+        base_score = float(state.get("base_score") or 0.0)
+        engagement_score = float(state.get("engagement_score") or base_score)
+        delta = round(engagement_score - base_score, 4)
+        resegmented = classify_dormant_segment(
+            has_website_visits=delta > 0.05,
+            has_product_views=delta >= 0.35,
+        )
+        if resegmented != state.get("revival_segment"):
+            logger.info(
+                "A4 re-segmented S4 lead %s before email #%d: %s -> %s",
+                lead_id,
+                email_number,
+                state.get("revival_segment"),
+                resegmented,
+            )
+        state["revival_segment"] = resegmented
 
     # G1 rejection revises the current email; it must not advance the sequence.
     if is_g1_rejection:
@@ -79,6 +102,7 @@ async def content_strategist(state: dict, *, db=None) -> dict:
                     .where(EmailTemplate.scenario_id == scenario)
                     .where(EmailTemplate.is_active == True)  # noqa: E712
                     .where(EmailTemplate.version == 1)
+                    .where(EmailTemplate.language == language)
                 )
                 if scenario == "S4":
                     segment = state.get("revival_segment", "P1")
@@ -147,13 +171,20 @@ async def content_strategist(state: dict, *, db=None) -> dict:
 
         # Fetch the email-#N template from DB as a style reference for A5
         if db is not None:
-            result = await db.execute(
+            query = (
                 select(EmailTemplate)
                 .where(EmailTemplate.scenario_id == scenario)
                 .where(EmailTemplate.is_active == True)  # noqa: E712
                 .where(EmailTemplate.version == email_number)
-                .limit(1)
+                .where(EmailTemplate.language == language)
             )
+            if scenario == "S5" and state.get("product_interest"):
+                query = query.where(EmailTemplate.product_code == state["product_interest"])
+            if scenario == "S4":
+                query = query.where(
+                    EmailTemplate.product_code == state.get("revival_segment", "P1")
+                )
+            result = await db.execute(query.limit(1))
             ref_template = result.scalar_one_or_none()
             if ref_template:
                 state["template_style_reference"] = ref_template.subject

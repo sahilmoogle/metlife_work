@@ -21,5 +21,14 @@ class APIConfig(BaseSettingsWrapper):
     BACKEND_CORS_ORIGINS: Optional[str] = None
     API_VER_STR_V1: str = "/api/v1"
 
+    # Send Engine quiet-hours window in JST.
+    QUIET_START_JST_HOUR: int = 21
+    QUIET_END_JST_HOUR: int = 8
+
+    # Internal automatic timer processor for quiet-hours/cadence/S4 timers.
+    AUTO_TIMER_PROCESSOR_ENABLED: bool = True
+    AUTO_TIMER_PROCESSOR_INTERVAL_SECONDS: int = 30
+    AUTO_TIMER_PROCESSOR_LIMIT: int = 25
+
 
 api_config = APIConfig()

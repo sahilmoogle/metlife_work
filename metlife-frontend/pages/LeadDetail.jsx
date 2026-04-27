@@ -93,6 +93,7 @@ const LeadDetail = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [workflowState, setWorkflowState] = useState(null);
   const [pendingHitl, setPendingHitl] = useState(null);
+  const [latestHitl, setLatestHitl] = useState(null);
   const [threadCtxLoading, setThreadCtxLoading] = useState(false);
   const [threadCtxNote, setThreadCtxNote] = useState("");
   const [decisionBusy, setDecisionBusy] = useState(false);
@@ -138,30 +139,36 @@ const LeadDetail = () => {
 
   useEffect(() => {
     if (!lead?.thread_id || !token) {
-      setWorkflowState(null);
-      setPendingHitl(null);
-      setThreadCtxNote("");
-      return;
+      const id = setTimeout(() => {
+        setWorkflowState(null);
+        setPendingHitl(null);
+        setLatestHitl(null);
+        setThreadCtxNote("");
+      }, 0);
+      return () => clearTimeout(id);
     }
     let cancelled = false;
     (async () => {
       setThreadCtxLoading(true);
       setThreadCtxNote("");
       try {
-        const [wf, queueRows] = await Promise.all([
+        const [wf, pendingRows, resolvedRows] = await Promise.all([
           getWorkflowState(token, lead.thread_id),
           fetchHitlQueue(token, { threadId: lead.thread_id }),
+          fetchHitlQueue(token, { threadId: lead.thread_id, queue: "resolved" }),
         ]);
         if (!cancelled) {
           setWorkflowState(wf);
-          const rows = Array.isArray(queueRows) ? queueRows : [];
-          const awaiting = rows.find((r) => r.review_status === "Awaiting") || rows[0] || null;
-          setPendingHitl(awaiting);
+          const pending = Array.isArray(pendingRows) ? pendingRows : [];
+          const resolved = Array.isArray(resolvedRows) ? resolvedRows : [];
+          setPendingHitl(pending[0] || null);
+          setLatestHitl(pending[0] || resolved[0] || null);
         }
       } catch (e) {
         if (!cancelled) {
           setWorkflowState(null);
           setPendingHitl(null);
+          setLatestHitl(null);
           const msg = e.message || "";
           setThreadCtxNote(
             msg.includes("404") || msg.includes("No checkpoint")
@@ -281,6 +288,7 @@ const LeadDetail = () => {
       emailsSent: lead.emails_sent_count ?? 0,
     };
   }, [lead, cpScoreNum, cpThresholdNum]);
+  const hasSentEmail = (lead?.emails_sent_count ?? 0) > 0 || (lead?.communications?.length ?? 0) > 0;
 
   const reviewsPath = lead?.thread_id ? `/reviews/${encodeURIComponent(lead.thread_id)}` : "/reviews";
 
@@ -356,6 +364,11 @@ const LeadDetail = () => {
 
   const handleSimulate = async (eventType, label = null) => {
     if (!lead?.thread_id || simulateBusy) return;
+    if (!hasSentEmail) {
+      setSimulateOpen(false);
+      alert("No email has been sent yet. Approve G1 and let A6 send before using the demo simulator.");
+      return;
+    }
     setSimulateBusy(true);
     setSimulateOpen(false);
     try {
@@ -439,9 +452,17 @@ const LeadDetail = () => {
             <div className="relative">
               <button
                 type="button"
-                onClick={() => setSimulateOpen(!simulateOpen)}
+                onClick={() => {
+                  if (!hasSentEmail) return;
+                  setSimulateOpen(!simulateOpen);
+                }}
                 disabled={simulateBusy}
-                className="inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-4 py-2 text-xs font-semibold text-violet-700 shadow-sm hover:border-violet-300 hover:bg-violet-100 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-200 dark:hover:border-violet-400"
+                title={!hasSentEmail ? "Approve G1 and send at least one email before simulating engagement." : "Simulate engagement event"}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-xs font-semibold shadow-sm ${
+                  hasSentEmail
+                    ? "border-violet-200 bg-violet-50 text-violet-700 hover:border-violet-300 hover:bg-violet-100 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-200 dark:hover:border-violet-400"
+                    : "cursor-not-allowed border-gray-200 bg-gray-50 text-gray-400 dark:border-volt-borderSoft dark:bg-white/5 dark:text-volt-muted2"
+                }`}
               >
                 {simulateBusy ? "Simulating…" : "⚡ Demo Simulator"}
                 <svg viewBox="0 0 24 24" fill="none" className={`h-3 w-3 transition-transform ${simulateOpen ? "rotate-180" : ""}`}>
@@ -454,15 +475,30 @@ const LeadDetail = () => {
                   <button onClick={() => handleSimulate("email_opened")} className="block w-full px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-50 dark:text-volt-text dark:hover:bg-white/5">
                     Email Opened (+0.10)
                   </button>
+                  <button onClick={() => handleSimulate("email_clicked", "Medical Insurance")} className="block w-full px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-50 dark:text-volt-text dark:hover:bg-white/5">
+                    Click Medical (+0.15)
+                  </button>
                   <button onClick={() => handleSimulate("email_clicked", "Life Insurance")} className="block w-full px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-50 dark:text-volt-text dark:hover:bg-white/5">
-                    Email Clicked (+0.15)
+                    Click Life (+0.15)
+                  </button>
+                  <button onClick={() => handleSimulate("email_clicked", "Asset Formation")} className="block w-full px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-50 dark:text-volt-text dark:hover:bg-white/5">
+                    Click Asset (+0.15)
                   </button>
                   <button onClick={() => handleSimulate("consult_page_visit")} className="block w-full px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-50 dark:text-volt-text dark:hover:bg-white/5">
                     Page Visit (+0.40)
                   </button>
+                  <button onClick={() => handleSimulate("seminar_inquiry")} className="block w-full px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-50 dark:text-volt-text dark:hover:bg-white/5">
+                    Seminar Inquiry (+0.20)
+                  </button>
+                  <button onClick={() => handleSimulate("f2f_request")} className="block w-full px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-50 dark:text-volt-text dark:hover:bg-white/5">
+                    F2F Request (+0.30)
+                  </button>
                   <div className="my-1 border-t border-gray-100 dark:border-volt-borderSoft" />
                   <button onClick={() => handleSimulate("consultation_booked")} className="block w-full px-3 py-2 text-left text-xs font-semibold text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-500/10">
                     Consult Booked (+0.50)
+                  </button>
+                  <button onClick={() => handleSimulate("bounce")} className="block w-full px-3 py-2 text-left text-xs text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10">
+                    Bounce + DQ Review
                   </button>
                   <button onClick={() => handleSimulate("unsubscribe")} className="block w-full px-3 py-2 text-left text-xs text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10">
                     Unsubscribe (Suppress)
@@ -722,12 +758,19 @@ const LeadDetail = () => {
                     {(workflowState?.current_node || lead?.current_node) || "—"}
                   </dd>
                 </div>
-                {workflowState?.hitl_gate ? (
+                {pendingHitl?.review_status === "Awaiting" && pendingHitl?.gate_type ? (
                   <div className="flex justify-between gap-2 sm:col-span-2">
                     <dt className="text-gray-500 dark:text-volt-muted2">HITL gate</dt>
                     <dd className="text-right font-medium text-gray-800 dark:text-volt-text">
-                      {workflowState.hitl_gate}
-                      {workflowState.hitl_status ? ` · ${workflowState.hitl_status}` : ""}
+                      {pendingHitl.gate_type} · pending
+                    </dd>
+                  </div>
+                ) : latestHitl?.gate_type ? (
+                  <div className="flex justify-between gap-2 sm:col-span-2">
+                    <dt className="text-gray-500 dark:text-volt-muted2">HITL gate</dt>
+                    <dd className="text-right font-medium text-gray-800 dark:text-volt-text">
+                      {latestHitl.gate_type}
+                      {latestHitl.review_status ? ` · ${latestHitl.review_status}` : ""}
                     </dd>
                   </div>
                 ) : null}

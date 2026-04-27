@@ -4,6 +4,7 @@ Agent Workflow API — start, pause, and monitor agent workflows.
 
 import json
 import logging
+import uuid
 from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
@@ -21,8 +22,15 @@ from model.api.v1.agents import (
     WorkflowStateResponse,
     ExecutionLogEntry,
     BatchRunResponse,
+    IntakeQuoteRequest,
+    IntakeConsultationRequest,
+    TrackClickRequest,
+    ScenarioConfigUpdateRequest,
 )
 from model.database.v1.leads import Lead
+from model.database.v1.quotes import Quote
+from model.database.v1.consultation import ConsultationRequest
+from model.database.v1.scenarios import ScenarioConfig
 from model.database.v1.communications import Communication
 from model.database.v1.emails import EmailEvent
 from model.database.v1.batch_runs import BatchRun
@@ -48,6 +56,11 @@ from config.v1.database_config import db_config
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _is_valid_phone(phone: str | None) -> bool:
+    digits = "".join(ch for ch in str(phone or "") if ch.isdigit())
+    return len(digits) >= 7
 
 
 @router.post(
@@ -197,6 +210,255 @@ async def retry_resume_workflow(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Resume failed: {str(e)}",
         )
+
+
+@router.post(
+    "/intake/quote",
+    response_model=APIResponse[dict],
+    status_code=status.HTTP_201_CREATED,
+)
+async def intake_quote(
+    request: IntakeQuoteRequest,
+    _: dict = Depends(require_permission("start_agent")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Internal quote intake endpoint replacing source-system webhooks in demo mode."""
+    lead_id = uuid.uuid4()
+    lead = Lead(
+        id=lead_id,
+        quote_id=request.quote_id,
+        first_name=request.first_name,
+        last_name=request.last_name,
+        email=request.email,
+        phone=request.phone,
+        age=request.age,
+        gender=request.gender,
+        ans3=request.ans3,
+        ans4=request.ans4,
+        ans5=request.ans5,
+        product_code=request.product_code,
+        plan_code=request.plan_code,
+        banner_code=request.banner_code,
+        registration_source=request.registration_source,
+        opt_in=False,
+        is_converted=False,
+        cooldown_flag=False,
+        workflow_status="New",
+        engagement_score=0.0,
+        base_score=0.0,
+        emails_sent_count=0,
+        max_emails=5,
+        workflow_completed=False,
+        commit_time=datetime.now(timezone.utc),
+        last_active_at=datetime.now(timezone.utc),
+    )
+    db.add(lead)
+    db.add(
+        Quote(
+            lead_id=lead_id,
+            product_code=request.product_code,
+            premium_estimate_jpy=request.premium_estimate_jpy,
+            raw_quote_ref=request.quote_id,
+        )
+    )
+    await db.commit()
+
+    workflow = None
+    if request.start_workflow:
+        workflow = await start_workflow(lead_id=str(lead_id), db_session=db)
+
+    return APIResponse(
+        success=True,
+        status_code=status.HTTP_201_CREATED,
+        data={
+            "lead_id": str(lead_id),
+            "thread_id": workflow.get("thread_id") if workflow else None,
+            "started": bool(workflow),
+        },
+        message="Quote intake accepted.",
+    )
+
+
+@router.post(
+    "/intake/consultation",
+    response_model=APIResponse[dict],
+    status_code=status.HTTP_201_CREATED,
+)
+async def intake_consultation(
+    request: IntakeConsultationRequest,
+    _: dict = Depends(require_permission("start_agent")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Internal consultation/seminar intake endpoint for S6/S7 source events."""
+    lead_id = uuid.uuid4()
+    registration_source = (
+        "f2f_form" if request.request_type == "face_to_face" else "web_callback"
+    )
+    lead = Lead(
+        id=lead_id,
+        first_name=request.first_name,
+        last_name=request.last_name,
+        email=request.email,
+        phone=request.phone,
+        gender=request.gender,
+        date_of_birth=request.date_of_birth,
+        registration_source=registration_source,
+        opt_in=False,
+        is_converted=False,
+        cooldown_flag=False,
+        workflow_status="New",
+        engagement_score=0.0,
+        base_score=0.0,
+        emails_sent_count=0,
+        max_emails=1,
+        workflow_completed=False,
+        commit_time=datetime.now(timezone.utc),
+        last_active_at=datetime.now(timezone.utc),
+    )
+    db.add(lead)
+    db.add(
+        ConsultationRequest(
+            lead_id=lead_id,
+            form_id=request.form_id,
+            request_id=request.request_id,
+            request_type=request.request_type,
+            email=request.email,
+            phone=request.phone,
+            gender=request.gender,
+            date_of_birth=request.date_of_birth,
+            memo=request.memo,
+            face_to_face=request.request_type == "face_to_face",
+            email_captured=bool(request.email),
+            campaign_code=request.campaign_code,
+        )
+    )
+    await db.commit()
+
+    workflow = None
+    if request.start_workflow:
+        workflow = await start_workflow(lead_id=str(lead_id), db_session=db)
+
+    return APIResponse(
+        success=True,
+        status_code=status.HTTP_201_CREATED,
+        data={
+            "lead_id": str(lead_id),
+            "thread_id": workflow.get("thread_id") if workflow else None,
+            "started": bool(workflow),
+        },
+        message="Consultation intake accepted.",
+    )
+
+
+@router.post(
+    "/intake/seminar",
+    response_model=APIResponse[dict],
+    status_code=status.HTTP_201_CREATED,
+)
+async def intake_seminar(
+    request: IntakeConsultationRequest,
+    _: dict = Depends(require_permission("start_agent")),
+    db: AsyncSession = Depends(get_db),
+):
+    request.request_type = "seminar"
+    return await intake_consultation(request, _, db)
+
+
+@router.post(
+    "/track/click",
+    response_model=APIResponse[dict],
+    status_code=status.HTTP_200_OK,
+)
+async def track_internal_click(
+    request: TrackClickRequest,
+    current_user: dict = Depends(require_permission("edit_lead")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Demo/internal tracked-link endpoint that records a CTA click."""
+    return await track_engagement_event(
+        EventTrackRequest(
+            thread_id=request.thread_id,
+            event_type="email_clicked",
+            clicked_label=request.clicked_label,
+            clicked_url=request.clicked_url,
+        ),
+        current_user,
+        db,
+    )
+
+
+@router.get(
+    "/scenarios/config",
+    response_model=APIResponse[list[dict]],
+    status_code=status.HTTP_200_OK,
+)
+async def list_scenario_config(
+    _: dict = Depends(require_permission("run_workflow")),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(ScenarioConfig).order_by(ScenarioConfig.scenario_id))
+    rows = result.scalars().all()
+    return APIResponse(
+        success=True,
+        status_code=status.HTTP_200_OK,
+        data=[
+            {
+                "scenario_id": row.scenario_id,
+                "name": row.name,
+                "base_score": row.base_score,
+                "handoff_threshold": row.handoff_threshold,
+                "cadence_days": row.cadence_days,
+                "max_emails": row.max_emails,
+                "default_keigo": row.default_keigo,
+                "default_tone": row.default_tone,
+                "is_active": row.is_active,
+            }
+            for row in rows
+        ],
+        message=f"{len(rows)} scenario config row(s).",
+    )
+
+
+@router.patch(
+    "/scenarios/config/{scenario_id}",
+    response_model=APIResponse[dict],
+    status_code=status.HTTP_200_OK,
+)
+async def update_scenario_config(
+    scenario_id: str,
+    request: ScenarioConfigUpdateRequest,
+    _: dict = Depends(require_permission("run_workflow")),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(ScenarioConfig).where(ScenarioConfig.scenario_id == scenario_id)
+    )
+    row = result.scalars().first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Scenario config not found.")
+
+    updates = request.model_dump(exclude_unset=True)
+    if "base_score" in updates and not 0 <= updates["base_score"] <= 1:
+        raise HTTPException(status_code=400, detail="base_score must be 0..1")
+    if "handoff_threshold" in updates and not 0 <= updates["handoff_threshold"] <= 1:
+        raise HTTPException(status_code=400, detail="handoff_threshold must be 0..1")
+    if "max_emails" in updates and updates["max_emails"] < 1:
+        raise HTTPException(status_code=400, detail="max_emails must be >= 1")
+    if "cadence_days" in updates and updates["cadence_days"] < 0:
+        raise HTTPException(status_code=400, detail="cadence_days must be >= 0")
+
+    await db.execute(
+        sa_update(ScenarioConfig)
+        .where(ScenarioConfig.scenario_id == scenario_id)
+        .values(**updates)
+    )
+    await db.commit()
+    return APIResponse(
+        success=True,
+        status_code=status.HTTP_200_OK,
+        data={"scenario_id": scenario_id, "updated": updates},
+        message="Scenario config updated.",
+    )
 
 
 @router.get(
@@ -675,11 +937,15 @@ async def process_due_workflow_timers(
     failed: list[dict] = []
 
     for timer in timers:
-        timer_id = str(timer.id)
+        timer_pk = timer.id
+        timer_id = str(timer_pk)
+        timer_type = timer.timer_type
+        timer_thread_id = timer.thread_id
+        timer_payload = timer.payload
         try:
             await db.execute(
                 sa_update(WorkflowTimer)
-                .where(WorkflowTimer.id == timer.id)
+                .where(WorkflowTimer.id == timer_pk)
                 .where(WorkflowTimer.status == "pending")
                 .values(status="processing")
             )
@@ -691,8 +957,8 @@ async def process_due_workflow_timers(
                 "send_deferred": False,
             }
 
-            if timer.timer_type == "quiet_hours":
-                outbox_id = _payload_value(timer.payload, "outbox_id")
+            if timer_type == "quiet_hours":
+                outbox_id = _payload_value(timer_payload, "outbox_id")
                 outbox = None
                 if outbox_id:
                     outbox_result = await db.execute(
@@ -703,7 +969,7 @@ async def process_due_workflow_timers(
                 if outbox is None:
                     outbox_result = await db.execute(
                         select(EmailOutbox)
-                        .where(EmailOutbox.thread_id == timer.thread_id)
+                        .where(EmailOutbox.thread_id == timer_thread_id)
                         .where(EmailOutbox.status == "held")
                         .order_by(EmailOutbox.scheduled_for.asc())
                         .limit(1)
@@ -725,11 +991,34 @@ async def process_due_workflow_timers(
                         "content_type": outbox.content_type or "unknown",
                     }
                 )
-            elif timer.timer_type not in ("cadence", "s4_response_window"):
-                raise ValueError(f"Unsupported timer_type={timer.timer_type}")
+            elif timer_type == "s4_response_window":
+                lead_result = await db.execute(
+                    select(Lead).where(Lead.thread_id == timer_thread_id).limit(1)
+                )
+                lead = lead_result.scalars().first()
+                if lead and lead.is_converted:
+                    await db.execute(
+                        sa_update(WorkflowTimer)
+                        .where(WorkflowTimer.id == timer_pk)
+                        .values(status="fired")
+                    )
+                    await db.commit()
+                    processed.append(
+                        {
+                            "timer_id": timer_id,
+                            "thread_id": timer_thread_id,
+                            "timer_type": timer_type,
+                            "target_node": "none",
+                            "workflow_status": "Converted",
+                            "hitl_gate": None,
+                        }
+                    )
+                    continue
+            elif timer_type not in ("cadence", "s4_response_window"):
+                raise ValueError(f"Unsupported timer_type={timer_type}")
 
             run_result = await jump_to_node(
-                timer.thread_id,
+                timer_thread_id,
                 target_node,
                 db_session=db,
                 state_patch=state_patch,
@@ -738,7 +1027,7 @@ async def process_due_workflow_timers(
 
             await db.execute(
                 sa_update(WorkflowTimer)
-                .where(WorkflowTimer.id == timer.id)
+                .where(WorkflowTimer.id == timer_pk)
                 .values(status="fired")
             )
             await db.commit()
@@ -746,8 +1035,8 @@ async def process_due_workflow_timers(
             processed.append(
                 {
                     "timer_id": timer_id,
-                    "thread_id": timer.thread_id,
-                    "timer_type": timer.timer_type,
+                    "thread_id": timer_thread_id,
+                    "timer_type": timer_type,
                     "target_node": target_node,
                     "workflow_status": state.get("workflow_status"),
                     "hitl_gate": state.get("hitl_gate"),
@@ -758,15 +1047,15 @@ async def process_due_workflow_timers(
             logger.error("Timer %s failed: %s", timer_id, exc, exc_info=True)
             await db.execute(
                 sa_update(WorkflowTimer)
-                .where(WorkflowTimer.id == timer.id)
+                .where(WorkflowTimer.id == timer_pk)
                 .values(status="failed")
             )
             await db.commit()
             failed.append(
                 {
                     "timer_id": timer_id,
-                    "thread_id": timer.thread_id,
-                    "timer_type": timer.timer_type,
+                    "thread_id": timer_thread_id,
+                    "timer_type": timer_type,
                     "error": str(exc),
                 }
             )
@@ -878,8 +1167,20 @@ async def track_engagement_event(
                 current_state.get("engagement_score", 0.0) + score_increment, 4
             )
 
-            # Build the state patch to inject back into the checkpoint
-            state_patch: dict = {"engagement_score": new_score}
+            # Build the state patch to inject back into the checkpoint.
+            # The graph route is then resumed through A3 -> A8 so engagement
+            # events leave a real workflow trace, not only a direct score patch.
+            state_patch: dict = {
+                "engagement_score": new_score,
+                "event_pending_route": True,
+                "last_event_type": request.event_type,
+                "last_event_at": now.isoformat(),
+                "last_clicked_label": request.clicked_label,
+            }
+            if request.event_type not in ("unsubscribe", "bounce"):
+                state_patch["preferred_send_hour_jst"] = (
+                    now.astimezone(timezone(timedelta(hours=9))).hour
+                )
 
             # For S5 CTA clicks: update product_interest so A4 generates the right content
             if request.event_type == "email_clicked" and request.clicked_label:
@@ -927,15 +1228,17 @@ async def track_engagement_event(
             )
             lead = lead_result.scalars().first()
             if lead:
+                lead_id = lead.id
                 # Find the latest sent email for this lead
                 comm_result = await db.execute(
                     select(Communication)
-                    .where(Communication.lead_id == lead.id)
+                    .where(Communication.lead_id == lead_id)
                     .order_by(Communication.sent_at.desc())
                     .limit(1)
                 )
                 comm = comm_result.scalars().first()
                 email_num = comm.email_number if comm else 0
+                comm_id = comm.id if comm else None
 
                 if comm:
                     if request.event_type == "email_opened" and comm.opened_at is None:
@@ -956,23 +1259,53 @@ async def track_engagement_event(
 
                 # Unsubscribe / hard bounce → OPT_IN=True + Suppressed permanently (spec)
                 if request.event_type in ("unsubscribe", "bounce"):
+                    lead_patch: dict = {
+                        "opt_in": True,
+                        "workflow_status": "Suppressed",
+                    }
+                    if request.event_type == "bounce" and not _is_valid_phone(lead.phone):
+                        state_patch["data_quality_flag"] = True
+                        state_patch["data_quality_reason"] = (
+                            "Email bounced and phone is missing or invalid."
+                        )
+                        existing_dq = await db.execute(
+                            select(HITLQueue)
+                            .where(HITLQueue.thread_id == request.thread_id)
+                            .where(HITLQueue.gate_type == "DQ")
+                            .where(HITLQueue.review_status == "Awaiting")
+                            .limit(1)
+                        )
+                        if existing_dq.scalars().first() is None:
+                            db.add(
+                                HITLQueue(
+                                    lead_id=lead_id,
+                                    thread_id=request.thread_id,
+                                    gate_type="DQ",
+                                    gate_description="Data Quality Manual Review",
+                                    suggested_persona="data_quality_review",
+                                    persona_confidence=0.0,
+                                    reviewer_notes=(
+                                        "Email bounced and phone is missing or invalid."
+                                    ),
+                                )
+                            )
                     await db.execute(
                         sa_update(Lead)
-                        .where(Lead.id == lead.id)
-                        .values(opt_in=True, workflow_status="Suppressed")
+                        .where(Lead.id == lead_id)
+                        .values(**lead_patch)
                     )
                     await db.commit()
                     logger.info(
                         "Lead %s suppressed permanently (%s)",
-                        lead.id,
+                        lead_id,
                         request.event_type,
                     )
 
                 # Write EmailEvent row so the full engagement history is auditable
                 db.add(
                     EmailEvent(
-                        lead_id=lead.id,
-                        communication_id=comm.id if comm else None,
+                        lead_id=lead_id,
+                        communication_id=comm_id,
                         event_type=request.event_type,
                         score_delta=score_increment,
                         email_number=email_num,
@@ -993,17 +1326,32 @@ async def track_engagement_event(
                     # Only positive engagement events reset the 180-day clock
                     lead_updates["last_active_at"] = now
                 await db.execute(
-                    sa_update(Lead).where(Lead.id == lead.id).values(**lead_updates)
+                    sa_update(Lead).where(Lead.id == lead_id).values(**lead_updates)
                 )
                 await db.commit()
 
-        handoff_opened = await _open_event_driven_handoff_if_ready(
-            db=db,
-            thread_id=request.thread_id,
-            state=patched_state or {**current_state, **state_patch},
-            event_type=request.event_type,
-            new_score=new_score,
+        routable_state = patched_state or {**current_state, **state_patch}
+        should_route_event = (
+            request.event_type not in ("unsubscribe", "bounce")
+            and routable_state.get("hitl_status") != "pending"
         )
+        if should_route_event:
+            run_result = await jump_to_node(
+                request.thread_id,
+                "intent_analyser",
+                db_session=db,
+                state_patch=state_patch,
+            )
+            routed_state = run_result.get("state", {})
+            handoff_opened = routed_state.get("hitl_gate") == "G4"
+        else:
+            handoff_opened = await _open_event_driven_handoff_if_ready(
+                db=db,
+                thread_id=request.thread_id,
+                state=routable_state,
+                event_type=request.event_type,
+                new_score=new_score,
+            )
 
         return APIResponse(
             success=True,
