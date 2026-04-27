@@ -11,8 +11,66 @@ import {
   updateAdminUser,
   updateAdminUserPermissions,
 } from "../src/services/adminApi";
+import { fetchRecentSseEvents } from "../src/services/sseStream";
 import { formatRelativeTime } from "../src/utils/relativeTime";
 import { useRelativeClock } from "../src/hooks/useRelativeClock";
+
+// ── Audit log helpers ─────────────────────────────────────────────────
+
+const EVENT_DOT = {
+  workflow_state:   "bg-emerald-500",
+  hitl_approved:    "bg-emerald-500",
+  hitl_edited:      "bg-amber-500",
+  hitl_required:    "bg-violet-500",
+  hitl_rejected:    "bg-rose-500",
+  node_transition:  "bg-sky-500",
+  batch_progress:   "bg-indigo-500",
+  lead_converted:   "bg-teal-500",
+};
+
+/** Map an SSE event row from the backend → the shape the UI list expects. */
+const sseEventToAuditRow = (ev) => {
+  const actor = ev.actor_name || ev.actor_email || "System";
+  const role  = ev.actor_role  || "System";
+  const lead  = ev.lead_name   || ev.lead_id || "";
+
+  let text;
+  switch (ev.event_type) {
+    case "workflow_state":
+      text = `${actor} ${ev.status || "updated"} workflow${lead ? ` for ${lead}` : ""}`;
+      break;
+    case "hitl_required":
+      text = `${actor ? actor + " triggered" : "System triggered"} HITL gate ${ev.gate || ""}${lead ? ` for ${lead}` : ""}`;
+      break;
+    case "hitl_approved":
+      text = `${actor} approved ${ev.gate || "HITL gate"}${lead ? ` for ${lead}` : ""}`;
+      break;
+    case "hitl_edited":
+      text = `${actor} submitted edits on ${ev.gate || "HITL gate"}${lead ? ` for ${lead}` : ""}`;
+      break;
+    case "hitl_rejected":
+      text = `${actor} rejected ${ev.gate || "HITL gate"}${lead ? ` for ${lead}` : ""}${ev.reason ? ` — ${ev.reason}` : ""}`;
+      break;
+    case "node_transition":
+      text = `${actor ? actor + ": " : ""}Node ${ev.node || ""} ${ev.status || "transitioned"}${lead ? ` (${lead})` : ""}`;
+      break;
+    case "batch_progress":
+      text = `Batch run: ${ev.processed ?? "?"}/${ev.total ?? "?"} leads processed`;
+      break;
+    case "lead_converted":
+      text = `${actor} confirmed sales handoff${lead ? ` for ${lead}` : ""}`;
+      break;
+    default:
+      text = ev.event_type?.replace(/_/g, " ") || "System event";
+  }
+
+  return {
+    dot:  EVENT_DOT[ev.event_type] || "bg-gray-400",
+    text,
+    at:   ev.persisted_at || ev.created_at || new Date().toISOString(),
+    role,
+  };
+};
 
 const roles = [
   {
@@ -144,47 +202,9 @@ const Settings = () => {
   const { token, user: currentUser } = useAuth();
   const { t } = useTranslation();
 
-  const [accessAuditLog] = useState(() => {
-    const now = Date.now();
-    return [
-      {
-        dot: "bg-emerald-500",
-        text: "Singh Sahil started workflow S1 for Masaki Tanaka",
-        at: new Date(now - 2 * 60 * 1000).toISOString(),
-        role: "Admin",
-      },
-      {
-        dot: "bg-amber-500",
-        text: "Nakamura Aiko approved G1 - Content Compliance for Kana Suzuki",
-        at: new Date(now - 8 * 60 * 1000).toISOString(),
-        role: "Reviewer",
-      },
-      {
-        dot: "bg-violet-500",
-        text: "Kobayashi Mei clicked “Run from A3” on lead Tomoko Sato",
-        at: new Date(now - 15 * 60 * 1000).toISOString(),
-        role: "Manager",
-      },
-      {
-        dot: "bg-sky-500",
-        text: "Suzuki Hiro paused workflow for Riku Endo at G4",
-        at: new Date(now - 22 * 60 * 1000).toISOString(),
-        role: "Manager",
-      },
-      {
-        dot: "bg-rose-500",
-        text: "Ito Takeshi rejected G1 for Kenji Yamada — tone mismatch",
-        at: new Date(now - 34 * 60 * 1000).toISOString(),
-        role: "Reviewer",
-      },
-      {
-        dot: "bg-gray-400",
-        text: "Tanaka Yoshi added Yamada Fumiko as Viewer",
-        at: new Date(now - 48 * 60 * 1000).toISOString(),
-        role: "Admin",
-      },
-    ];
-  });
+  const [accessAuditLog, setAccessAuditLog] = useState([]);
+  const [auditLoading, setAuditLoading] = useState(true);
+  const [auditError, setAuditError] = useState("");
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -238,6 +258,29 @@ const Settings = () => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void refresh();
   }, [refresh]);
+
+  const fetchAuditLog = useCallback(async () => {
+    if (!token) return;
+    setAuditError("");
+    setAuditLoading(true);
+    try {
+      const rows = await fetchRecentSseEvents(token, { limit: 24 });
+      setAccessAuditLog(
+        (Array.isArray(rows) ? rows : [])
+          .filter((ev) => ev?.event_type)
+          .map(sseEventToAuditRow)
+      );
+    } catch (e) {
+      setAuditError(e.message || "Failed to load audit log.");
+    } finally {
+      setAuditLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchAuditLog();
+  }, [fetchAuditLog]);
 
   const roleCounts = useMemo(() => {
     const counts = { admin: 0, manager: 0, reviewer: 0, viewer: 0 };
@@ -1063,27 +1106,70 @@ const Settings = () => {
         <div className="app-surface-panel p-4">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">Access Audit Log</p>
-            <span className="text-xs text-gray-400 dark:text-volt-muted2">Last 24h</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-400 dark:text-volt-muted2">Last 24h</span>
+              <button
+                type="button"
+                onClick={fetchAuditLog}
+                disabled={auditLoading}
+                title="Refresh audit log"
+                className="inline-flex h-6 w-6 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-400 transition hover:border-[#a7c4f2] hover:text-[#004EB2] disabled:cursor-not-allowed disabled:opacity-40 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted2 dark:hover:border-indigo-500/40 dark:hover:text-indigo-300"
+              >
+                <svg viewBox="0 0 24 24" fill="none" className={`h-3.5 w-3.5 ${auditLoading ? "animate-spin" : ""}`} aria-hidden="true">
+                  <path d="M23 4v6h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M1 20v-6h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            </div>
           </div>
 
+          {auditError ? (
+            <div className="mb-2 rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
+              {auditError}{" "}
+              <button type="button" className="font-semibold underline" onClick={fetchAuditLog}>
+                Retry
+              </button>
+            </div>
+          ) : null}
+
           <div className="space-y-2">
-            {accessAuditLog.map((item) => (
-              <div
-                key={item.text}
-                className="flex items-start gap-3 rounded-2xl border border-gray-100 bg-white px-3 py-3 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:shadow-none"
-              >
-                <span className={`mt-1.5 h-2 w-2 flex-none rounded-full ${item.dot}`} />
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold text-gray-800 dark:text-white">{item.text}</p>
-                  <p
-                    className="mt-1  text-xs font-medium text-gray-500 dark:text-volt-muted2"
-                    title={new Date(item.at).toLocaleString()}
-                  >
-                    {formatRelativeTime(item.at)} • {item.role}
-                  </p>
+            {auditLoading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="flex animate-pulse items-start gap-3 rounded-2xl border border-gray-100 bg-white px-3 py-3 dark:border-volt-borderSoft dark:bg-volt-card/60"
+                >
+                  <span className="mt-1.5 h-2 w-2 flex-none rounded-full bg-gray-200 dark:bg-white/10" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="h-3 w-3/4 rounded-full bg-gray-200 dark:bg-white/10" />
+                    <div className="h-2.5 w-1/3 rounded-full bg-gray-100 dark:bg-white/5" />
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            ) : !auditLoading && accessAuditLog.length === 0 ? (
+              <p className="py-4 text-center text-xs text-gray-400 dark:text-volt-muted2">
+                No audit events in the last 24h.
+              </p>
+            ) : (
+              accessAuditLog.map((item, idx) => (
+                <div
+                  key={`${item.at}-${idx}`}
+                  className="flex items-start gap-3 rounded-2xl border border-gray-100 bg-white px-3 py-3 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:shadow-none"
+                >
+                  <span className={`mt-1.5 h-2 w-2 flex-none rounded-full ${item.dot}`} />
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-gray-800 dark:text-white">{item.text}</p>
+                    <p
+                      className="mt-1 text-xs font-medium text-gray-500 dark:text-volt-muted2"
+                      title={new Date(item.at).toLocaleString()}
+                    >
+                      {formatRelativeTime(item.at)} • {item.role}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

@@ -11,6 +11,9 @@ import logging
 import time
 from datetime import datetime, timezone
 
+from sqlalchemy import select
+
+from model.database.v1.scenarios import ScenarioConfig
 from core.v1.services.agents.rules.scenario_rules import (
     classify_scenario,
     get_scenario_config,
@@ -81,13 +84,32 @@ async def persona_classifier(state: dict, *, db=None) -> dict:
     )
 
     config = get_scenario_config(scenario)
+    if db is not None:
+        result = await db.execute(
+            select(ScenarioConfig).where(ScenarioConfig.scenario_id == scenario)
+        )
+        db_config = result.scalars().first()
+        if db_config and db_config.is_active:
+            config.update(
+                {
+                    "name": db_config.name,
+                    "base_score": db_config.base_score,
+                    "handoff_threshold": db_config.handoff_threshold,
+                    "cadence_days": db_config.cadence_days,
+                    "max_emails": db_config.max_emails,
+                    "keigo": db_config.default_keigo,
+                    "tone": db_config.default_tone,
+                }
+            )
     keigo = resolve_keigo_level(state.get("age"))
 
     # ── Calculate confidence ─────────────────────────────────────────
     has_survey = bool(state.get("ans3"))
     has_age = state.get("age") is not None
 
-    if has_survey and has_age:
+    if scenario in ("S6", "S7"):
+        confidence = 0.40  # Consultation/call leads are intentionally human-reviewed.
+    elif has_survey and has_age:
         confidence = 0.92
     elif has_survey or has_age:
         confidence = 0.70
@@ -100,7 +122,10 @@ async def persona_classifier(state: dict, *, db=None) -> dict:
     state["persona_confidence"] = confidence
     state["keigo_level"] = keigo if scenario == "S3" else config.get("keigo", "casual")
     state["base_score"] = config["base_score"]
-    state["engagement_score"] = config["base_score"]
+    state["engagement_score"] = max(
+        float(state.get("engagement_score") or 0.0),
+        float(config["base_score"]),
+    )
     state["handoff_threshold"] = config["handoff_threshold"]
     state["max_emails"] = config["max_emails"]
     state["current_node"] = NODE_ID

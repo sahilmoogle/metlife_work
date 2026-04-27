@@ -119,9 +119,8 @@ const AppLayout = () => {
 
         {/* Sidebar — photo layer + gradient so the skyline stays visible and sharp */}
         <aside
-          className={`fixed left-0 top-0 z-50 h-full w-[280px] overflow-x-hidden overflow-y-hidden border-r border-white/10 bg-[#0b1830] text-white transition-[transform,width] duration-200 lg:static lg:z-auto lg:h-full lg:flex-none lg:translate-x-0 lg:block dark:border-volt-borderSoft dark:text-volt-text ${
-            sidebarCollapsed ? "lg:w-[84px]" : "lg:w-[255px]"
-          } ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
+          className={`fixed left-0 top-0 z-50 h-full w-[280px] overflow-x-hidden overflow-y-hidden border-r border-white/10 bg-[#0b1830] text-white transition-[transform,width] duration-200 lg:static lg:z-auto lg:h-full lg:flex-none lg:translate-x-0 lg:block dark:border-volt-borderSoft dark:text-volt-text ${sidebarCollapsed ? "lg:w-[84px]" : "lg:w-[255px]"
+            } ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
         >
           <div className="pointer-events-none absolute inset-0 z-0">
             <img
@@ -138,64 +137,64 @@ const AppLayout = () => {
           />
           <div className="relative z-10 flex h-full min-h-0 flex-col overflow-y-auto p-4 [text-shadow:0_1px_2px_rgba(0,0,0,0.45)]">
             <div className={`mb-8 ${sidebarCollapsed ? "lg:flex lg:flex-col lg:items-center lg:gap-2" : "flex items-center gap-3"}`}>
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 text-sm font-bold text-indigo-700">
-              <img src={mainIcon} alt="icon" className="w-8 h-8" />
-            </div>
-
-            {!sidebarCollapsed ? (
-              <div className="min-w-0">
-                <h1 className="truncate text-sm font-semibold text-white dark:text-volt-text">{t("brand.name")}</h1>
-                <p className="truncate text-[11px] text-white/70 dark:text-volt-muted">{t("brand.tagline")}</p>
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 text-sm font-bold text-indigo-700">
+                <img src={mainIcon} alt="icon" className="w-8 h-8" />
               </div>
-            ) : null}
 
-            {/* Mobile close */}
-            <button
-              type="button"
-              className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/10 text-white/80 transition hover:bg-white/15 hover:text-white lg:hidden dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
-              aria-label="Close sidebar"
-              onClick={() => setSidebarOpen(false)}
-            >
-              <X className="h-4 w-4" />
-            </button>
+              {!sidebarCollapsed ? (
+                <div className="min-w-0">
+                  <h1 className="truncate text-sm font-semibold text-white dark:text-volt-text">{t("brand.name")}</h1>
+                  <p className="truncate text-[11px] text-white/70 dark:text-volt-muted">{t("brand.tagline")}</p>
+                </div>
+              ) : null}
 
-            {/* Desktop collapse/expand */}
-            <button
-              type="button"
-              className={`hidden h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/10 text-white/80 transition hover:bg-white/15 hover:text-white lg:inline-flex dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted ${sidebarCollapsed ? "lg:ml-0" : "ml-auto"
-                }`}
-              aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              onClick={() => setSidebarCollapsed((v) => !v)}
-            >
-              {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-            </button>
-          </div>
-          <nav className="space-y-2 text-sm">
-            {navItems.map((item) => {
-              const Icon = item.icon;
+              {/* Mobile close */}
+              <button
+                type="button"
+                className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/10 text-white/80 transition hover:bg-white/15 hover:text-white lg:hidden dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
+                aria-label="Close sidebar"
+                onClick={() => setSidebarOpen(false)}
+              >
+                <X className="h-4 w-4" />
+              </button>
 
-              return (
-                <NavLink
-                  key={`${item.key}-${item.path}`}
-                  to={item.path}
-                  title={sidebarCollapsed ? t(`nav.${item.key}`, { defaultValue: item.key }) : undefined}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 rounded-xl px-3 py-2 transition ${sidebarCollapsed ? "lg:justify-center" : ""
-                    } ${isActive
-                      ? "bg-white/15 font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_0_28px_rgba(124,158,255,0.22)] ring-1 ring-white/20 dark:bg-white/12 dark:text-volt-text dark:ring-[rgba(124,158,255,0.35)]"
-                      : "text-white/80 hover:bg-white/10 hover:text-white dark:text-volt-muted dark:hover:bg-white/10 dark:hover:text-volt-text"
-                    }`
-                  }
-                >
-                  <Icon className="h-4 w-4" />
-                  {!sidebarCollapsed ? (
-                    <span className="truncate">{t(`nav.${item.key}`, { defaultValue: item.key })}</span>
-                  ) : null}
-                </NavLink>
-              );
-            })}
-          </nav>
+              {/* Desktop collapse/expand */}
+              <button
+                type="button"
+                className={`hidden h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/10 text-white/80 transition hover:bg-white/15 hover:text-white lg:inline-flex dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted ${sidebarCollapsed ? "lg:ml-0" : "ml-auto"
+                  }`}
+                aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                onClick={() => setSidebarCollapsed((v) => !v)}
+              >
+                {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+              </button>
+            </div>
+            <nav className="space-y-2 text-sm">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+
+                return (
+                  <NavLink
+                    key={`${item.key}-${item.path}`}
+                    to={item.path}
+                    title={sidebarCollapsed ? t(`nav.${item.key}`, { defaultValue: item.key }) : undefined}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 rounded-xl px-3 py-2 transition ${sidebarCollapsed ? "lg:justify-center" : ""
+                      } ${isActive
+                        ? "bg-white/15 font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_0_28px_rgba(124,158,255,0.22)] ring-1 ring-white/20 dark:bg-white/12 dark:text-volt-text dark:ring-[rgba(124,158,255,0.35)]"
+                        : "text-white/80 hover:bg-white/10 hover:text-white dark:text-volt-muted dark:hover:bg-white/10 dark:hover:text-volt-text"
+                      }`
+                    }
+                  >
+                    <Icon className="h-4 w-4" />
+                    {!sidebarCollapsed ? (
+                      <span className="truncate">{t(`nav.${item.key}`, { defaultValue: item.key })}</span>
+                    ) : null}
+                  </NavLink>
+                );
+              })}
+            </nav>
           </div>
         </aside>
 
