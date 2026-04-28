@@ -205,6 +205,7 @@ const Settings = () => {
   const [accessAuditLog, setAccessAuditLog] = useState([]);
   const [auditLoading, setAuditLoading] = useState(true);
   const [auditError, setAuditError] = useState("");
+  const [auditVisibleCount, setAuditVisibleCount] = useState(6);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -270,6 +271,7 @@ const Settings = () => {
           .filter((ev) => ev?.event_type)
           .map(sseEventToAuditRow)
       );
+      setAuditVisibleCount(6);
     } catch (e) {
       setAuditError(e.message || "Failed to load audit log.");
     } finally {
@@ -1246,7 +1248,7 @@ const Settings = () => {
                 No audit events in the last 24h.
               </p>
             ) : (
-              accessAuditLog.map((item, idx) => (
+              accessAuditLog.slice(0, auditVisibleCount).map((item, idx) => (
                 <div
                   key={`${item.at}-${idx}`}
                   className="flex items-start gap-3 rounded-2xl border border-gray-100 bg-white px-3 py-3 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:shadow-none"
@@ -1265,6 +1267,30 @@ const Settings = () => {
               ))
             )}
           </div>
+
+          {!auditLoading && accessAuditLog.length > auditVisibleCount ? (
+            <div className="mt-3 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setAuditVisibleCount((n) => Math.min(accessAuditLog.length, n + 20))}
+                className="inline-flex h-9 items-center justify-center rounded-full border border-gray-200 bg-white px-4 text-xs font-semibold text-gray-700 shadow-sm transition hover:border-[#a7c4f2] hover:text-[#004EB2] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text dark:shadow-none dark:hover:border-volt-border dark:hover:text-white"
+              >
+                Read more
+              </button>
+            </div>
+          ) : null}
+
+          {!auditLoading && accessAuditLog.length > 6 && auditVisibleCount >= accessAuditLog.length ? (
+            <div className="mt-2 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setAuditVisibleCount(6)}
+                className="text-xs font-semibold text-gray-500 hover:underline dark:text-volt-muted2"
+              >
+                Show less
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
     </section>

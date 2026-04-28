@@ -1,8 +1,10 @@
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import mainIcon from "../src/assets/images/main-icon.jpg";
+import mainIcon from "../src/assets/images/main-icon.png";
 import userIcon from "../src/assets/images/user.jpg";
+import sidebarCityLight from "../src/assets/images/light-sidebar.png";
+import sidebarCity from "../src/assets/images/loginBackground.png";
 import { useTranslation } from "react-i18next";
 
 
@@ -213,43 +215,77 @@ const AppLayout = () => {
 
         {/* Sidebar — photo layer + gradient so the skyline stays visible and sharp */}
         <aside
-          className={`fixed left-0 top-0 z-50 h-full w-[280px] overflow-x-hidden overflow-y-hidden border-r border-white/10 bg-[#0b1830] text-white transition-[transform,width] duration-200 lg:static lg:z-auto lg:h-full lg:flex-none lg:translate-x-0 lg:block dark:border-volt-borderSoft dark:text-volt-text ${sidebarCollapsed ? "lg:w-[84px]" : "lg:w-[255px]"
+          className={`fixed left-0 top-0 z-50 h-full w-[280px] overflow-hidden border-r border-gray-200 bg-[#f6f9ff] text-slate-900 transition-[transform,width] duration-200 lg:static lg:z-auto lg:flex-none lg:translate-x-0 lg:block dark:border-volt-borderSoft dark:bg-[radial-gradient(120%_90%_at_50%_-10%,rgba(124,158,255,0.14),transparent_55%),linear-gradient(180deg,#0b1830_0%,#071225_55%,#060914_100%)] dark:text-volt-text ${sidebarCollapsed ? "lg:w-[84px]" : "lg:w-[255px]"
             } ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
         >
+          {/* Light-mode city illustration (same treatment as dark, with the light asset). */}
+          <img
+            src={sidebarCityLight}
+            alt=""
+            aria-hidden="true"
+            className="pointer-events-none absolute bottom-0 left-0 z-0 block h-[48%] w-full select-none object-cover object-left-bottom opacity-[0.9] dark:hidden"
+            style={{
+              maskImage: "linear-gradient(to top, black 0%, black 72%, transparent 100%)",
+              WebkitMaskImage: "linear-gradient(to top, black 0%, black 72%, transparent 100%)",
+              filter: "grayscale(0.02) saturate(1.02) brightness(1.02) contrast(1.06)",
+            }}
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] block h-[48%] dark:hidden"
+            style={{
+              background:
+                "linear-gradient(to top, rgba(246,249,255,0.55) 0%, rgba(246,249,255,0.26) 45%, rgba(246,249,255,0.0) 100%)",
+            }}
+          />
 
-          <div className="relative z-10 flex h-full min-h-0 flex-col overflow-y-auto p-4 [text-shadow:0_1px_2px_rgba(0,0,0,0.45)]">
-            <div className={`mb-8 ${sidebarCollapsed ? "lg:flex lg:flex-col lg:items-center lg:gap-2" : "flex items-center gap-3"}`}>
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 text-sm font-bold text-indigo-700">
-                <img src={mainIcon} alt="icon" className="w-8 h-8" />
+          {/* Dark-mode city illustration (matches reference dark screenshot). */}
+          <img
+            src={sidebarCity}
+            alt=""
+            aria-hidden="true"
+            className="pointer-events-none absolute bottom-0 left-0 z-0 hidden h-[48%] w-full select-none object-cover object-left-bottom opacity-[0.8] dark:block"
+            style={{
+              maskImage: "linear-gradient(to top, black 0%, black 72%, transparent 100%)",
+              WebkitMaskImage: "linear-gradient(to top, black 0%, black 72%, transparent 100%)",
+              filter: "grayscale(0.06) saturate(1.02) brightness(0.68) contrast(1.18)",
+            }}
+          />
+          {/* Dark overlay to make skyline subtle like reference */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] hidden h-[48%] dark:block"
+            style={{
+              background:
+                "linear-gradient(to top, rgba(6,9,20,0.42) 0%, rgba(6,9,20,0.22) 45%, rgba(6,9,20,0.0) 100%)",
+            }}
+          />
+
+          <div className="relative z-10 flex h-full min-h-0 flex-col overflow-y-auto px-4 pt-4 pb-3">
+            <div className={`mb-7 ${sidebarCollapsed ? "lg:flex lg:flex-col lg:items-center lg:gap-2" : "flex items-center gap-3"}`}>
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-sm ring-1 ring-gray-200 dark:bg-white/10 dark:ring-white/15">
+                <img src={mainIcon} alt="icon" className="h-8 w-8" />
               </div>
 
               {!sidebarCollapsed ? (
-                <div className="min-w-0">
-                  <h1 className="truncate text-sm font-semibold text-white dark:text-volt-text">{t("brand.name")}</h1>
-                  <p className="truncate text-[11px] text-white/70 dark:text-volt-muted">{t("brand.tagline")}</p>
+                <div className="min-w-0 leading-tight">
+                  <h1 className="truncate text-base font-semibold tracking-tight text-slate-900 dark:text-volt-text">
+                    MetLife
+                  </h1>
+                  <p className="truncate text-[11px] text-slate-500 dark:text-volt-muted">
+                    Lead Nurturing Platform
+                  </p>
                 </div>
               ) : null}
 
               {/* Mobile close */}
               <button
                 type="button"
-                className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/10 text-white/80 transition hover:bg-white/15 hover:text-white lg:hidden dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
+                className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 bg-white text-slate-600 shadow-sm transition hover:border-blue-200 hover:text-blue-700 lg:hidden dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
                 aria-label="Close sidebar"
                 onClick={() => setSidebarOpen(false)}
               >
                 <X className="h-4 w-4" />
-              </button>
-
-              {/* Desktop collapse/expand */}
-              <button
-                type="button"
-                className={`hidden h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/10 text-white/80 transition hover:bg-white/15 hover:text-white lg:inline-flex dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted ${sidebarCollapsed ? "lg:ml-0" : "ml-auto"
-                  }`}
-                aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-                title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-                onClick={() => setSidebarCollapsed((v) => !v)}
-              >
-                {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
               </button>
             </div>
             <nav className="space-y-2 text-sm">
@@ -262,10 +298,10 @@ const AppLayout = () => {
                     to={item.path}
                     title={sidebarCollapsed ? t(`nav.${item.key}`, { defaultValue: item.key }) : undefined}
                     className={({ isActive }) =>
-                      `flex items-center gap-3 rounded-xl px-3 py-2 transition ${sidebarCollapsed ? "lg:justify-center" : ""
+                      `flex items-center gap-3 rounded-xl px-3 py-2.5 transition ${sidebarCollapsed ? "lg:justify-center" : ""
                       } ${isActive
-                        ? "bg-white/15 font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_0_28px_rgba(124,158,255,0.22)] ring-1 ring-white/20 dark:bg-white/12 dark:text-volt-text dark:ring-[rgba(124,158,255,0.35)]"
-                        : "text-white/80 hover:bg-white/10 hover:text-white dark:text-volt-muted dark:hover:bg-white/10 dark:hover:text-volt-text"
+                        ? "bg-gradient-to-r from-[#0b5fff] to-[#0b5fff] font-semibold text-white shadow-[0_10px_25px_rgba(11,95,255,0.22)]"
+                        : "text-slate-600 hover:bg-white/70 hover:text-slate-900 dark:text-volt-muted dark:hover:bg-white/10 dark:hover:text-volt-text"
                       }`
                     }
                   >
@@ -277,6 +313,29 @@ const AppLayout = () => {
                 );
               })}
             </nav>
+
+            {/* Footer like reference (keep collapse/expand button always visible). */}
+            <div className="mt-auto pt-6">
+              {!sidebarCollapsed ? (
+                <div className="inline-block rounded-xl bg-white/70 px-3 py-2 text-[10px] leading-relaxed text-slate-700 shadow-sm ring-1 ring-black/5 backdrop-blur-sm dark:bg-transparent dark:px-0 dark:py-0 dark:text-white/55 dark:shadow-none dark:ring-0 dark:backdrop-blur-0">
+                  <p>© 2025 MetLife Insurance K.K.</p>
+                  <p>All rights reserved.</p>
+                </div>
+              ) : null}
+
+              <div className={`mt-4 flex items-center ${sidebarCollapsed ? "justify-center" : "justify-between"}`}>
+                <button
+                  type="button"
+                  className="hidden h-9 w-9 items-center justify-center rounded-xl border border-gray-200 bg-white text-slate-600 shadow-sm transition hover:border-blue-200 hover:text-blue-700 lg:inline-flex dark:border-white/10 dark:bg-white/5 dark:text-white/70 dark:hover:bg-white/10"
+                  aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                  title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                  onClick={() => setSidebarCollapsed((v) => !v)}
+                >
+                  {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+                </button>
+                {!sidebarCollapsed ? <div className="hidden lg:block" /> : null}
+              </div>
+            </div>
           </div>
         </aside>
 
@@ -323,7 +382,7 @@ const AppLayout = () => {
               </button>
 
               <div className="relative" ref={notificationsRef}>
-                <button
+                {/* <button
                   type="button"
                   onClick={() => setNotificationsOpen((v) => !v)}
                   className="relative inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm transition hover:border-indigo-200 hover:text-[#004EB2] dark:border-volt-borderSoft/80 dark:bg-[linear-gradient(180deg,rgba(20,38,74,0.9),rgba(12,22,46,0.88))] dark:text-white dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
@@ -338,7 +397,7 @@ const AppLayout = () => {
                       {unreadCount > 9 ? "9+" : unreadCount}
                     </span>
                   ) : null}
-                </button>
+                </button> */}
 
                 {notificationsOpen ? (
                   <div
@@ -509,7 +568,7 @@ const AppLayout = () => {
             </div>
           </header>
 
-          <div className="app-dark-main-fill flex-1 overflow-y-auto bg-transparent p-4 sm:p-6">
+          <div className="app-dark-main-fill flex-1 overflow-y-auto bg-transparent p-2 sm:p-3">
             <Outlet />
           </div>
         </main>

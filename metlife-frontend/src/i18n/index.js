@@ -181,7 +181,7 @@ const resources = {
           ready: "Ready",
         },
         runButton: {
-          complete: "Complete",
+          complete: "Re-run",
           running: "Running…",
           runAll: "Run All Workflows",
           runningTitle:
@@ -519,7 +519,7 @@ const resources = {
           ready: "準備完了",
         },
         runButton: {
-          complete: "完了",
+          complete: "再実行",
           running: "実行中…",
           runAll: "全ワークフロー実行",
           runningTitle:

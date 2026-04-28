@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { fetchDashboardStats } from "../src/services/dashboardApi";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 
 const MetricIcon = ({ variant }) => {
   const common = "h-4 w-4";
@@ -108,6 +109,7 @@ const scenarioMeta = {
 const Dashboard = () => {
   const { token } = useAuth();
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -178,8 +180,8 @@ const Dashboard = () => {
       {
         label: `${t("dashboard.funnel.totalLeads")} ${formatInt(totalCount)}`,
         value: totalCount ? 100 : 0,
-        color: "bg-violet-600",
-        track: "bg-violet-50",
+        color: "bg-blue-600",
+        track: "bg-blue-50",
       },
       {
         label: `${t("dashboard.funnel.activeProcessing")} ${formatInt(active)}`,
@@ -199,8 +201,8 @@ const Dashboard = () => {
       {
         label: `${t("dashboard.funnel.converted")} ${formatInt(converted)}`,
         value: pct(converted, totalCount),
-        color: "bg-fuchsia-600",
-        track: "bg-fuchsia-50",
+        color: "bg-indigo-600",
+        track: "bg-indigo-50",
       },
       {
         label: `${t("dashboard.funnel.dormant")} ${formatInt(dormant)}`,
@@ -216,37 +218,58 @@ const Dashboard = () => {
       {
         title: t("dashboard.kpi.totalLeads"),
         value: formatInt(total),
-        change: suppressed ? t("dashboard.kpi.suppressed", { count: formatInt(suppressed) }) : t("dashboard.kpi.allRecords"),
+        footer: suppressed
+          ? t("dashboard.kpi.suppressed", { count: formatInt(suppressed) })
+          : t("dashboard.kpi.allRecords", { defaultValue: "All records →" }),
+        footerAction: "/leads",
         icon: "leads",
-        chip: "bg-violet-50 text-violet-700 ring-violet-100",
-        iconWrap: "bg-violet-50 text-violet-700",
+        iconBadge:
+          "bg-blue-50 text-blue-700 ring-blue-100 dark:bg-blue-500/15 dark:text-blue-200 dark:ring-blue-500/25",
+        footerClass: "text-[#004EB2] dark:text-blue-300",
       },
       {
         title: t("dashboard.kpi.activeWorkflows"),
         value: formatInt(active),
-        change: total ? kpiShareOfTotal(active, total) : "—",
+        footer: total ? kpiShareOfTotal(active, total) : "—",
         icon: "workflows",
-        chip: "bg-emerald-50 text-emerald-700 ring-emerald-100",
-        iconWrap: "bg-emerald-50 text-emerald-700",
+        iconBadge:
+          "bg-emerald-50 text-emerald-700 ring-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200 dark:ring-emerald-500/25",
+        footerClass: "text-gray-500 dark:text-volt-muted",
       },
       {
         title: t("dashboard.kpi.converted"),
         value: formatInt(converted),
-        change: total ? kpiShareOfTotal(converted, total) : "—",
+        footer: total ? kpiShareOfTotal(converted, total) : "—",
         icon: "converted",
-        chip: "bg-amber-50 text-amber-700 ring-amber-100",
-        iconWrap: "bg-amber-50 text-amber-700",
+        iconBadge:
+          "bg-indigo-50 text-indigo-700 ring-indigo-100 dark:bg-blue-500/15 dark:text-blue-200 dark:ring-blue-500/25",
+        footerClass: "text-gray-500 dark:text-volt-muted",
       },
       {
         title: t("dashboard.kpi.pendingHitl"),
-        value: formatInt(hitlDistinct),
-        change: t("dashboard.kpi.pendingHitlCaption", {
-          items: formatInt(hitlRows),
-          leads: formatInt(hitlDistinct),
+        value: formatInt(hitlRows),
+        footer: t("dashboard.kpi.pendingHitlCaptionShort", {
+          defaultValue: `${formatInt(hitlRows)} review items`,
+          count: formatInt(hitlRows),
         }),
+        footerAction: "/reviews",
         icon: "pending",
-        chip: "bg-rose-50 text-rose-700 ring-rose-100",
-        iconWrap: "bg-rose-50 text-rose-700",
+        iconBadge:
+          "bg-amber-50 text-amber-700 ring-amber-100 dark:bg-amber-500/15 dark:text-amber-200 dark:ring-amber-500/25",
+        footerClass: "text-amber-700 dark:text-amber-300",
+      },
+      {
+        title: t("dashboard.kpi.queueAwaiting", { defaultValue: "Queue Awaiting" }),
+        value: formatInt(hitlDistinct),
+        footer: t("dashboard.kpi.queueAwaitingCaption", {
+          defaultValue: `${formatInt(hitlDistinct)} leads`,
+          count: formatInt(hitlDistinct),
+        }),
+        footerAction: "/reviews",
+        icon: "queue",
+        iconBadge:
+          "bg-rose-50 text-rose-700 ring-rose-100 dark:bg-rose-500/15 dark:text-rose-200 dark:ring-rose-500/25",
+        footerClass: "text-rose-700 dark:text-rose-300",
       },
     ],
     [active, converted, hitlDistinct, hitlRows, kpiShareOfTotal, suppressed, t, total]
@@ -281,44 +304,65 @@ const Dashboard = () => {
         </div>
       ) : null}
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {kpiCards.map((item) => (
           <article
             key={item.title}
             className="app-surface-card p-4"
           >
             <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${item.iconWrap}`}>
+              <div className="flex min-w-0 items-center gap-3">
+                <div className={`flex h-10 w-10 flex-none items-center justify-center rounded-2xl ring-1 ${item.iconBadge}`}>
                   <MetricIcon variant={item.icon} />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-xs font-medium text-gray-500 dark:text-volt-muted">{item.title}</p>
-                  <p className="mt-1 text-2xl font-semibold tracking-tight text-[#1e2a52] dark:text-white">{item.value}</p>
+                  <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">
+                    {item.value}
+                  </p>
                 </div>
               </div>
-              <span className={`max-w-[55%] text-right rounded px-2.5 py-1 text-[10px] font-semibold ring-1 ${item.chip} break-words`}>
-                {item.change}
-              </span>
             </div>
+
+            <div className="mt-2">
+              {item.footerAction ? (
+                <button
+                  type="button"
+                  onClick={() => navigate(item.footerAction)}
+                  className={`text-xs font-semibold ${item.footerClass} hover:underline`}
+                >
+                  {item.footer}
+                </button>
+              ) : (
+                <p className={`text-xs font-medium ${item.footerClass}`}>{item.footer}</p>
+              )}
+            </div>
+
           </article>
         ))}
       </section>
 
       <section className="mt-4 grid gap-3 xl:grid-cols-2">
         <article className="app-surface-card p-4">
-          <h3 className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("dashboard.funnel.title")}</h3>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 ring-1 ring-blue-100">
+              <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
+                <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+              </svg>
+            </span>
+            <h3 className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("dashboard.funnel.title")}</h3>
+          </div>
           <p className="mb-4 text-xs font-medium text-gray-500 dark:text-volt-muted">{t("dashboard.funnel.subtitle")}</p>
           <div className="space-y-3">
             {funnelBars.map((bar) => (
               <div key={bar.label}>
                 <div className="mb-1 flex justify-between text-[11px] text-gray-500 dark:text-volt-muted">
-                  <span>{bar.label}</span>
+                  <span className="truncate pr-3">{bar.label}</span>
                   <span>{bar.value}%</span>
                 </div>
-                <div className={`h-2 rounded-full ${bar.track}`}>
+                <div className={`h-2 rounded-full ${bar.track} dark:bg-white/5`}>
                   <div
-                    className={`h-full rounded-full ${bar.color}`}
+                    className={`h-full rounded-full ${bar.color} dark:opacity-90`}
                     style={{ width: `${Math.min(100, bar.value)}%` }}
                   />
                 </div>
@@ -328,13 +372,35 @@ const Dashboard = () => {
         </article>
 
         <article className="app-surface-card p-4">
-          <h3 className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("dashboard.scenarios.title")}</h3>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 ring-1 ring-blue-100">
+                <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
+                  <path
+                    d="M4 7h16M4 12h10M4 17h14"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </span>
+              <h3 className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("dashboard.scenarios.title")}</h3>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => navigate("/analytics")}
+              className="text-xs font-semibold text-[#004EB2] hover:underline dark:text-indigo-300"
+            >
+              {t("dashboard.scenarios.viewAnalytics", { defaultValue: "View analytics →" })}
+            </button>
+          </div>
           <p className="mb-4 text-[11px] text-gray-500 dark:text-volt-muted">{t("dashboard.scenarios.subtitle")}</p>
           <div className="grid gap-2 sm:grid-cols-2">
             {scenarioRows.map((scenario) => (
               <div
                 key={scenario.id}
-                className="flex items-center gap-3 rounded-2xl border border-gray-200/90 bg-white p-3 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-volt-borderSoft dark:bg-[linear-gradient(180deg,rgba(18,34,68,0.78),rgba(10,18,38,0.72))] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.045)]"
+                className="app-surface-nested flex items-center gap-3 p-3"
               >
                 <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#eaf2ff] text-xs font-semibold text-[#004EB2] ring-1 ring-[#cfe0ff]">
                   {scenario.id}
@@ -350,30 +416,85 @@ const Dashboard = () => {
       </section>
 
       <section className="app-surface-card mt-4 p-4">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("dashboard.feed.title")}</h3>
-          <span className="inline-flex items-center gap-2 text-xs text-gray-400 dark:text-volt-muted2">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 ring-1 ring-blue-100">
+                <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
+                  <path
+                    d="M4 17h16M6 14l3-3 3 3 6-6"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
+              <h3 className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("dashboard.feed.title")}</h3>
+            </div>
+            <p className="mt-1 text-xs text-gray-500 dark:text-volt-muted">{t("dashboard.feed.subtitle", { defaultValue: "Real-time pipeline node activity" })}</p>
+          </div>
+
+          <span className="inline-flex flex-none items-center gap-2 text-xs text-gray-400 dark:text-volt-muted2">
             <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
             {t("dashboard.feed.fromActiveNodes")}
           </span>
         </div>
-        <div className="space-y-3">
-          {feedItems.length ? (
-            feedItems.map((item) => (
-              <div
-                key={item.title}
-                className="flex items-start gap-3 border-b border-gray-100 pb-3 text-sm text-gray-600 last:border-none last:pb-0 dark:border-volt-borderSoft dark:text-volt-muted"
-              >
-                <span className="mt-1.5 h-2 w-2 flex-none rounded-full bg-violet-500" />
-                <div className="min-w-0">
-                  <p className="truncate text-sm text-gray-700 dark:text-volt-text">{item.title}</p>
-                  <p className="mt-0.5  text-xs font-medium text-gray-500 dark:text-volt-muted">{item.meta}</p>
+
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch lg:justify-between">
+          <div className="min-w-0 flex-1 space-y-3">
+            {feedItems.length ? (
+              feedItems.map((item) => (
+                <div
+                  key={item.title}
+                  className="flex items-start gap-3 border-b border-gray-100 pb-3 text-sm text-gray-600 last:border-none last:pb-0 dark:border-volt-borderSoft dark:text-volt-muted"
+                >
+                  <span className="mt-1.5 h-2 w-2 flex-none rounded-full bg-blue-500" />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm text-gray-700 dark:text-volt-text">{item.title}</p>
+                    <p className="mt-0.5 text-xs font-medium text-gray-500 dark:text-volt-muted">{item.meta}</p>
+                  </div>
                 </div>
-              </div>
-            ))
-          ) : (
-            <p className="text-sm text-gray-500 dark:text-volt-muted">{t("dashboard.feed.empty")}</p>
-          )}
+              ))
+            ) : (
+              <p className="text-sm text-gray-500 dark:text-volt-muted">{t("dashboard.feed.empty")}</p>
+            )}
+          </div>
+
+          {/* <div className="app-surface-nested w-full flex-none p-3 lg:w-[420px]">
+            <div className="flex items-center justify-between text-xs text-gray-500 dark:text-volt-muted">
+              <span className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white/60 px-2.5 py-1 text-[11px] font-semibold text-gray-700 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-white">
+                <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
+                {t("dashboard.feed.live", { defaultValue: "Live" })}
+              </span>
+              <span>{t("dashboard.feed.fromActiveNodes")}</span>
+            </div>
+            <svg
+              viewBox="0 0 420 120"
+              className="mt-2 h-[120px] w-full"
+              role="img"
+              aria-label="Live activity chart"
+            >
+              <defs>
+                <linearGradient id="dashLine" x1="0" x2="1" y1="0" y2="0">
+                  <stop offset="0" stopColor="#2563eb" stopOpacity="0.9" />
+                  <stop offset="1" stopColor="#60a5fa" stopOpacity="0.95" />
+                </linearGradient>
+              </defs>
+              <path
+                d="M10 90 C 60 20, 120 110, 170 70 S 280 20, 330 60 S 380 110, 410 55"
+                fill="none"
+                stroke="url(#dashLine)"
+                strokeWidth="3.5"
+                strokeLinecap="round"
+              />
+              <path
+                d="M10 90 C 60 20, 120 110, 170 70 S 280 20, 330 60 S 380 110, 410 55 L410 118 L10 118 Z"
+                fill="#2563eb"
+                opacity="0.06"
+              />
+            </svg>
+          </div> */}
         </div>
       </section>
     </>

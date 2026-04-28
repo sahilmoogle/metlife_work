@@ -695,7 +695,7 @@ const Campaigns = () => {
 
             <button
               type="button"
-              onClick={status === "complete" ? reset : runAll}
+              onClick={runAll}
               disabled={status === "running"}
               title={
                 status === "running"
@@ -704,7 +704,11 @@ const Campaigns = () => {
               }
               className="inline-flex h-10 items-center gap-2 rounded-full bg-gradient-to-r from-[#0b4aa6] via-[#004EB2] to-[#003B86] px-5 text-xs font-semibold text-white shadow-[0_12px_30px_rgba(0,78,178,0.22)] transition hover:brightness-[1.05] disabled:cursor-not-allowed disabled:opacity-60 dark:shadow-[0_12px_30px_rgba(0,0,0,0.35)]"
             >
-              {status === "complete" ? t("common.complete") : status === "running" ? t("common.running") : t("campaigns.runButton.runAll")}
+              {status === "complete"
+                ? t("campaigns.runButton.complete")
+                : status === "running"
+                  ? t("common.running")
+                  : t("campaigns.runButton.runAll")}
               <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/20" aria-hidden>
                 {status === "running" ? (
                   <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
