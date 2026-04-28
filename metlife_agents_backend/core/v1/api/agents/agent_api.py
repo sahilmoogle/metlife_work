@@ -396,7 +396,9 @@ async def list_scenario_config(
     _: dict = Depends(require_permission("run_workflow")),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(ScenarioConfig).order_by(ScenarioConfig.scenario_id))
+    result = await db.execute(
+        select(ScenarioConfig).order_by(ScenarioConfig.scenario_id)
+    )
     rows = result.scalars().all()
     return APIResponse(
         success=True,
@@ -1178,9 +1180,9 @@ async def track_engagement_event(
                 "last_clicked_label": request.clicked_label,
             }
             if request.event_type not in ("unsubscribe", "bounce"):
-                state_patch["preferred_send_hour_jst"] = (
-                    now.astimezone(timezone(timedelta(hours=9))).hour
-                )
+                state_patch["preferred_send_hour_jst"] = now.astimezone(
+                    timezone(timedelta(hours=9))
+                ).hour
 
             # For S5 CTA clicks: update product_interest so A4 generates the right content
             if request.event_type == "email_clicked" and request.clicked_label:
@@ -1263,7 +1265,9 @@ async def track_engagement_event(
                         "opt_in": True,
                         "workflow_status": "Suppressed",
                     }
-                    if request.event_type == "bounce" and not _is_valid_phone(lead.phone):
+                    if request.event_type == "bounce" and not _is_valid_phone(
+                        lead.phone
+                    ):
                         state_patch["data_quality_flag"] = True
                         state_patch["data_quality_reason"] = (
                             "Email bounced and phone is missing or invalid."
@@ -1290,9 +1294,7 @@ async def track_engagement_event(
                                 )
                             )
                     await db.execute(
-                        sa_update(Lead)
-                        .where(Lead.id == lead_id)
-                        .values(**lead_patch)
+                        sa_update(Lead).where(Lead.id == lead_id).values(**lead_patch)
                     )
                     await db.commit()
                     logger.info(

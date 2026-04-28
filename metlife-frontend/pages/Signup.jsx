@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useTranslation } from "react-i18next";
-import mainIcon from "../src/assets/images/main-icon.jpg";
+import mainIcon from "../src/assets/images/main-icon.png";
 import metlifeBg from "../src/assets/images/loginBackground.png";
 
 const MailIcon = (props) => (

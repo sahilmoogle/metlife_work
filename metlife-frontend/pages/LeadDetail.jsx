@@ -34,6 +34,43 @@ const SCENARIO_NAMES = {
 const scenarioLabel = (id) =>
   id ? `${id} · ${SCENARIO_NAMES[id] ?? id}` : "—";
 
+const _normYesNo = (v) => {
+  if (v == null) return null;
+  const s = String(v).trim().toLowerCase();
+  if (!s) return null;
+  if (["yes", "y", "true", "t", "1", "on", "はい"].includes(s)) return "Yes";
+  if (["no", "n", "false", "f", "0", "off", "いいえ"].includes(s)) return "No";
+  return String(v).trim();
+};
+
+const SURVEY_Q = {
+  ans3: {
+    label: "Q3",
+    question: "Purchase intent (routing)",
+    answer: (v) => {
+      const s = (v ?? "").toString().trim().toUpperCase();
+      if (!s) return "—";
+      if (s === "A" || s === "B") return `${s} · Active buyer (fast track → S5)`;
+      if (s === "C") return "C · Needs-based survey path (S1–S3 / S2 by Q4)";
+      return s;
+    },
+  },
+  ans4: {
+    label: "Q4",
+    question: "Life event recently? (routing)",
+    answer: (v) => {
+      const yn = _normYesNo(v);
+      if (!yn) return "—";
+      return yn === "Yes" ? "Yes · Life event (→ S2)" : yn === "No" ? "No · Age-based (→ S1/S3)" : yn;
+    },
+  },
+  ans5: {
+    label: "Q5",
+    question: "Additional survey answer",
+    answer: (v) => _normYesNo(v) ?? "—",
+  },
+};
+
 const chip = {
   Low: "bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-volt-text",
   Medium: "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-200",
@@ -238,6 +275,54 @@ const LeadDetail = () => {
 
   const cpScoreNum = workflowState?.engagement_score ?? lead?.engagement_score ?? 0;
   const cpThresholdNum = workflowState?.handoff_threshold ?? 0.8;
+  const isPaused = String(lead?.workflow_status || "").toLowerCase() === "paused";
+  const cadenceDueAtIso = workflowState?.cadence_due_at ?? lead?.cadence_due_at ?? null;
+  const cadenceDays = Number(workflowState?.cadence_days ?? lead?.cadence_days ?? 0);
+  const queuedSendIso = useMemo(() => {
+    const logs = Array.isArray(lead?.execution_log) ? lead.execution_log : [];
+    // Prefer explicit ISO timestamps from cadence timer log lines.
+    for (let i = logs.length - 1; i >= 0; i -= 1) {
+      const d = String(logs[i]?.description || "");
+      const m = d.match(/scheduled for ([0-9]{4}-[0-9]{2}-[0-9]{2}T[^\\s]+)/i);
+      if (m?.[1]) return m[1];
+    }
+    // Fallback: quiet-hours log ("Email queued for 08:00 JST") → compute next JST time.
+    for (let i = logs.length - 1; i >= 0; i -= 1) {
+      const title = String(logs[i]?.title || "");
+      const desc = String(logs[i]?.description || "");
+      if (!/quiet hours/i.test(title) && !/quiet window/i.test(desc)) continue;
+      const tm = desc.match(/queued for\\s*(\\d{1,2}):(\\d{2})\\s*JST/i);
+      if (!tm) continue;
+      const hh = Number(tm[1]);
+      const mm = Number(tm[2]);
+      if (!Number.isFinite(hh) || !Number.isFinite(mm)) continue;
+      const nowUtc = new Date();
+      // JST is fixed UTC+9 (no DST)
+      const nowJst = new Date(nowUtc.getTime() + 9 * 60 * 60 * 1000);
+      const y = nowJst.getUTCFullYear();
+      const mo = nowJst.getUTCMonth();
+      const da = nowJst.getUTCDate();
+      let dueUtcMs = Date.UTC(y, mo, da, hh, mm, 0) - 9 * 60 * 60 * 1000;
+      if (dueUtcMs <= nowUtc.getTime()) {
+        dueUtcMs += 24 * 60 * 60 * 1000;
+      }
+      return new Date(dueUtcMs).toISOString();
+    }
+    return null;
+  }, [lead]);
+
+  const nextSendAt = useMemo(() => {
+    const iso = cadenceDueAtIso || queuedSendIso;
+    if (!iso) return null;
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }, [cadenceDueAtIso, queuedSendIso]);
+  const secondSendAt = useMemo(() => {
+    if (!nextSendAt) return null;
+    const step = Number.isFinite(cadenceDays) && cadenceDays > 0 ? cadenceDays : 1;
+    const d = new Date(nextSendAt.getTime() + step * 24 * 60 * 60 * 1000);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }, [nextSendAt, cadenceDays]);
 
   /** Pipeline row states: avoids showing “stuck” on A8 while the journey actually ended at Dormant. */
   const pipelineStageStates = useMemo(() => {
@@ -574,17 +659,26 @@ const LeadDetail = () => {
               <p className="text-xs font-semibold text-gray-600 dark:text-volt-muted">Survey answers</p>
               {lead.ans3 ? (
                 <p className="mt-1 text-[11px] text-gray-500 dark:text-volt-muted2">
-                  <span className="font-semibold text-gray-700 dark:text-volt-text">Q3:</span> {lead.ans3}
+                  <span className="font-semibold text-gray-700 dark:text-volt-text">{SURVEY_Q.ans3.label}:</span>{" "}
+                  <span className="text-gray-600 dark:text-volt-muted2">{SURVEY_Q.ans3.question}</span>{" "}
+                  <span className="font-semibold text-gray-800 dark:text-volt-text">·</span>{" "}
+                  <span className="font-semibold text-gray-700 dark:text-volt-text">{SURVEY_Q.ans3.answer(lead.ans3)}</span>
                 </p>
               ) : null}
               {lead.ans4 ? (
                 <p className="mt-1 text-[11px] text-gray-500 dark:text-volt-muted2">
-                  <span className="font-semibold text-gray-700 dark:text-volt-text">Q4:</span> {lead.ans4}
+                  <span className="font-semibold text-gray-700 dark:text-volt-text">{SURVEY_Q.ans4.label}:</span>{" "}
+                  <span className="text-gray-600 dark:text-volt-muted2">{SURVEY_Q.ans4.question}</span>{" "}
+                  <span className="font-semibold text-gray-800 dark:text-volt-text">·</span>{" "}
+                  <span className="font-semibold text-gray-700 dark:text-volt-text">{SURVEY_Q.ans4.answer(lead.ans4)}</span>
                 </p>
               ) : null}
               {lead.ans5 ? (
                 <p className="mt-1 text-[11px] text-gray-500 dark:text-volt-muted2">
-                  <span className="font-semibold text-gray-700 dark:text-volt-text">Q5:</span> {lead.ans5}
+                  <span className="font-semibold text-gray-700 dark:text-volt-text">{SURVEY_Q.ans5.label}:</span>{" "}
+                  <span className="text-gray-600 dark:text-volt-muted2">{SURVEY_Q.ans5.question}</span>{" "}
+                  <span className="font-semibold text-gray-800 dark:text-volt-text">·</span>{" "}
+                  <span className="font-semibold text-gray-700 dark:text-volt-text">{SURVEY_Q.ans5.answer(lead.ans5)}</span>
                 </p>
               ) : null}
             </div>
@@ -785,10 +879,33 @@ const LeadDetail = () => {
             {lead.thread_id ? (
               <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3 dark:border-indigo-500/20 dark:bg-indigo-500/10">
                 <p className="text-xs font-semibold text-indigo-800 dark:text-indigo-200">Pipeline (checkpoint position)</p>
-                <p className="mt-1 text-[11px] text-gray-600 dark:text-volt-muted2">
-                  Typical nurture chain (S1–S5). S4 dormant revival inserts <span className="font-semibold">A10 · Dormancy</span> before revival steps.
-                  {threadCtxLoading ? " Loading checkpoint…" : ""}
-                </p>
+                {isPaused && nextSendAt ? (
+                  <div className="mt-2 rounded-lg border border-indigo-200/70 bg-white/70 px-3 py-2 text-[11px] dark:border-indigo-500/30 dark:bg-volt-panel/60">
+                    <p className="font-semibold text-indigo-900 dark:text-indigo-100">Paused · scheduled sends</p>
+                    <p className="mt-0.5 text-gray-700 dark:text-volt-muted">
+                      Next email:{" "}
+                      <span className="font-semibold text-gray-900 dark:text-white">
+                        {formatRelativeTime(nextSendAt.toISOString()) || nextSendAt.toLocaleString()}
+                      </span>
+                      {" · "}
+                      <span className="text-gray-500 dark:text-volt-muted2">{nextSendAt.toLocaleString()}</span>
+                    </p>
+                    {secondSendAt ? (
+                      <p className="mt-0.5 text-gray-700 dark:text-volt-muted">
+                        After that:{" "}
+                        <span className="font-semibold text-gray-900 dark:text-white">
+                          {formatRelativeTime(secondSendAt.toISOString()) || secondSendAt.toLocaleString()}
+                        </span>
+                        {" · "}
+                        <span className="text-gray-500 dark:text-volt-muted2">{secondSendAt.toLocaleString()}</span>
+                      </p>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="mt-1 text-[11px] text-gray-600 dark:text-volt-muted2">
+                    {threadCtxLoading ? "Loading checkpoint…" : ""}
+                  </p>
+                )}
                 {(workflowState?.current_node || lead?.current_node) === "A10_Dormancy" ? (
                   <p className="mt-2 rounded-lg bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-900 dark:bg-amber-500/15 dark:text-amber-100">
                     Active: dormant-revival segment (A10) → G3 campaign gate

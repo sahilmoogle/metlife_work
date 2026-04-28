@@ -345,7 +345,7 @@ async def _seed_consolidated_workbooks(db: AsyncSession) -> dict[str, int]:
         if out["seminar_rows"]:
             logger.info("Imported %d TSeminarConsultReq row(s).", out["seminar_rows"])
 
-    aa_path = root / "AdobeAnalytics.xlsx"
+    aa_path = root / "AdobeCampaignHistory.xlsx"
     if aa_path.is_file() and tyec_lead_pk_set:
         df = pd.read_excel(aa_path)
         for _, row in df.iterrows():
@@ -410,7 +410,9 @@ async def _seed_consolidated_workbooks(db: AsyncSession) -> dict[str, int]:
 
         await db.flush()
         if out["adobe_events"]:
-            logger.info("Imported %d AdobeAnalytics event(s).", out["adobe_events"])
+            logger.info(
+                "Imported %d AdobeCampaignHistory event(s).", out["adobe_events"]
+            )
 
     await db.commit()
     return out

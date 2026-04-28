@@ -33,6 +33,10 @@ const resources = {
           title: "Analytics",
           subtitle: "Performance and conversion intelligence",
         },
+        profile: {
+          title: "Profile",
+          subtitle: "Personal details, preferences, and security",
+        },
         settings: {
           title: "Admin - RBAC",
           subtitle: "Access control and administration",
@@ -177,7 +181,7 @@ const resources = {
           ready: "Ready",
         },
         runButton: {
-          complete: "Complete",
+          complete: "Re-run",
           running: "Running…",
           runAll: "Run All Workflows",
           runningTitle:
@@ -367,6 +371,10 @@ const resources = {
           title: "分析",
           subtitle: "パフォーマンスとコンバージョンのインサイト",
         },
+        profile: {
+          title: "プロフィール",
+          subtitle: "個人情報、設定、セキュリティ",
+        },
         settings: {
           title: "管理 - RBAC",
           subtitle: "アクセス制御と管理",
@@ -511,7 +519,7 @@ const resources = {
           ready: "準備完了",
         },
         runButton: {
-          complete: "完了",
+          complete: "再実行",
           running: "実行中…",
           runAll: "全ワークフロー実行",
           runningTitle:

@@ -173,6 +173,8 @@ const ReviewDetail = () => {
     return <Navigate to="/reviews" replace />;
   }
 
+  const leadId = data?.lead_id != null ? String(data.lead_id) : "";
+
   return (
     <section className="space-y-3">
       <div className="app-surface-card p-4">
@@ -290,11 +292,12 @@ const ReviewDetail = () => {
                       sandbox=""
                       srcDoc={data.draft_body}
                       className="w-full border-0"
-                      style={{ minHeight: 420, background: "#fff" }}
+                      style={{ minHeight: 320, background: "#fff" }}
                       onLoad={(e) => {
                         const doc = e.target.contentDocument;
                         if (doc?.body) {
-                          e.target.style.height = `${doc.body.scrollHeight + 24}px`;
+                          const desired = doc.body.scrollHeight + 24;
+                          e.target.style.height = `${Math.min(520, desired)}px`;
                         }
                       }}
                     />
@@ -351,6 +354,18 @@ const ReviewDetail = () => {
       </div>
 
       <div className="flex flex-wrap items-center justify-end gap-2">
+        <button
+          type="button"
+          disabled={!leadId || decisionLocked}
+          onClick={() => {
+            if (!leadId) return;
+            navigate(`/leads/${encodeURIComponent(leadId)}`);
+          }}
+          className="inline-flex h-9 items-center gap-2 rounded-full border border-gray-200 bg-white px-5 text-xs font-semibold text-gray-700 hover:border-indigo-200 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted dark:hover:border-volt-border dark:hover:text-white"
+          title={leadId ? `Open lead ${leadId} in Leads` : "Lead id not available"}
+        >
+          View Lead <span className="text-sm">↗</span>
+        </button>
         {/* <button
           type="button"
           disabled={actionLoading}

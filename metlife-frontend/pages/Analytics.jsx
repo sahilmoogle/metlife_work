@@ -9,6 +9,114 @@ const ranges = [
   { key: "all", labelKey: "analytics.ranges.all" },
 ];
 
+const HeaderIcon = ({ variant }) => {
+  const common = "h-4 w-4";
+  if (variant === "trend") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" className={common} aria-hidden="true">
+        <path
+          d="M4 16l5-5 4 4 7-7"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M15 8h5v5"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
+  if (variant === "bars") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" className={common} aria-hidden="true">
+        <path d="M5 19V9m5 10V5m5 14v-8m4 8V8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (variant === "mail") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" className={common} aria-hidden="true">
+        <path d="M5 7h14v10H5V7Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+        <path d="M6 8l6 5 6-5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (variant === "shield") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" className={common} aria-hidden="true">
+        <path d="M12 3 20 7v6c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V7l8-4Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+        <path d="M9.5 12.5 11.2 14.2 14.8 10.6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={common} aria-hidden="true">
+      <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Z" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M12 7v6l4 2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+};
+
+const KpiIcon = ({ idx }) => {
+  const common = "h-4 w-4";
+  const i = idx % 6;
+  if (i === 0) {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" className={common} aria-hidden="true">
+        <path d="M7 7h10M7 12h6M7 17h8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+        <path d="M5 6.5A2.5 2.5 0 0 1 7.5 4h9A2.5 2.5 0 0 1 19 6.5v11A2.5 2.5 0 0 1 16.5 20h-9A2.5 2.5 0 0 1 5 17.5v-11Z" stroke="currentColor" strokeWidth="1.7" />
+      </svg>
+    );
+  }
+  if (i === 1) {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" className={common} aria-hidden="true">
+        <path d="M7.5 6.5h9M7.5 17.5h9" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+        <path d="M7.25 12h9.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+        <path d="M5 6.5a1 1 0 1 0 0 .01V6.5ZM5 12a1 1 0 1 0 0 .01V12ZM5 17.5a1 1 0 1 0 0 .01v-.01Z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (i === 2) {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" className={common} aria-hidden="true">
+        <path d="M6 15.5 10 11.5 12.75 14.25 18 9" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M5 19h14" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+        <path d="M6 19V6.5A2.5 2.5 0 0 1 8.5 4h7A2.5 2.5 0 0 1 18 6.5V19" stroke="currentColor" strokeWidth="1.7" />
+      </svg>
+    );
+  }
+  if (i === 3) {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" className={common} aria-hidden="true">
+        <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Z" stroke="currentColor" strokeWidth="1.7" />
+      </svg>
+    );
+  }
+  if (i === 4) {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" className={common} aria-hidden="true">
+        <path d="M12 3 20 7v6c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V7l8-4Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+        <path d="M9.5 12.5 11.2 14.2 14.8 10.6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={common} aria-hidden="true">
+      <path d="M7 7h10" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M7 12h10" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M7 17h10" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M5 6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6Z" stroke="currentColor" strokeWidth="1.7" />
+    </svg>
+  );
+};
+
 /** Visual tokens for KPI cards (API returns data only; styling stays in UI). */
 const KPI_CARD_STYLES = [
   { bar: "bg-emerald-500", valueTone: "text-emerald-700 dark:text-emerald-200", subTone: "text-gray-500 dark:text-volt-muted" },
@@ -56,6 +164,17 @@ const EMAIL_METRIC_STYLE = {
 const SCORE_BUCKET_COLORS = ["bg-rose-500", "bg-orange-500", "bg-amber-400", "bg-blue-500", "bg-emerald-500"];
 
 const formatInt = (n) => new Intl.NumberFormat().format(Number(n) || 0);
+const toNum = (v) => {
+  if (v == null) return 0;
+  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+  if (typeof v === "string") {
+    const cleaned = v.replaceAll(",", "").trim();
+    const n = Number(cleaned);
+    return Number.isFinite(n) ? n : 0;
+  }
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
 
 const Analytics = () => {
   const { token } = useAuth();
@@ -90,11 +209,28 @@ const Analytics = () => {
     const list = data?.kpis ?? [];
     return list.map((k, i) => ({
       ...k,
+      index: i,
       ...(KPI_CARD_STYLES[i] || KPI_CARD_STYLES[0]),
     }));
   }, [data]);
 
   const weeklyBars = data?.weekly_progression ?? [];
+  const weeklyChart = useMemo(() => {
+    const rows = Array.isArray(weeklyBars) ? weeklyBars : [];
+    const maxVal = Math.max(
+      1,
+      ...rows.flatMap((w) => [toNum(w?.new_leads), toNum(w?.engaged), toNum(w?.converted)]),
+    );
+    return {
+      rows,
+      maxVal,
+      totals: {
+        new: rows.reduce((acc, r) => acc + toNum(r?.new_leads), 0),
+        engaged: rows.reduce((acc, r) => acc + toNum(r?.engaged), 0),
+        converted: rows.reduce((acc, r) => acc + toNum(r?.converted), 0),
+      },
+    };
+  }, [weeklyBars]);
 
   const exportJson = () => {
     if (!data) return;
@@ -139,7 +275,7 @@ const Analytics = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex rounded-full border border-gray-200 bg-gray-50 p-1 dark:border-volt-borderSoft dark:bg-white/5">
+            <div className="inline-flex rounded-full border border-gray-200 bg-gray-50 p-1 shadow-sm dark:border-volt-borderSoft dark:bg-white/5 dark:shadow-none">
               {ranges.map((r) => {
                 const active = range === r.key;
                 return (
@@ -193,12 +329,22 @@ const Analytics = () => {
             : kpisWithStyle.map((k) => (
                 <div
                   key={k.title}
-                  className="relative overflow-hidden rounded-3xl border border-gray-200/90 bg-white p-4 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-volt-borderSoft dark:bg-volt-card/75 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] dark:ring-1 dark:ring-white/[0.06]"
+                  className="app-surface-nested group relative overflow-hidden p-4 shadow-[0_1px_0_rgba(15,23,42,0.02)] transition hover:-translate-y-[1px] hover:shadow-[0_18px_55px_rgba(15,23,42,0.08)] dark:hover:shadow-[0_28px_70px_rgba(0,0,0,0.55)]"
                 >
                   <div className={`absolute left-0 top-0 h-1 w-full dark:h-0.5 dark:opacity-90 ${k.bar}`} />
-                  <p className="text-xs font-medium text-gray-500 dark:text-volt-muted">{k.title}</p>
-                  <p className={`mt-2 text-2xl font-semibold tracking-tight ${k.valueTone}`}>{k.value}</p>
-                  <p className={`mt-1 text-[11px] font-medium ${k.subTone}`}>{k.sub}</p>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-gray-500 dark:text-volt-muted">{k.title}</p>
+                      <p className={`mt-2 text-2xl font-semibold tracking-tight ${k.valueTone}`}>{k.value}</p>
+                      <p className={`mt-1 text-[11px] font-medium ${k.subTone}`}>{k.sub}</p>
+                    </div>
+                    <div
+                      className={`flex h-10 w-10 flex-none items-center justify-center rounded-2xl ring-1 ${k.bar} bg-opacity-10 text-gray-700 ring-gray-200 group-hover:bg-opacity-[0.14] dark:bg-opacity-15 dark:text-white dark:ring-white/10`}
+                      aria-hidden="true"
+                    >
+                      <KpiIcon idx={k.index ?? 0} />
+                    </div>
+                  </div>
                 </div>
               ))}
         </div>
@@ -206,81 +352,145 @@ const Analytics = () => {
 
       <div className="grid gap-3 xl:grid-cols-[2fr_1fr]">
         <div className="app-surface-card p-4">
-          <div className="mb-3">
-            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{translate("analytics.weekly.title")}</p>
-            <p className="mt-1 text-[11px] font-medium text-gray-500 dark:text-volt-muted2">{translate("analytics.weekly.subtitle")}</p>
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 ring-1 ring-blue-100 dark:bg-blue-500/15 dark:text-blue-200 dark:ring-blue-500/25">
+                  <HeaderIcon variant="bars" />
+                </span>
+                <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{translate("analytics.weekly.title")}</p>
+              </div>
+              <p className="mt-1 text-[11px] font-medium text-gray-500 dark:text-volt-muted2">{translate("analytics.weekly.subtitle")}</p>
+            </div>
           </div>
 
-          <div className="flex items-end justify-between gap-3">
-            {(weeklyBars.length ? weeklyBars : []).map((w) => {
-              const total = Math.max(1, w.new_leads + w.engaged + w.converted);
-              const hNew = Math.round((w.new_leads / total) * 100);
-              const hEng = Math.round((w.engaged / total) * 100);
-              const hConv = Math.max(0, 100 - hNew - hEng);
-              return (
-                <div key={w.label} className="flex flex-1 flex-col items-center gap-2">
-                  <div className="flex h-44 w-full max-w-[120px] items-end justify-center rounded-2xl bg-gray-50 p-2 ring-1 ring-gray-100 dark:bg-white/5 dark:ring-volt-borderSoft">
-                    <div className="flex h-full w-10 flex-col-reverse overflow-hidden rounded-xl bg-white ring-1 ring-gray-100 dark:bg-volt-card/60 dark:ring-volt-borderSoft">
-                      <div className="w-full bg-emerald-500" style={{ height: `${hConv}%` }} />
-                      <div className="w-full bg-violet-500" style={{ height: `${hEng}%` }} />
-                      <div className="w-full bg-blue-500" style={{ height: `${hNew}%` }} />
-                    </div>
-                  </div>
-                  <p className="text-[11px] font-semibold text-gray-500 dark:text-volt-muted2">{w.label}</p>
-                </div>
-              );
-            })}
-            {!loading && weeklyBars.length === 0 ? (
-              <p className="w-full py-8 text-center text-sm text-gray-400">{translate("analytics.noWeeklyData")}</p>
-            ) : null}
-          </div>
-
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-[11px] text-gray-500 dark:text-volt-muted2">
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-4 text-[11px] text-gray-500 dark:text-volt-muted2">
             <span className="inline-flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-blue-500" /> {translate("analytics.weekly.newLeads")}
+              <span className="h-2 w-2 rounded-full bg-fuchsia-600" /> {translate("analytics.weekly.newLeads")}
             </span>
             <span className="inline-flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-violet-500" /> {translate("analytics.weekly.engaged")}
+              <span className="h-2 w-2 rounded-full bg-indigo-600" /> {translate("analytics.weekly.engaged")}
             </span>
             <span className="inline-flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-emerald-500" /> {translate("analytics.weekly.converted")}
             </span>
           </div>
+
+          <div className="mt-3 overflow-x-auto">
+            <div className="min-w-[620px] rounded-3xl border border-gray-100 bg-white p-3 shadow-sm dark:border-volt-borderSoft dark:bg-white/5 dark:shadow-none">
+              <div className="flex h-[220px] items-end justify-between gap-3 px-2">
+                {weeklyChart.rows.map((w) => {
+                  const vNew = toNum(w?.new_leads);
+                  const vEng = toNum(w?.engaged);
+                  const vConv = toNum(w?.converted);
+                  const pctNew = Math.max(3, Math.round((vNew / weeklyChart.maxVal) * 100));
+                  const pctEng = Math.max(3, Math.round((vEng / weeklyChart.maxVal) * 100));
+                  const pctConv = Math.max(3, Math.round((vConv / weeklyChart.maxVal) * 100));
+                  return (
+                    <div key={w.label} className="flex flex-1 flex-col items-center gap-2">
+                      <div className="flex w-full max-w-[120px] items-end justify-center gap-3">
+                        <div className="flex flex-col items-center gap-1">
+                          <p className="text-[11px] font-semibold text-fuchsia-700 dark:text-fuchsia-200">
+                            {formatInt(vNew)}
+                          </p>
+                          <div
+                            className="w-4 rounded-xl bg-fuchsia-600 shadow-[0_10px_20px_rgba(192,38,211,0.18)] dark:shadow-[0_12px_24px_rgba(0,0,0,0.35)]"
+                            style={{ height: `${pctNew}%` }}
+                          />
+                        </div>
+                        <div className="flex flex-col items-center gap-1">
+                          <p className="text-[11px] font-semibold text-indigo-700 dark:text-indigo-200">
+                            {formatInt(vEng)}
+                          </p>
+                          <div
+                            className="w-4 rounded-xl bg-indigo-600 shadow-[0_10px_20px_rgba(79,70,229,0.18)] dark:shadow-[0_12px_24px_rgba(0,0,0,0.35)]"
+                            style={{ height: `${pctEng}%` }}
+                          />
+                        </div>
+                        <div className="flex flex-col items-center gap-1">
+                          <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-200">
+                            {formatInt(vConv)}
+                          </p>
+                          <div
+                            className="w-4 rounded-xl bg-emerald-500 shadow-[0_10px_20px_rgba(16,185,129,0.18)] dark:shadow-[0_12px_24px_rgba(0,0,0,0.35)]"
+                            style={{ height: `${pctConv}%` }}
+                          />
+                        </div>
+                      </div>
+                      <p className="text-[11px] font-semibold text-gray-500 dark:text-volt-muted2">{w.label}</p>
+                    </div>
+                  );
+                })}
+
+                {!loading && weeklyChart.rows.length === 0 ? (
+                  <p className="w-full py-10 text-center text-sm text-gray-400">{translate("analytics.noWeeklyData")}</p>
+                ) : null}
+              </div>
+
+              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                <div className="rounded-2xl bg-fuchsia-50 px-4 py-3 text-center ring-1 ring-fuchsia-100 dark:bg-fuchsia-500/10 dark:ring-fuchsia-500/20">
+                  <p className="text-xl font-semibold text-fuchsia-700 dark:text-fuchsia-200">{formatInt(weeklyChart.totals.new)}</p>
+                  <p className="mt-0.5 text-[11px] font-medium text-fuchsia-700/80 dark:text-fuchsia-200/80">
+                    Total New Leads
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-indigo-50 px-4 py-3 text-center ring-1 ring-indigo-100 dark:bg-indigo-500/10 dark:ring-indigo-500/20">
+                  <p className="text-xl font-semibold text-indigo-700 dark:text-indigo-200">{formatInt(weeklyChart.totals.engaged)}</p>
+                  <p className="mt-0.5 text-[11px] font-medium text-indigo-700/80 dark:text-indigo-200/80">
+                    Total Engaged
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-center ring-1 ring-emerald-100 dark:bg-emerald-500/10 dark:ring-emerald-500/20">
+                  <p className="text-xl font-semibold text-emerald-700 dark:text-emerald-200">{formatInt(weeklyChart.totals.converted)}</p>
+                  <p className="mt-0.5 text-[11px] font-medium text-emerald-700/80 dark:text-emerald-200/80">
+                    Total Converted
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="app-surface-card p-4">
           <div className="mb-3">
-            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{translate("analytics.scenarioConversion.title")}</p>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200 dark:ring-emerald-500/25">
+                <HeaderIcon variant="trend" />
+              </span>
+              <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{translate("analytics.scenarioConversion.title")}</p>
+            </div>
             <p className="mt-1 text-[11px] text-gray-500 font-medium dark:text-volt-muted2">{translate("analytics.scenarioConversion.subtitle")}</p>
           </div>
 
-          <div className="space-y-3">
-            {(data?.scenario_conversion ?? []).map((s) => (
-              <div key={s.scenario_id} className="flex items-center gap-3">
-                <div className="w-28 shrink-0">
-                  <p className="text-xs font-semibold text-gray-700 dark:text-volt-text">
-                    {s.scenario_id} <span className="text-gray-400">·</span> {s.label}
-                  </p>
-                </div>
-                <div className="flex-1">
-                  <div className="h-2 rounded-full bg-gray-100 dark:bg-white/10">
-                    <div
-                      className={`h-full rounded-full ${SCENARIO_BAR[s.scenario_id] || "bg-gray-400"}`}
-                      style={{ width: `${Math.min(100, s.conversion_pct)}%` }}
-                    />
+          <div className="overflow-x-auto">
+            <div className="min-w-[520px] space-y-3">
+              {(data?.scenario_conversion ?? []).map((s) => (
+                <div key={s.scenario_id} className="flex items-center gap-3">
+                  <div className="w-24 shrink-0 sm:w-28">
+                    <p className="text-xs font-semibold text-gray-700 dark:text-volt-text">
+                      {s.scenario_id} <span className="text-gray-400">·</span> {s.label}
+                    </p>
+                  </div>
+                  <div className="flex-1">
+                    <div className="h-2 rounded-full bg-gray-100 dark:bg-white/10">
+                      <div
+                        className={`h-full rounded-full ${SCENARIO_BAR[s.scenario_id] || "bg-gray-400"}`}
+                        style={{ width: `${Math.min(100, s.conversion_pct)}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="w-10 text-right text-xs font-semibold text-gray-700 dark:text-volt-text">
+                    {s.conversion_pct.toFixed(1)}%
+                  </div>
+                  <div className="w-16 text-right text-xs text-gray-500 font-medium dark:text-volt-muted2">
+                    {formatInt(s.converted_count)}/{formatInt(s.total_leads_in_period)}
                   </div>
                 </div>
-                <div className="w-10 text-right text-xs font-semibold text-gray-700 dark:text-volt-text">
-                  {s.conversion_pct.toFixed(1)}%
-                </div>
-                <div className="w-14 text-right text-xs text-gray-500  font-medium   dark:text-volt-muted2">
-                  {formatInt(s.converted_count)}/{formatInt(s.total_leads_in_period)}
-                </div>
-              </div>
-            ))}
-            {!loading && !(data?.scenario_conversion?.length) ? (
-              <p className="text-sm text-gray-400">{translate("analytics.scenarioConversion.empty")}</p>
-            ) : null}
+              ))}
+              {!loading && !(data?.scenario_conversion?.length) ? (
+                <p className="text-sm text-gray-400">{translate("analytics.scenarioConversion.empty")}</p>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
@@ -332,7 +542,12 @@ const Analytics = () => {
 
         <div className="app-surface-card p-4">
           <div className="mb-3">
-            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{translate("analytics.emailPerf.title")}</p>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700 ring-1 ring-cyan-100 dark:bg-cyan-500/15 dark:text-cyan-200 dark:ring-cyan-500/25">
+                <HeaderIcon variant="mail" />
+              </span>
+              <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{translate("analytics.emailPerf.title")}</p>
+            </div>
             <p className="mt-1 text-[11px] text-gray-500 font-medium dark:text-volt-muted2">{translate("analytics.emailPerf.subtitle")}</p>
           </div>
 
@@ -390,7 +605,12 @@ const Analytics = () => {
 
         <div className="app-surface-card p-4">
           <div className="mb-3">
-            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{translate("analytics.hitlGate.title")}</p>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-2xl bg-violet-50 text-violet-700 ring-1 ring-violet-100 dark:bg-violet-500/15 dark:text-fuchsia-200 dark:ring-violet-500/25">
+                <HeaderIcon variant="shield" />
+              </span>
+              <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{translate("analytics.hitlGate.title")}</p>
+            </div>
             <p className="mt-1 text-[11px] text-gray-500 font-medium dark:text-volt-muted2">{translate("analytics.hitlGate.subtitle")}</p>
           </div>
 

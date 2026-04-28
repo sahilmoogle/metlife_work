@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import mainIcon from "../src/assets/images/main-icon.jpg";
+import mainIcon from "../src/assets/images/main-icon.png";
 import metlifeBg from "../src/assets/images/loginBackground.png";
 import { useTranslation } from "react-i18next";
 
