@@ -330,7 +330,7 @@ const Analytics = () => {
             : kpisWithStyle.map((k) => (
                 <div
                   key={k.title}
-                  className="group relative overflow-hidden rounded-3xl border border-gray-200/90 bg-[linear-gradient(180deg,#ffffff_0%,#f7faff_100%)] p-4 shadow-[0_1px_0_rgba(15,23,42,0.02)] transition hover:-translate-y-[1px] hover:shadow-[0_18px_55px_rgba(15,23,42,0.08)] dark:border-volt-borderSoft dark:bg-volt-card/75 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] dark:hover:shadow-[0_28px_70px_rgba(0,0,0,0.55)] dark:ring-1 dark:ring-white/[0.06]"
+                  className="group relative overflow-hidden rounded-3xl border border-gray-200/90 bg-[linear-gradient(180deg,#ffffff_0%,#f7faff_100%)] p-4 shadow-[0_1px_0_rgba(15,23,42,0.02)] transition hover:-translate-y-[1px] hover:shadow-[0_18px_55px_rgba(15,23,42,0.08)] dark:border-volt-borderSoft dark:bg-volt-card/75 dark:[background-image:none] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] dark:hover:shadow-[0_28px_70px_rgba(0,0,0,0.55)] dark:ring-1 dark:ring-white/[0.06]"
                 >
                   <div className={`absolute left-0 top-0 h-1 w-full dark:h-0.5 dark:opacity-90 ${k.bar}`} />
                   <div className="flex items-start justify-between gap-3">
@@ -701,19 +701,25 @@ const Analytics = () => {
             {(data?.llm_usage ?? []).map((row, i) => (
               <div
                 key={row.model}
-                className={`rounded-2xl border border-gray-100 p-4 ring-1 ${
-                  i === 0 ? "bg-amber-50 ring-amber-100" : "bg-blue-50 ring-blue-100"
+                className={`rounded-2xl border p-4 ring-1 ${
+                  i === 0
+                    ? "border-amber-100 bg-amber-50 ring-amber-100 dark:border-amber-500/25 dark:bg-amber-500/10 dark:ring-amber-500/20"
+                    : "border-blue-100 bg-blue-50 ring-blue-100 dark:border-blue-500/25 dark:bg-blue-500/10 dark:ring-blue-500/20"
                 }`}
               >
-                <p className={`text-xs font-semibold ${i === 0 ? "text-amber-800" : "text-blue-800"}`}>{row.model}</p>
-                <p className={`mt-2 text-2xl font-semibold ${i === 0 ? "text-amber-900" : "text-blue-900"}`}>
+                <p className={`text-xs font-semibold ${i === 0 ? "text-amber-800 dark:text-amber-200" : "text-blue-800 dark:text-blue-200"}`}>
+                  {row.model}
+                </p>
+                <p className={`mt-2 text-2xl font-semibold ${i === 0 ? "text-amber-900 dark:text-amber-100" : "text-blue-900 dark:text-blue-100"}`}>
                   {row.tokens_millions != null ? `${row.tokens_millions.toFixed(2)}M` : "—"}
                 </p>
-                <p className={`mt-1 text-[11px] ${i === 0 ? "text-amber-800/80" : "text-blue-800/80"}`}>
+                <p className={`mt-1 text-[11px] ${i === 0 ? "text-amber-800/80 dark:text-amber-200/80" : "text-blue-800/80 dark:text-blue-200/80"}`}>
                   {translate("analytics.llm.tokens")}
                   {row.cost_jpy != null ? ` · ¥${formatInt(Math.round(row.cost_jpy))}` : ""}
                 </p>
-                <p className={`mt-2 text-[11px] ${i === 0 ? "text-amber-900/70" : "text-blue-900/70"}`}>{row.note}</p>
+                <p className={`mt-2 text-[11px] ${i === 0 ? "text-amber-900/70 dark:text-amber-100/70" : "text-blue-900/70 dark:text-blue-100/70"}`}>
+                  {row.note}
+                </p>
               </div>
             ))}
           </div>

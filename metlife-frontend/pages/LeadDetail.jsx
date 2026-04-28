@@ -547,7 +547,12 @@ const LeadDetail = () => {
           <div className="mt-4 rounded-xl bg-gray-50 p-3 dark:bg-white/5">
             <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
               <p className="text-gray-400 dark:text-volt-muted2">Email</p>
-              <p className="text-right font-medium text-gray-700 dark:text-volt-text">{lead.email || "—"}</p>
+              <p
+                className="truncate text-right font-medium text-gray-700 dark:text-volt-text"
+                title={lead.email || ""}
+              >
+                {lead.email || "—"}
+              </p>
               <p className="text-gray-400 dark:text-volt-muted2">Device</p>
               <p className="text-right font-medium text-gray-700 dark:text-volt-text">{lead.device_type || "—"}</p>
               <p className="text-gray-400 dark:text-volt-muted2">Scenario</p>
