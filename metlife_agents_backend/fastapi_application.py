@@ -37,7 +37,9 @@ async def _reset_processing_timers() -> None:
     )
     async with SchedulerSessionLocal() as db:
         await db.execute(
-            text("UPDATE workflow_timers SET status='pending' WHERE status='processing'")
+            text(
+                "UPDATE workflow_timers SET status='pending' WHERE status='processing'"
+            )
         )
         await db.commit()
 
