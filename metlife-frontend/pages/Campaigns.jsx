@@ -511,7 +511,6 @@ const Campaigns = () => {
             });
             setScenarioCounts(counts);
           }
-
           if (dash.status === "fulfilled" && dash.value?.node_counts) {
             setPipelineCounts(aggregatePipelineCounts(dash.value.node_counts));
           }
@@ -651,7 +650,10 @@ const Campaigns = () => {
   // After load, and when the active batch id changes, resync HITL (batch-scoped when possible).
   useEffect(() => {
     if (!token || loading) return;
-    void refreshHitl();
+    const id = setTimeout(() => {
+      void refreshHitl();
+    }, 0);
+    return () => clearTimeout(id);
   }, [token, loading, batch?.batch_id, refreshHitl]);
 
   // When a batch finishes, the 1.2s poller stops — HITL approvals would not update the top
@@ -770,6 +772,14 @@ const Campaigns = () => {
                 >
                   <span className="h-2 w-2 rounded-full bg-rose-500" />
                   {formatInt(failed)} {t("campaigns.batch.failed")}
+                </span>
+                <span className="inline-flex items-center gap-2" title="All open HITL rows">
+                  <span className="h-2 w-2 rounded-full bg-violet-500" />
+                  {formatInt(awaitingHitlGlobal)} global HITL
+                </span>
+                <span className="inline-flex items-center gap-2" title="Converted leads across all campaigns">
+                  <span className="h-2 w-2 rounded-full bg-teal-500" />
+                  {formatInt(dashConvertedLeads)} converted
                 </span>
               </div>
             </div>

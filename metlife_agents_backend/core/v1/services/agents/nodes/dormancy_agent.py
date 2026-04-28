@@ -195,6 +195,7 @@ async def dormancy_agent(state: dict, *, db=None) -> dict:
 
     state["revival_segment"] = segment
     state["scenario"] = "S4"
+    state["scenario_locked"] = "S4"
 
     # G3 Campaign Approval is mandatory for all S4 revival batches
     state["hitl_gate"] = "G3"

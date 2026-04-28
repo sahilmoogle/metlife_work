@@ -29,7 +29,11 @@ if db_config.is_sqlite():
 
 
 SessionLocal = async_sessionmaker(
-    bind=engine, class_=AsyncSession, autocommit=False, autoflush=False
+    bind=engine,
+    class_=AsyncSession,
+    autocommit=False,
+    autoflush=False,
+    expire_on_commit=False,
 )
 
 

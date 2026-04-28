@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import mainIcon from "../src/assets/images/main-icon.jpg";
 import userIcon from "../src/assets/images/user.jpg";
 import { useTranslation } from "react-i18next";
-import sidebarPhoto from "../src/assets/images/sidebar-japan-art.png";
+
 
 import {
   LayoutDashboard,
@@ -216,19 +216,7 @@ const AppLayout = () => {
           className={`fixed left-0 top-0 z-50 h-full w-[280px] overflow-x-hidden overflow-y-hidden border-r border-white/10 bg-[#0b1830] text-white transition-[transform,width] duration-200 lg:static lg:z-auto lg:h-full lg:flex-none lg:translate-x-0 lg:block dark:border-volt-borderSoft dark:text-volt-text ${sidebarCollapsed ? "lg:w-[84px]" : "lg:w-[255px]"
             } ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
         >
-          <div className="pointer-events-none absolute inset-0 z-0">
-            <img
-              src={sidebarPhoto}
-              alt=""
-              className="h-full w-full object-cover object-center dark:brightness-[0.95] dark:contrast-[1.06]"
-              decoding="async"
-              fetchPriority="high"
-            />
-          </div>
-          <div
-            className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-b from-[#050f1f]/78 from-0% via-[#050f1f]/38 via-[40%] to-transparent to-[100%] dark:from-[#020617]/56 dark:via-[#020617]/18 dark:to-transparent"
-            aria-hidden
-          />
+
           <div className="relative z-10 flex h-full min-h-0 flex-col overflow-y-auto p-4 [text-shadow:0_1px_2px_rgba(0,0,0,0.45)]">
             <div className={`mb-8 ${sidebarCollapsed ? "lg:flex lg:flex-col lg:items-center lg:gap-2" : "flex items-center gap-3"}`}>
               <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 text-sm font-bold text-indigo-700">
