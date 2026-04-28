@@ -25,6 +25,7 @@ from core.v1.services.sse.manager import (
     workflow_state_event,
 )
 from core.v1.services.agents.state import create_log_entry
+from config.v1.api_config import api_config
 
 logger = logging.getLogger(__name__)
 
@@ -32,21 +33,31 @@ NODE_ID = "A6_Send"
 
 # JST quiet hours: 21:00 – 08:00
 JST = timezone(timedelta(hours=9))
-QUIET_START = 21
-QUIET_END = 8
+
+
+def _quiet_start_hour() -> int:
+    return max(0, min(23, int(api_config.QUIET_START_JST_HOUR)))
+
+
+def _quiet_end_hour() -> int:
+    return max(0, min(23, int(api_config.QUIET_END_JST_HOUR)))
 
 
 def _is_quiet_hours() -> bool:
     """Check if current JST time is within quiet hours."""
     now_jst = datetime.now(JST)
-    return now_jst.hour >= QUIET_START or now_jst.hour < QUIET_END
+    quiet_start = _quiet_start_hour()
+    quiet_end = _quiet_end_hour()
+    return now_jst.hour >= quiet_start or now_jst.hour < quiet_end
 
 
 def _next_quiet_end_utc() -> datetime:
-    """Return the next 08:00 JST as UTC."""
+    """Return the next configured quiet-hours end time as UTC."""
     now_jst = datetime.now(JST)
-    due_jst = now_jst.replace(hour=QUIET_END, minute=0, second=0, microsecond=0)
-    if now_jst.hour >= QUIET_START:
+    quiet_start = _quiet_start_hour()
+    quiet_end = _quiet_end_hour()
+    due_jst = now_jst.replace(hour=quiet_end, minute=0, second=0, microsecond=0)
+    if now_jst.hour >= quiet_start:
         due_jst += timedelta(days=1)
     return due_jst.astimezone(timezone.utc)
 
@@ -117,17 +128,20 @@ async def send_engine(state: dict, *, db: AsyncSession | None = None) -> dict:
         ]
         return state
 
-    # ── Quiet hours enforcement (21:00–08:00 JST) ────────────────────
+    # ── Quiet hours enforcement (JST) ────────────────────────────────
     # Spec: never send during these hours. Critical for S3 seniors.
     # Hold the draft in the internal outbox; a scheduler/manual resume can
     # process it after the quiet window ends.
     if _is_quiet_hours():
         now_jst = datetime.now(JST)
         due_at = _next_quiet_end_utc()
+        quiet_start = _quiet_start_hour()
+        quiet_end = _quiet_end_hour()
         logger.info(
-            "A6: Quiet hours active (%02d:%02d JST) — email held until 08:00 JST",
+            "A6: Quiet hours active (%02d:%02d JST) — email held until %02d:00 JST",
             now_jst.hour,
             now_jst.minute,
+            quiet_end,
         )
         if db is not None:
             outbox_item = EmailOutbox(
@@ -170,7 +184,11 @@ async def send_engine(state: dict, *, db: AsyncSession | None = None) -> dict:
         state["execution_log"] = [
             create_log_entry(
                 title="A6 - SEND ENGINE · QUIET HOURS HOLD",
-                description=f"Current JST time {now_jst.strftime('%H:%M')} is within 21:00–08:00 quiet window. Email queued for 08:00 JST.",
+                description=(
+                    f"Current JST time {now_jst.strftime('%H:%M')} is within "
+                    f"{quiet_start:02d}:00–{quiet_end:02d}:00 quiet window. "
+                    f"Email queued for {quiet_end:02d}:00 JST."
+                ),
                 badges=["Quiet Hours", "Held"],
             )
         ]
@@ -179,7 +197,7 @@ async def send_engine(state: dict, *, db: AsyncSession | None = None) -> dict:
                 lead_id,
                 NODE_ID,
                 "paused",
-                "quiet hours hold until 08:00 JST",
+                f"quiet hours hold until {quiet_end:02d}:00 JST",
                 batch_id=state.get("batch_id"),
             )
         )

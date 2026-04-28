@@ -72,6 +72,61 @@ class EventTrackRequest(BaseModel):
     )
 
 
+class IntakeQuoteRequest(BaseModel):
+    quote_id: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    age: Optional[int] = None
+    gender: Optional[str] = None
+    ans3: Optional[str] = None
+    ans4: Optional[str] = None
+    ans5: Optional[str] = None
+    product_code: Optional[str] = None
+    plan_code: Optional[str] = None
+    banner_code: Optional[str] = None
+    registration_source: str = "quote_intake"
+    premium_estimate_jpy: Optional[int] = None
+    start_workflow: bool = True
+
+
+class IntakeConsultationRequest(BaseModel):
+    request_id: Optional[str] = None
+    request_type: str = "web_to_call"
+    form_id: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    gender: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    memo: Optional[str] = None
+    campaign_code: Optional[str] = None
+    start_workflow: bool = True
+
+
+class TrackClickRequest(BaseModel):
+    thread_id: str
+    clicked_label: str
+    clicked_url: Optional[str] = None
+
+
+class HandoffAssignRequest(BaseModel):
+    assigned_to: str
+
+
+class ScenarioConfigUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    base_score: Optional[float] = None
+    handoff_threshold: Optional[float] = None
+    cadence_days: Optional[int] = None
+    max_emails: Optional[int] = None
+    default_keigo: Optional[str] = None
+    default_tone: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
 class ExecutionLogEntry(BaseModel):
     title: str
     description: str

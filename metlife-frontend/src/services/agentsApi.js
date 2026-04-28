@@ -163,6 +163,87 @@ export const trackEvent = async (token, body) => {
   return payload?.data;
 };
 
+export const trackClick = async (token, body) => {
+  const response = await fetch(`${buildUrl(envConfig.agentsPath)}/track/click`, {
+    method: "POST",
+    headers: authedHeaders(token, { "Content-Type": "application/json" }),
+    body: JSON.stringify(body || {}),
+  });
+
+  if (!response.ok) {
+    const message = await parseApiError(response, "Failed to track click.");
+    throw new Error(message);
+  }
+
+  const payload = await response.json();
+  return payload?.data;
+};
+
+export const listScenarioConfig = async (token) => {
+  const response = await fetch(`${buildUrl(envConfig.agentsPath)}/scenarios/config`, {
+    method: "GET",
+    headers: authedHeaders(token),
+  });
+
+  if (!response.ok) {
+    const message = await parseApiError(response, "Failed to load scenario config.");
+    throw new Error(message);
+  }
+
+  const payload = await response.json();
+  return payload?.data ?? [];
+};
+
+export const updateScenarioConfig = async (token, scenarioId, body) => {
+  const safeId = encodeURIComponent(scenarioId);
+  const response = await fetch(`${buildUrl(envConfig.agentsPath)}/scenarios/config/${safeId}`, {
+    method: "PATCH",
+    headers: authedHeaders(token, { "Content-Type": "application/json" }),
+    body: JSON.stringify(body || {}),
+  });
+
+  if (!response.ok) {
+    const message = await parseApiError(response, "Failed to update scenario config.");
+    throw new Error(message);
+  }
+
+  const payload = await response.json();
+  return payload?.data;
+};
+
+export const intakeQuote = async (token, body) => {
+  const response = await fetch(`${buildUrl(envConfig.agentsPath)}/intake/quote`, {
+    method: "POST",
+    headers: authedHeaders(token, { "Content-Type": "application/json" }),
+    body: JSON.stringify(body || {}),
+  });
+
+  if (!response.ok) {
+    const message = await parseApiError(response, "Failed to create quote intake.");
+    throw new Error(message);
+  }
+
+  const payload = await response.json();
+  return payload?.data;
+};
+
+export const intakeConsultation = async (token, body, { seminar = false } = {}) => {
+  const path = seminar ? "/intake/seminar" : "/intake/consultation";
+  const response = await fetch(`${buildUrl(envConfig.agentsPath)}${path}`, {
+    method: "POST",
+    headers: authedHeaders(token, { "Content-Type": "application/json" }),
+    body: JSON.stringify(body || {}),
+  });
+
+  if (!response.ok) {
+    const message = await parseApiError(response, "Failed to create consultation intake.");
+    throw new Error(message);
+  }
+
+  const payload = await response.json();
+  return payload?.data;
+};
+
 export const getWorkflowState = async (token, threadId) => {
   const safeId = encodeURIComponent(threadId);
   const response = await fetch(`${buildUrl(envConfig.agentsPath)}/state/${safeId}`, {

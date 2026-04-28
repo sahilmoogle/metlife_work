@@ -11,6 +11,11 @@ const parseApiError = async (response, fallbackMessage) => {
   }
 };
 
+const authedHeaders = (token, extra = {}) => ({
+  ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  ...extra,
+});
+
 export const fetchHitlQueue = async (
   token,
   { gateType, queue, batchId, threadId } = {},
@@ -71,6 +76,57 @@ export const approveHitl = async (token, threadId, body) => {
 
   if (!response.ok) {
     const message = await parseApiError(response, "Unable to submit HITL decision.");
+    throw new Error(message);
+  }
+
+  const payload = await response.json();
+  return payload?.data;
+};
+
+export const listHandoffs = async (token, { status } = {}) => {
+  const params = new URLSearchParams();
+  if (status) params.set("status", status);
+  const qs = params.toString();
+  const response = await fetch(`${buildUrl(envConfig.hitlPath)}/handoffs${qs ? `?${qs}` : ""}`, {
+    method: "GET",
+    headers: authedHeaders(token),
+  });
+
+  if (!response.ok) {
+    const message = await parseApiError(response, "Unable to load handoffs.");
+    throw new Error(message);
+  }
+
+  const payload = await response.json();
+  return payload?.data ?? [];
+};
+
+export const assignHandoff = async (token, handoffId, assignedTo) => {
+  const safeId = encodeURIComponent(handoffId);
+  const response = await fetch(`${buildUrl(envConfig.hitlPath)}/handoffs/${safeId}/assign`, {
+    method: "POST",
+    headers: authedHeaders(token, { "Content-Type": "application/json" }),
+    body: JSON.stringify({ assigned_to: assignedTo }),
+  });
+
+  if (!response.ok) {
+    const message = await parseApiError(response, "Unable to assign handoff.");
+    throw new Error(message);
+  }
+
+  const payload = await response.json();
+  return payload?.data;
+};
+
+export const completeHandoff = async (token, handoffId) => {
+  const safeId = encodeURIComponent(handoffId);
+  const response = await fetch(`${buildUrl(envConfig.hitlPath)}/handoffs/${safeId}/complete`, {
+    method: "POST",
+    headers: authedHeaders(token),
+  });
+
+  if (!response.ok) {
+    const message = await parseApiError(response, "Unable to complete handoff.");
     throw new Error(message);
   }
 

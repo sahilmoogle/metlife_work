@@ -1,3 +1,4 @@
+import asyncio
 import time
 import random
 import string
@@ -9,6 +10,8 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from starlette.middleware.cors import CORSMiddleware
 
 from config.v1.api_config import api_config
@@ -18,6 +21,7 @@ from utils.v1.errors import InternalServerException
 from utils.v1.connections import (
     check_connections,
     create_connections,
+    engine,
     remove_connections,
 )
 
@@ -27,12 +31,79 @@ logging.config.fileConfig(_LOG_CONF, disable_existing_loggers=False)
 logger = logging.getLogger(__name__)
 
 
+async def _reset_processing_timers() -> None:
+    SchedulerSessionLocal = async_sessionmaker(
+        bind=engine, class_=AsyncSession, expire_on_commit=False
+    )
+    async with SchedulerSessionLocal() as db:
+        await db.execute(
+            text("UPDATE workflow_timers SET status='pending' WHERE status='processing'")
+        )
+        await db.commit()
+
+
+async def _auto_timer_processor_loop(*, interval_s: int, limit: int) -> None:
+    from core.v1.api.agents.agent_api import process_due_workflow_timers
+
+    SchedulerSessionLocal = async_sessionmaker(
+        bind=engine, class_=AsyncSession, expire_on_commit=False
+    )
+
+    logger.info(
+        "Auto timer processor enabled: quiet-hours/cadence timers every %ss (limit=%s).",
+        interval_s,
+        limit,
+    )
+
+    await _reset_processing_timers()
+
+    try:
+        while True:
+            try:
+                async with SchedulerSessionLocal() as db:
+                    await process_due_workflow_timers(limit=limit, _={}, db=db)
+            except Exception as exc:
+                logger.error("Auto timer processor failed: %s", exc, exc_info=True)
+                try:
+                    await _reset_processing_timers()
+                except Exception as cleanup_exc:
+                    logger.error(
+                        "Auto timer processor cleanup failed: %s",
+                        cleanup_exc,
+                        exc_info=True,
+                    )
+
+            await asyncio.sleep(max(1, interval_s))
+    except asyncio.CancelledError:
+        logger.info("Auto timer processor stopped.")
+        raise
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan — startup and shutdown logic."""
     create_connections()
     await check_connections()
+
+    timer_task: asyncio.Task | None = None
+    if api_config.AUTO_TIMER_PROCESSOR_ENABLED:
+        timer_task = asyncio.create_task(
+            _auto_timer_processor_loop(
+                interval_s=api_config.AUTO_TIMER_PROCESSOR_INTERVAL_SECONDS,
+                limit=api_config.AUTO_TIMER_PROCESSOR_LIMIT,
+            ),
+            name="metlife-auto-timer-processor",
+        )
+        app.state.auto_timer_processor_task = timer_task
+
     yield
+
+    if timer_task is not None:
+        timer_task.cancel()
+        try:
+            await timer_task
+        except asyncio.CancelledError:
+            pass
     await remove_connections()
 
 

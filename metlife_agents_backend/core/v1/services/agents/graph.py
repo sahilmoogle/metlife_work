@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import logging
 import uuid
+import json
+import time
 from functools import partial
 from datetime import datetime, timezone, timedelta
 from contextlib import asynccontextmanager
@@ -30,6 +32,7 @@ from langgraph.types import interrupt, Command
 from config.v1.database_config import db_config
 from model.database.v1.leads import Lead
 from model.database.v1.workflow_timers import WorkflowTimer
+from model.database.v1.audit_log import AuditLog
 
 from core.v1.services.agents.state import create_initial_state, create_log_entry
 from core.v1.services.agents.nodes.identity_unifier import identity_unifier
@@ -63,6 +66,47 @@ except ImportError:
     AsyncSqliteSaver = None
 
 logger = logging.getLogger(__name__)
+
+
+def _with_agent_audit(node_id: str, node_fn, db_session=None):
+    async def audited_node(state: dict) -> dict:
+        started = time.perf_counter()
+        status = "completed"
+        error: str | None = None
+        try:
+            return await node_fn(state)
+        except Exception as exc:
+            status = "failed"
+            error = str(exc)
+            raise
+        finally:
+            if db_session is not None:
+                try:
+                    db_session.add(
+                        AuditLog(
+                            action=f"agent_node_{status}",
+                            resource_type="agent_node",
+                            resource_id=str(state.get("lead_id") or ""),
+                            details=json.dumps(
+                                {
+                                    "node_id": node_id,
+                                    "thread_id": state.get("thread_id"),
+                                    "scenario": state.get("scenario"),
+                                    "latency_ms": int(
+                                        (time.perf_counter() - started) * 1000
+                                    ),
+                                    "error": error,
+                                },
+                                ensure_ascii=False,
+                            ),
+                        )
+                    )
+                    await db_session.commit()
+                except Exception as audit_exc:
+                    await db_session.rollback()
+                    logger.warning("Agent audit write failed: %s", audit_exc)
+
+    return audited_node
 
 
 # ── Checkpointer factory ─────────────────────────────────────────────
@@ -263,7 +307,15 @@ async def schedule_cadence_timer(state: dict, *, db=None) -> dict:
     """Pause the workflow until the next nurture/send window is due."""
     lead_id = state["lead_id"]
     cadence_days = max(int(state.get("cadence_days") or 0), 0)
-    due_at = datetime.now(timezone.utc) + timedelta(days=cadence_days)
+    now_jst = datetime.now(timezone(timedelta(hours=9)))
+    preferred_hour = int(state.get("preferred_send_hour_jst") or 17)
+    preferred_hour = max(0, min(23, preferred_hour))
+    due_jst = (now_jst + timedelta(days=cadence_days)).replace(
+        hour=preferred_hour, minute=0, second=0, microsecond=0
+    )
+    if due_jst <= now_jst:
+        due_jst += timedelta(days=1)
+    due_at = due_jst.astimezone(timezone.utc)
     timer_type = "s4_response_window" if state.get("scenario") == "S4" else "cadence"
 
     await event_manager.publish(
@@ -381,6 +433,9 @@ def _route_after_scoring(state: dict) -> str:
     email_number = state.get("email_number", 0)
     max_emails = state.get("max_emails", 5)
 
+    if state.get("consultation_booked"):
+        return "sales_handoff"
+
     route = evaluate_score_route(score, threshold)
 
     if route == "handoff":
@@ -473,15 +528,39 @@ def build_graph(*, db_session=None, checkpointer=None):
     llm = get_llm()
 
     # Bind DB session and LLM into nodes that need them
-    bound_a1 = partial(identity_unifier, db=db_session)
-    bound_a2 = partial(persona_classifier, db=db_session)
-    bound_a3 = partial(intent_analyser, llm=llm, db=db_session)
-    bound_a5 = partial(generative_writer, llm=llm, db=db_session)
-    bound_a6 = partial(send_engine, db=db_session)
-    bound_a8 = partial(propensity_scorer, db=db_session)
-    bound_a9 = partial(sales_handoff, llm=llm, db=db_session)
-    bound_mark_dormant = partial(mark_dormant, db=db_session)
-    bound_schedule_cadence = partial(schedule_cadence_timer, db=db_session)
+    bound_a1 = _with_agent_audit(
+        "A1_Identity", partial(identity_unifier, db=db_session), db_session
+    )
+    bound_a2 = _with_agent_audit(
+        "A2_Persona", partial(persona_classifier, db=db_session), db_session
+    )
+    bound_a3 = _with_agent_audit(
+        "A3_Intent", partial(intent_analyser, llm=llm, db=db_session), db_session
+    )
+    bound_a4 = _with_agent_audit(
+        "A4_ContentStrategy", partial(content_strategist, db=db_session), db_session
+    )
+    bound_a5 = _with_agent_audit(
+        "A5_Writer", partial(generative_writer, llm=llm, db=db_session), db_session
+    )
+    bound_a6 = _with_agent_audit(
+        "A6_Send", partial(send_engine, db=db_session), db_session
+    )
+    bound_a8 = _with_agent_audit(
+        "A8_Scoring", partial(propensity_scorer, db=db_session), db_session
+    )
+    bound_a9 = _with_agent_audit(
+        "A9_Handoff", partial(sales_handoff, llm=llm, db=db_session), db_session
+    )
+    bound_a10 = _with_agent_audit(
+        "A10_Dormancy", partial(dormancy_agent, db=db_session), db_session
+    )
+    bound_mark_dormant = _with_agent_audit(
+        "mark_dormant", partial(mark_dormant, db=db_session), db_session
+    )
+    bound_schedule_cadence = _with_agent_audit(
+        "A11_CadenceTimer", partial(schedule_cadence_timer, db=db_session), db_session
+    )
 
     bound_prep_g1 = partial(prep_g1, db=db_session)
     bound_prep_g2 = partial(prep_g2, db=db_session)
@@ -495,12 +574,12 @@ def build_graph(*, db_session=None, checkpointer=None):
     graph.add_node("identity_unifier", bound_a1)
     graph.add_node("persona_classifier", bound_a2)
     graph.add_node("intent_analyser", bound_a3)
-    graph.add_node("content_strategist", partial(content_strategist, db=db_session))
+    graph.add_node("content_strategist", bound_a4)
     graph.add_node("generative_writer", bound_a5)
     graph.add_node("send_engine", bound_a6)
     graph.add_node("propensity_scorer", bound_a8)
     graph.add_node("sales_handoff", bound_a9)
-    graph.add_node("dormancy_agent", partial(dormancy_agent, db=db_session))
+    graph.add_node("dormancy_agent", bound_a10)
     graph.add_node("mark_dormant", bound_mark_dormant)
     graph.add_node("schedule_cadence", bound_schedule_cadence)
 

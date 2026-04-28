@@ -33,9 +33,13 @@ async def propensity_scorer(state: dict, *, db=None) -> dict:
     start = time.perf_counter()
 
     # ── Score increment based on email send ──────────────────────────
+    # Event-driven routes arrive here after /events/track has already patched
+    # the score.  Do not add the email_sent delta a second time for those.
     email_number = state.get("email_number", 0)
 
-    if email_number > 0:
+    if state.get("event_pending_route"):
+        state["event_pending_route"] = False
+    elif email_number > 0:
         delta = calculate_score_delta("email_sent")
         state["engagement_score"] = round(state.get("engagement_score", 0.0) + delta, 4)
 

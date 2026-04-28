@@ -13,7 +13,7 @@ from sqlalchemy import select, update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from model.api.v1 import APIResponse
-from model.api.v1.agents import HITLApproveRequest, HITLQueueItem
+from model.api.v1.agents import HITLApproveRequest, HITLQueueItem, HandoffAssignRequest
 from model.database.v1.hitl import HITLQueue
 from model.database.v1.leads import Lead
 from model.database.v1.sales_handoffs import SalesHandoff
@@ -191,6 +191,92 @@ async def get_hitl_detail(
         status_code=status.HTTP_200_OK,
         data=item,
         message="HITL detail retrieved.",
+    )
+
+
+@router.get(
+    "/handoffs",
+    response_model=APIResponse[list[dict]],
+    status_code=status.HTTP_200_OK,
+)
+async def list_handoffs(
+    status_filter: str | None = Query(None, alias="status"),
+    _: dict = Depends(require_permission("hitl_approve")),
+    db: AsyncSession = Depends(get_db),
+):
+    query = select(SalesHandoff).order_by(SalesHandoff.created_at.desc())
+    if status_filter:
+        query = query.where(SalesHandoff.status == status_filter)
+    result = await db.execute(query)
+    rows = result.scalars().all()
+    return APIResponse(
+        success=True,
+        status_code=status.HTTP_200_OK,
+        data=[
+            {
+                "id": str(row.id),
+                "lead_id": str(row.lead_id),
+                "thread_id": row.thread_id,
+                "scenario_id": row.scenario_id,
+                "score_snapshot": row.score_snapshot,
+                "briefing": row.briefing,
+                "status": row.status,
+                "assigned_to": row.assigned_to,
+                "accepted_at": str(row.accepted_at) if row.accepted_at else None,
+                "completed_at": str(row.completed_at) if row.completed_at else None,
+            }
+            for row in rows
+        ],
+        message=f"{len(rows)} handoff row(s).",
+    )
+
+
+@router.post(
+    "/handoffs/{handoff_id}/assign",
+    response_model=APIResponse[dict],
+    status_code=status.HTTP_200_OK,
+)
+async def assign_handoff(
+    handoff_id: UUID,
+    request: HandoffAssignRequest,
+    _: dict = Depends(require_permission("hitl_approve")),
+    db: AsyncSession = Depends(get_db),
+):
+    await db.execute(
+        sa_update(SalesHandoff)
+        .where(SalesHandoff.id == handoff_id)
+        .values(status="assigned", assigned_to=request.assigned_to)
+    )
+    await db.commit()
+    return APIResponse(
+        success=True,
+        status_code=status.HTTP_200_OK,
+        data={"handoff_id": str(handoff_id), "assigned_to": request.assigned_to},
+        message="Handoff assigned.",
+    )
+
+
+@router.post(
+    "/handoffs/{handoff_id}/complete",
+    response_model=APIResponse[dict],
+    status_code=status.HTTP_200_OK,
+)
+async def complete_handoff(
+    handoff_id: UUID,
+    _: dict = Depends(require_permission("hitl_approve")),
+    db: AsyncSession = Depends(get_db),
+):
+    await db.execute(
+        sa_update(SalesHandoff)
+        .where(SalesHandoff.id == handoff_id)
+        .values(status="completed", completed_at=datetime.now(timezone.utc))
+    )
+    await db.commit()
+    return APIResponse(
+        success=True,
+        status_code=status.HTTP_200_OK,
+        data={"handoff_id": str(handoff_id)},
+        message="Handoff completed.",
     )
 
 
