@@ -582,7 +582,101 @@ const Settings = () => {
           </p>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Mobile cards */}
+        <div className="sm:hidden space-y-2">
+          {loading ? (
+            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 text-sm text-gray-500 dark:border-volt-borderSoft dark:bg-white/5 dark:text-volt-muted">
+              {t("common.loading")}
+            </div>
+          ) : null}
+
+          {!loading && users.length === 0 ? (
+            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 text-sm text-gray-500 dark:border-volt-borderSoft dark:bg-white/5 dark:text-volt-muted">
+              {t("common.noItems")}
+            </div>
+          ) : null}
+
+          {!loading ? (
+            pagedUsers.map((u) => {
+              const keyPerms = permissionCols.slice(0, 4);
+              const enabledCount = permissionCols.reduce((acc, c) => acc + (u[c.key] ? 1 : 0), 0);
+              return (
+                <div
+                  key={u.user_id}
+                  className="rounded-3xl border border-gray-100 bg-white p-4 shadow-sm dark:border-volt-borderSoft dark:bg-volt-card/60"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`flex h-10 w-10 flex-none items-center justify-center rounded-2xl text-[11px] font-bold text-white ${avatarTone[normalizeRoleKey(u.role)] || avatarTone.viewer}`}>
+                        {u.name
+                          .split(" ")
+                          .slice(0, 2)
+                          .map((s) => s[0])
+                          .join("")}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{u.name}</p>
+                        <p className="truncate text-[11px] text-gray-500 dark:text-volt-muted2 break-all">{u.email}</p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <span className={`inline-flex rounded-full px-3 py-1 text-[11px] font-semibold ring-1 ${roleBadge[normalizeRoleKey(u.role)] || roleBadge.viewer}`}>
+                            {String(u.role || "Viewer").toUpperCase()}
+                          </span>
+                          <span className="inline-flex rounded-full bg-gray-100 px-3 py-1 text-[11px] font-semibold text-gray-700 dark:bg-white/10 dark:text-volt-text">
+                            {enabledCount} perms enabled
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <Toggle
+                      checked={Boolean(u.is_active)}
+                      onChange={() => toggleUserActive(u)}
+                      ariaLabel={`Toggle ${u.name} active`}
+                    />
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    {keyPerms.map((c) => (
+                      <div
+                        key={`${u.user_id}-${c.key}`}
+                        className="flex items-center justify-between rounded-2xl border border-gray-100 bg-gray-50 px-3 py-2 text-xs dark:border-volt-borderSoft dark:bg-white/5"
+                      >
+                        <span className="font-medium text-gray-600 dark:text-volt-muted">{c.label}</span>
+                        <span className="text-gray-700 dark:text-volt-text">{u[c.key] ? "✓" : "—"}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-4 flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openView(u)}
+                      className="inline-flex h-9 flex-1 items-center justify-center rounded-2xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 transition hover:border-indigo-200 hover:text-indigo-700 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text dark:hover:bg-white/10"
+                    >
+                      View
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openPermissions(u)}
+                      className="inline-flex h-9 flex-1 items-center justify-center rounded-2xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 transition hover:border-violet-200 hover:text-violet-700 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text dark:hover:bg-white/10"
+                    >
+                      Permissions
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openEdit(u)}
+                      className="inline-flex h-9 flex-1 items-center justify-center rounded-2xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 transition hover:border-emerald-200 hover:text-emerald-700 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text dark:hover:bg-white/10"
+                    >
+                      Edit
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          ) : null}
+        </div>
+
+        {/* Desktop table */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="min-w-[980px] w-full border-separate border-spacing-0">
             <thead>
               <tr className="text-left text-[11px] font-semibold text-gray-500 dark:text-volt-muted2">

@@ -297,7 +297,7 @@ const Dashboard = () => {
                   <p className="mt-1 text-2xl font-semibold tracking-tight text-[#1e2a52] dark:text-white">{item.value}</p>
                 </div>
               </div>
-              <span className={`rounded px-2.5 py-1 text-[10px] font-semibold ring-1 ${item.chip}`}>
+              <span className={`max-w-[55%] text-right rounded px-2.5 py-1 text-[10px] font-semibold ring-1 ${item.chip} break-words`}>
                 {item.change}
               </span>
             </div>
@@ -308,11 +308,11 @@ const Dashboard = () => {
       <section className="mt-4 grid gap-3 xl:grid-cols-2">
         <article className="app-surface-card p-4">
           <h3 className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("dashboard.funnel.title")}</h3>
-          <p className="mb-4 text-xs font-medium text-gray-500 dark:text-volt-muted2">{t("dashboard.funnel.subtitle")}</p>
+          <p className="mb-4 text-xs font-medium text-gray-500 dark:text-volt-muted">{t("dashboard.funnel.subtitle")}</p>
           <div className="space-y-3">
             {funnelBars.map((bar) => (
               <div key={bar.label}>
-                <div className="mb-1 flex justify-between text-[11px] text-gray-500 dark:text-volt-muted2">
+                <div className="mb-1 flex justify-between text-[11px] text-gray-500 dark:text-volt-muted">
                   <span>{bar.label}</span>
                   <span>{bar.value}%</span>
                 </div>
@@ -329,7 +329,7 @@ const Dashboard = () => {
 
         <article className="app-surface-card p-4">
           <h3 className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("dashboard.scenarios.title")}</h3>
-          <p className="mb-4 text-[11px] text-gray-500 dark:text-volt-muted2">{t("dashboard.scenarios.subtitle")}</p>
+          <p className="mb-4 text-[11px] text-gray-500 dark:text-volt-muted">{t("dashboard.scenarios.subtitle")}</p>
           <div className="grid gap-2 sm:grid-cols-2">
             {scenarioRows.map((scenario) => (
               <div
@@ -341,7 +341,7 @@ const Dashboard = () => {
                 </span>
                 <div>
                   <p className="text-sm font-semibold text-gray-800 dark:text-white">{scenario.value}</p>
-                  <p className="text-xs text-gray-500 dark:text-volt-muted2">{scenario.label}</p>
+                  <p className="text-xs text-gray-600 dark:text-volt-muted">{scenario.label}</p>
                 </div>
               </div>
             ))}

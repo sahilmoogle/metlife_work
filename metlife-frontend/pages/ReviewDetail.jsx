@@ -290,11 +290,12 @@ const ReviewDetail = () => {
                       sandbox=""
                       srcDoc={data.draft_body}
                       className="w-full border-0"
-                      style={{ minHeight: 420, background: "#fff" }}
+                      style={{ minHeight: 320, background: "#fff" }}
                       onLoad={(e) => {
                         const doc = e.target.contentDocument;
                         if (doc?.body) {
-                          e.target.style.height = `${doc.body.scrollHeight + 24}px`;
+                          const desired = doc.body.scrollHeight + 24;
+                          e.target.style.height = `${Math.min(520, desired)}px`;
                         }
                       }}
                     />

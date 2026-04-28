@@ -33,6 +33,10 @@ const resources = {
           title: "Analytics",
           subtitle: "Performance and conversion intelligence",
         },
+        profile: {
+          title: "Profile",
+          subtitle: "Personal details, preferences, and security",
+        },
         settings: {
           title: "Admin - RBAC",
           subtitle: "Access control and administration",
@@ -366,6 +370,10 @@ const resources = {
         analytics: {
           title: "分析",
           subtitle: "パフォーマンスとコンバージョンのインサイト",
+        },
+        profile: {
+          title: "プロフィール",
+          subtitle: "個人情報、設定、セキュリティ",
         },
         settings: {
           title: "管理 - RBAC",

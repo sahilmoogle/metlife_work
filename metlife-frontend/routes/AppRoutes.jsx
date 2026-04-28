@@ -9,6 +9,7 @@ import Analytics from "../pages/Analytics";
 import Reviews from "../pages/Reviews";
 import ReviewDetail from "../pages/ReviewDetail";
 import Settings from "../pages/Settings";
+import Profile from "../pages/Profile";
 import Login from "../pages/Login";
 import Signup from "../pages/Signup";
 import { useAuth } from "../context/AuthContext";
@@ -39,6 +40,7 @@ const AppRoutes = () => {
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/reviews" element={<Reviews />} />
           <Route path="/reviews/:id" element={<ReviewDetail />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
       </Route>

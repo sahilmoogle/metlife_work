@@ -211,28 +211,30 @@ const Analytics = () => {
             <p className="mt-1 text-[11px] font-medium text-gray-500 dark:text-volt-muted2">{translate("analytics.weekly.subtitle")}</p>
           </div>
 
-          <div className="flex items-end justify-between gap-3">
-            {(weeklyBars.length ? weeklyBars : []).map((w) => {
-              const total = Math.max(1, w.new_leads + w.engaged + w.converted);
-              const hNew = Math.round((w.new_leads / total) * 100);
-              const hEng = Math.round((w.engaged / total) * 100);
-              const hConv = Math.max(0, 100 - hNew - hEng);
-              return (
-                <div key={w.label} className="flex flex-1 flex-col items-center gap-2">
-                  <div className="flex h-44 w-full max-w-[120px] items-end justify-center rounded-2xl bg-gray-50 p-2 ring-1 ring-gray-100 dark:bg-white/5 dark:ring-volt-borderSoft">
-                    <div className="flex h-full w-10 flex-col-reverse overflow-hidden rounded-xl bg-white ring-1 ring-gray-100 dark:bg-volt-card/60 dark:ring-volt-borderSoft">
-                      <div className="w-full bg-emerald-500" style={{ height: `${hConv}%` }} />
-                      <div className="w-full bg-violet-500" style={{ height: `${hEng}%` }} />
-                      <div className="w-full bg-blue-500" style={{ height: `${hNew}%` }} />
+          <div className="overflow-x-auto">
+            <div className="flex min-w-[520px] items-end justify-between gap-3">
+              {(weeklyBars.length ? weeklyBars : []).map((w) => {
+                const total = Math.max(1, w.new_leads + w.engaged + w.converted);
+                const hNew = Math.round((w.new_leads / total) * 100);
+                const hEng = Math.round((w.engaged / total) * 100);
+                const hConv = Math.max(0, 100 - hNew - hEng);
+                return (
+                  <div key={w.label} className="flex flex-1 flex-col items-center gap-2">
+                    <div className="flex h-44 w-full max-w-[120px] items-end justify-center rounded-2xl bg-gray-50 p-2 ring-1 ring-gray-100 dark:bg-white/5 dark:ring-volt-borderSoft">
+                      <div className="flex h-full w-10 flex-col-reverse overflow-hidden rounded-xl bg-white ring-1 ring-gray-100 dark:bg-volt-card/60 dark:ring-volt-borderSoft">
+                        <div className="w-full bg-emerald-500" style={{ height: `${hConv}%` }} />
+                        <div className="w-full bg-violet-500" style={{ height: `${hEng}%` }} />
+                        <div className="w-full bg-blue-500" style={{ height: `${hNew}%` }} />
+                      </div>
                     </div>
+                    <p className="text-[11px] font-semibold text-gray-500 dark:text-volt-muted2">{w.label}</p>
                   </div>
-                  <p className="text-[11px] font-semibold text-gray-500 dark:text-volt-muted2">{w.label}</p>
-                </div>
-              );
-            })}
-            {!loading && weeklyBars.length === 0 ? (
-              <p className="w-full py-8 text-center text-sm text-gray-400">{translate("analytics.noWeeklyData")}</p>
-            ) : null}
+                );
+              })}
+              {!loading && weeklyBars.length === 0 ? (
+                <p className="w-full py-8 text-center text-sm text-gray-400">{translate("analytics.noWeeklyData")}</p>
+              ) : null}
+            </div>
           </div>
 
           <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-[11px] text-gray-500 dark:text-volt-muted2">
@@ -254,33 +256,35 @@ const Analytics = () => {
             <p className="mt-1 text-[11px] text-gray-500 font-medium dark:text-volt-muted2">{translate("analytics.scenarioConversion.subtitle")}</p>
           </div>
 
-          <div className="space-y-3">
-            {(data?.scenario_conversion ?? []).map((s) => (
-              <div key={s.scenario_id} className="flex items-center gap-3">
-                <div className="w-28 shrink-0">
-                  <p className="text-xs font-semibold text-gray-700 dark:text-volt-text">
-                    {s.scenario_id} <span className="text-gray-400">·</span> {s.label}
-                  </p>
-                </div>
-                <div className="flex-1">
-                  <div className="h-2 rounded-full bg-gray-100 dark:bg-white/10">
-                    <div
-                      className={`h-full rounded-full ${SCENARIO_BAR[s.scenario_id] || "bg-gray-400"}`}
-                      style={{ width: `${Math.min(100, s.conversion_pct)}%` }}
-                    />
+          <div className="overflow-x-auto">
+            <div className="min-w-[520px] space-y-3">
+              {(data?.scenario_conversion ?? []).map((s) => (
+                <div key={s.scenario_id} className="flex items-center gap-3">
+                  <div className="w-24 shrink-0 sm:w-28">
+                    <p className="text-xs font-semibold text-gray-700 dark:text-volt-text">
+                      {s.scenario_id} <span className="text-gray-400">·</span> {s.label}
+                    </p>
+                  </div>
+                  <div className="flex-1">
+                    <div className="h-2 rounded-full bg-gray-100 dark:bg-white/10">
+                      <div
+                        className={`h-full rounded-full ${SCENARIO_BAR[s.scenario_id] || "bg-gray-400"}`}
+                        style={{ width: `${Math.min(100, s.conversion_pct)}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="w-10 text-right text-xs font-semibold text-gray-700 dark:text-volt-text">
+                    {s.conversion_pct.toFixed(1)}%
+                  </div>
+                  <div className="w-16 text-right text-xs text-gray-500 font-medium dark:text-volt-muted2">
+                    {formatInt(s.converted_count)}/{formatInt(s.total_leads_in_period)}
                   </div>
                 </div>
-                <div className="w-10 text-right text-xs font-semibold text-gray-700 dark:text-volt-text">
-                  {s.conversion_pct.toFixed(1)}%
-                </div>
-                <div className="w-14 text-right text-xs text-gray-500  font-medium   dark:text-volt-muted2">
-                  {formatInt(s.converted_count)}/{formatInt(s.total_leads_in_period)}
-                </div>
-              </div>
-            ))}
-            {!loading && !(data?.scenario_conversion?.length) ? (
-              <p className="text-sm text-gray-400">{translate("analytics.scenarioConversion.empty")}</p>
-            ) : null}
+              ))}
+              {!loading && !(data?.scenario_conversion?.length) ? (
+                <p className="text-sm text-gray-400">{translate("analytics.scenarioConversion.empty")}</p>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>

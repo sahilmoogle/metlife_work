@@ -94,6 +94,14 @@ export const AuthProvider = ({ children }) => {
     clearSession();
   }, [clearSession]);
 
+  const updateUser = useCallback((patch) => {
+    setUser((current) => {
+      const base = current ?? {};
+      const nextPatch = typeof patch === "function" ? patch(base) : patch;
+      return { ...base, ...(nextPatch || {}) };
+    });
+  }, []);
+
   const value = useMemo(
     () => ({
       token,
@@ -104,8 +112,9 @@ export const AuthProvider = ({ children }) => {
       login,
       register,
       logout,
+      updateUser,
     }),
-    [isBootstrapping, login, logout, register, token, tokenType, user]
+    [isBootstrapping, login, logout, register, token, tokenType, updateUser, user]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
