@@ -77,7 +77,8 @@ async def generative_writer(
                     HumanMessage(content=user_msg),
                 ]
             )
-            parsed = json.loads(response.content)
+            raw = response if isinstance(response, str) else response.content
+            parsed = json.loads(raw)
             state["draft_email_subject"] = parsed.get("subject", "")
             state["draft_email_body"] = parsed.get("body", "")
             state["hitl_reviewer_notes"] = json.dumps(
