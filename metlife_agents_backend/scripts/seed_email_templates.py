@@ -53,8 +53,8 @@ except ImportError:  # pragma: no cover
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
-_SCRIPT_DIR = Path(__file__).parent                    # …/scripts/
-_REPO_ROOT = _SCRIPT_DIR.parent.parent                 # …/metlife/
+_SCRIPT_DIR = Path(__file__).parent  # …/scripts/
+_REPO_ROOT = _SCRIPT_DIR.parent.parent  # …/metlife/
 _TEMPLATE_DIR = _REPO_ROOT / "email_template"
 
 
@@ -89,7 +89,9 @@ def _load_html_from_msg(path: Path) -> str:
     msg = _extract_msg.Message(str(path))
     html = msg.htmlBody
     if html:
-        return html.decode("utf-8", errors="replace") if isinstance(html, bytes) else html
+        return (
+            html.decode("utf-8", errors="replace") if isinstance(html, bytes) else html
+        )
     body = msg.body
     if body:
         return f"<pre>{body}</pre>"
@@ -112,7 +114,9 @@ def _load_html(rel_path: str) -> str:
     raise ValueError(f"Unsupported template file type: {suffix!r} ({path})")
 
 
-def _fallback_html(subject: str, body_paragraphs: list[str], cta: str = "詳しく見る") -> str:
+def _fallback_html(
+    subject: str, body_paragraphs: list[str], cta: str = "詳しく見る"
+) -> str:
     """Minimal inline HTML — used only for S4 revival templates that have no source file."""
     paras = "".join(f"<p>{p}</p>\n" for p in body_paragraphs)
     return f"""<!DOCTYPE html>
@@ -574,62 +578,8 @@ TEMPLATES: list[dict] = [
         "keigo_level": "casual",
         "body_html": _load_html("Phase2/20251016_第4配信.eml"),
     },
-    # ── S4 Dormant Revival · P1 / P2 / P3 segment templates ──────────────────
-    # No source files exist for these; inline HTML is used as the approved asset.
-    {
-        "scenario_id": "S4",
-        "product_code": "P1",
-        "template_name": "s4_revival_p1_brand_campaign",
-        "subject": "【メットライフ生命】お久しぶりです。保険の見直しはお済みですか？",
-        "version": 1,
-        "keigo_level": "casual",
-        "body_html": _fallback_html(
-            "お久しぶりです。保険の見直しはお済みですか？",
-            [
-                "{{FIRST_NAME}}様、ご無沙汰しております。メットライフ生命です。",
-                "以前ご登録いただきましたが、その後いかがお過ごしでしょうか。",
-                "人生のステージが変わると、必要な保険も変わります。改めて、あなたに合った保障をご一緒に考えてみませんか。",
-                "まずは情報収集だけでも構いません。専門家への無料相談をご利用ください。",
-            ],
-            cta="無料相談を申し込む",
-        ),
-    },
-    {
-        "scenario_id": "S4",
-        "product_code": "P2",
-        "template_name": "s4_revival_p2_product_sim_invite",
-        "subject": "【メットライフ生命】新商品のご案内 ＋ 無料シミュレーション",
-        "version": 1,
-        "keigo_level": "casual",
-        "body_html": _fallback_html(
-            "新商品のご案内 ＋ 無料シミュレーション",
-            [
-                "{{FIRST_NAME}}様、メットライフ生命からの最新情報をお届けします。",
-                "お客様のライフステージに合わせた新しい保険プランをご用意しました。",
-                "無料のシミュレーションツールを使えば、月々の保険料と保障内容を5分で確認できます。",
-                "あなたの家族を守るための最適なプランを、今すぐシミュレーションで確かめてみてください。",
-            ],
-            cta="無料シミュレーションを試す",
-        ),
-    },
-    {
-        "scenario_id": "S4",
-        "product_code": "P3",
-        "template_name": "s4_revival_p3_consultation_campaign",
-        "subject": "【メットライフ生命】専門家への無料相談のご案内",
-        "version": 1,
-        "keigo_level": "casual",
-        "body_html": _fallback_html(
-            "専門家への無料相談のご案内",
-            [
-                "{{FIRST_NAME}}様、以前、メットライフ生命の保険についてご関心をお持ちいただきありがとうございました。",
-                "お客様のご状況に合わせて、専門のライフプランナーが最適な保障プランをご提案します。",
-                "相談は完全無料です。お気軽にご予約ください。",
-                "今なら最短翌日にオンライン・対面のどちらでもご相談いただけます。",
-            ],
-            cta="今すぐ相談を予約する",
-        ),
-    },
+    # S4 revival Email #1 is intentionally not seeded from inline placeholders.
+    # When no file-backed approved template exists, A4 routes to llm_generated.
 ]
 
 

@@ -2,13 +2,42 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { fetchLeadsList } from "../src/services/leadsApi";
+import { runBatch } from "../src/services/agentsApi";
 import { fetchHitlQueue } from "../src/services/hitlApi";
 import { downloadBlob, leadsToCsv } from "../src/utils/exportFile";
 import { useTranslation } from "react-i18next";
 import { formatRelativeTime } from "../src/utils/relativeTime";
 import { useRelativeClock } from "../src/hooks/useRelativeClock";
+import GuidePanel from "../components/GuidePanel";
 
 const leadFilters = ["All", "Active", "HITL", "Converted", "Dormant"];
+const ANY_VALUE = "all";
+const scoreFilters = [
+  { key: ANY_VALUE, label: "Any score" },
+  { key: "high", label: "High (>= 0.70)" },
+  { key: "medium", label: "Medium (0.40-0.69)" },
+  { key: "low", label: "Low (< 0.40)" },
+  { key: "zero", label: "Zero" },
+];
+const activityFilters = [
+  { key: ANY_VALUE, label: "Any activity" },
+  { key: "today", label: "Today" },
+  { key: "7d", label: "Last 7 days" },
+  { key: "30d", label: "Last 30 days" },
+  { key: "stale", label: "Stale (30+ days)" },
+  { key: "none", label: "No activity" },
+];
+
+const leadStatusLegend = [
+  ["New", "No workflow thread has started yet."],
+  ["Active", "Workflow is running or ready for the next graph step."],
+  ["Processing", "Agent execution is currently in progress."],
+  ["HITL", "A human review is waiting in the Reviews queue."],
+  ["Paused", "Waiting for cadence or quiet-hours timer before continuing."],
+  ["Dormant", "Nurture ended without handoff; eligible for later revival."],
+  ["Converted", "Sales handoff was accepted or completed."],
+  ["Suppressed", "Opt-out, unsubscribe, bounce, or invalid contact path."],
+];
 
 const statusStyles = {
   Active: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200",
@@ -53,6 +82,36 @@ const matchesFilter = (lead, filter, pendingHitlLeadIds) => {
   return true;
 };
 
+const uniqueOptions = (items, key) =>
+  [...new Set(items.map((item) => item?.[key]).filter(Boolean).map(String))].sort((a, b) =>
+    a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }),
+  );
+
+const matchesScoreFilter = (lead, filter) => {
+  if (filter === ANY_VALUE) return true;
+  const score = Number(lead.engagement_score ?? 0);
+  if (filter === "high") return score >= 0.7;
+  if (filter === "medium") return score >= 0.4 && score < 0.7;
+  if (filter === "low") return score > 0 && score < 0.4;
+  if (filter === "zero") return score === 0;
+  return true;
+};
+
+const matchesActivityFilter = (lead, filter) => {
+  if (filter === ANY_VALUE) return true;
+  const time = lead.last_activity ? new Date(lead.last_activity).getTime() : NaN;
+  if (!Number.isFinite(time)) return filter === "none";
+  if (filter === "none") return false;
+
+  const ageMs = Date.now() - time;
+  const dayMs = 24 * 60 * 60 * 1000;
+  if (filter === "today") return ageMs <= dayMs;
+  if (filter === "7d") return ageMs <= 7 * dayMs;
+  if (filter === "30d") return ageMs <= 30 * dayMs;
+  if (filter === "stale") return ageMs > 30 * dayMs;
+  return true;
+};
+
 const Leads = () => {
   useRelativeClock(30000);
   const navigate = useNavigate();
@@ -63,9 +122,17 @@ const Leads = () => {
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState("All");
   const [query, setQuery] = useState("");
+  const [scenarioFilter, setScenarioFilter] = useState(ANY_VALUE);
+  const [personaFilter, setPersonaFilter] = useState(ANY_VALUE);
+  const [stepFilter, setStepFilter] = useState(ANY_VALUE);
+  const [scoreFilter, setScoreFilter] = useState(ANY_VALUE);
+  const [activityFilter, setActivityFilter] = useState(ANY_VALUE);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState(() => new Set());
+  const [runSelectedBusy, setRunSelectedBusy] = useState(false);
+  const [runSelectedMessage, setRunSelectedMessage] = useState("");
+  const [runSelectedError, setRunSelectedError] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
   const [pendingHitlLeadIds, setPendingHitlLeadIds] = useState(() => new Set());
 
@@ -111,10 +178,25 @@ const Leads = () => {
     };
   }, [token, refreshKey]);
 
+  const scenarioOptions = useMemo(() => uniqueOptions(leads, "scenario_id"), [leads]);
+  const personaOptions = useMemo(() => uniqueOptions(leads, "persona_code"), [leads]);
+  const stepOptions = useMemo(() => uniqueOptions(leads, "current_agent_node"), [leads]);
+  const hasAdvancedFilters =
+    scenarioFilter !== ANY_VALUE ||
+    personaFilter !== ANY_VALUE ||
+    stepFilter !== ANY_VALUE ||
+    scoreFilter !== ANY_VALUE ||
+    activityFilter !== ANY_VALUE;
+
   const filteredLeads = useMemo(() => {
     const q = query.trim().toLowerCase();
     return leads
       .filter((lead) => matchesFilter(lead, activeFilter, pendingHitlLeadIds))
+      .filter((lead) => scenarioFilter === ANY_VALUE || String(lead.scenario_id || "") === scenarioFilter)
+      .filter((lead) => personaFilter === ANY_VALUE || String(lead.persona_code || "") === personaFilter)
+      .filter((lead) => stepFilter === ANY_VALUE || String(lead.current_agent_node || "") === stepFilter)
+      .filter((lead) => matchesScoreFilter(lead, scoreFilter))
+      .filter((lead) => matchesActivityFilter(lead, activityFilter))
       .filter((lead) => {
         if (!q) return true;
         const hay = [
@@ -130,7 +212,17 @@ const Leads = () => {
           .toLowerCase();
         return hay.includes(q);
       });
-  }, [activeFilter, leads, pendingHitlLeadIds, query]);
+  }, [
+    activeFilter,
+    activityFilter,
+    leads,
+    pendingHitlLeadIds,
+    personaFilter,
+    query,
+    scenarioFilter,
+    scoreFilter,
+    stepFilter,
+  ]);
 
   const totalRows = filteredLeads.length;
   const totalPages = Math.max(1, Math.ceil(totalRows / rowsPerPage));
@@ -140,7 +232,15 @@ const Leads = () => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(1);
     setSelected(new Set());
-  }, [activeFilter, query, rowsPerPage]);
+  }, [activeFilter, activityFilter, personaFilter, query, rowsPerPage, scenarioFilter, scoreFilter, stepFilter]);
+
+  const clearAdvancedFilters = () => {
+    setScenarioFilter(ANY_VALUE);
+    setPersonaFilter(ANY_VALUE);
+    setStepFilter(ANY_VALUE);
+    setScoreFilter(ANY_VALUE);
+    setActivityFilter(ANY_VALUE);
+  };
 
   useEffect(() => {
     // Clamp page if current page becomes invalid (e.g., after filter changes).
@@ -188,6 +288,27 @@ const Leads = () => {
     downloadBlob(filename, leadsToCsv(rows), "text/csv;charset=utf-8");
   };
 
+  const handleRunSelected = async () => {
+    if (!selected.size || runSelectedBusy) return;
+    setRunSelectedBusy(true);
+    setRunSelectedError("");
+    setRunSelectedMessage("");
+    try {
+      const payload = await runBatch(token, { leadIds: Array.from(selected) });
+      if (!payload?.success) {
+        setRunSelectedError(payload?.message || "No eligible selected leads to run.");
+        return;
+      }
+      setRunSelectedMessage(payload?.message || "Selected leads batch started.");
+      setSelected(new Set());
+      setRefreshKey((k) => k + 1);
+    } catch (e) {
+      setRunSelectedError(e.message || "Failed to start selected leads batch.");
+    } finally {
+      setRunSelectedBusy(false);
+    }
+  };
+
   return (
     <section className="app-surface-card p-3 sm:p-4">
       {loadError ? (
@@ -196,6 +317,16 @@ const Leads = () => {
           <button type="button" className="font-semibold underline" onClick={() => setRefreshKey((k) => k + 1)}>
             {t("common.retry")}
           </button>
+        </div>
+      ) : null}
+      {runSelectedMessage ? (
+        <div className="mb-3 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200">
+          {runSelectedMessage}
+        </div>
+      ) : null}
+      {runSelectedError ? (
+        <div className="mb-3 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+          {runSelectedError}
         </div>
       ) : null}
 
@@ -243,6 +374,19 @@ const Leads = () => {
           </div>
           <button
             type="button"
+            disabled={loading || runSelectedBusy || !selected.size}
+            onClick={handleRunSelected}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-200 dark:hover:bg-indigo-500/20"
+            title={
+              selected.size
+                ? `Run workflow for ${selected.size} selected lead(s)`
+                : "Select at least one lead to run only selected"
+            }
+          >
+            {runSelectedBusy ? "Starting..." : `Run selected (${selected.size})`}
+          </button>
+          <button
+            type="button"
             disabled={loading || !filteredLeads.length}
             onClick={handleExport}
             className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#0b4aa6] via-[#004EB2] to-[#003B86] px-5 text-xs font-semibold text-white shadow-[0_12px_30px_rgba(0,78,178,0.22)] transition duration-200 ease-out hover:brightness-[1.06] hover:shadow-[0_14px_34px_rgba(0,78,178,0.28)] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#004EB2]/50 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 dark:shadow-[0_12px_30px_rgba(0,0,0,0.35)]"
@@ -255,6 +399,119 @@ const Leads = () => {
             {t("common.export")}
           </button>
         </div>
+      </div>
+
+      <div className="mb-3 rounded-2xl border border-gray-100 bg-gray-50/70 p-3 dark:border-volt-borderSoft dark:bg-white/5">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-600 dark:text-volt-muted2">
+            More filters
+          </p>
+          {hasAdvancedFilters ? (
+            <button
+              type="button"
+              onClick={clearAdvancedFilters}
+              className="text-[11px] font-semibold text-[#004EB2] hover:underline"
+            >
+              Clear filters
+            </button>
+          ) : null}
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+          <label className="text-[11px] font-semibold text-gray-600 dark:text-volt-muted2">
+            Scenario
+            <select
+              value={scenarioFilter}
+              onChange={(event) => setScenarioFilter(event.target.value)}
+              className="mt-1 h-9 w-full rounded-xl border border-gray-200 bg-white px-3 text-xs font-medium text-gray-700 outline-none focus:border-indigo-300 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text"
+            >
+              <option value={ANY_VALUE}>Any scenario</option>
+              {scenarioOptions.map((scenario) => (
+                <option key={scenario} value={scenario}>
+                  {scenario}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-[11px] font-semibold text-gray-600 dark:text-volt-muted2">
+            Persona
+            <select
+              value={personaFilter}
+              onChange={(event) => setPersonaFilter(event.target.value)}
+              className="mt-1 h-9 w-full rounded-xl border border-gray-200 bg-white px-3 text-xs font-medium text-gray-700 outline-none focus:border-indigo-300 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text"
+            >
+              <option value={ANY_VALUE}>Any persona</option>
+              {personaOptions.map((persona) => (
+                <option key={persona} value={persona}>
+                  {persona}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-[11px] font-semibold text-gray-600 dark:text-volt-muted2">
+            Current step
+            <select
+              value={stepFilter}
+              onChange={(event) => setStepFilter(event.target.value)}
+              className="mt-1 h-9 w-full rounded-xl border border-gray-200 bg-white px-3 text-xs font-medium text-gray-700 outline-none focus:border-indigo-300 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text"
+            >
+              <option value={ANY_VALUE}>Any step</option>
+              {stepOptions.map((step) => (
+                <option key={step} value={step}>
+                  {step}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-[11px] font-semibold text-gray-600 dark:text-volt-muted2">
+            Score
+            <select
+              value={scoreFilter}
+              onChange={(event) => setScoreFilter(event.target.value)}
+              className="mt-1 h-9 w-full rounded-xl border border-gray-200 bg-white px-3 text-xs font-medium text-gray-700 outline-none focus:border-indigo-300 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text"
+            >
+              {scoreFilters.map((filter) => (
+                <option key={filter.key} value={filter.key}>
+                  {filter.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-[11px] font-semibold text-gray-600 dark:text-volt-muted2">
+            Last activity
+            <select
+              value={activityFilter}
+              onChange={(event) => setActivityFilter(event.target.value)}
+              className="mt-1 h-9 w-full rounded-xl border border-gray-200 bg-white px-3 text-xs font-medium text-gray-700 outline-none focus:border-indigo-300 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text"
+            >
+              {activityFilters.map((filter) => (
+                <option key={filter.key} value={filter.key}>
+                  {filter.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div className="mb-3">
+        <GuidePanel
+          title="Lead guide"
+          subtitle="Statuses, selected runs, and export behavior"
+        >
+          <div className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-gray-500 dark:text-volt-muted2">
+            <span>Run selected = checked eligible leads only</span>
+            <span>Export = selected rows, or filtered rows when nothing is selected</span>
+            <span>Completed non-dormant leads are skipped until revival rules apply</span>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          {leadStatusLegend.map(([status, detail]) => (
+            <div key={status} className="rounded-xl bg-white px-3 py-2 text-[11px] dark:bg-volt-panel/60">
+              <span className="font-semibold text-gray-800 dark:text-white">{status}:</span>{" "}
+              <span className="text-gray-600 dark:text-volt-muted2">{detail}</span>
+            </div>
+          ))}
+          </div>
+        </GuidePanel>
       </div>
 
       <div className="overflow-x-auto">

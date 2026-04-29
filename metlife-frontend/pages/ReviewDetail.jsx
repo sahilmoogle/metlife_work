@@ -33,6 +33,123 @@ const PencilIcon = (props) => (
   </svg>
 );
 
+const isHtmlBody = (value = "") => value.trim().startsWith("<");
+const hasJapaneseText = (value = "") => /[\u3040-\u30ff\u3400-\u9fff]/.test(value);
+
+const htmlToEditableText = (html = "") => {
+  if (!isHtmlBody(html) || typeof DOMParser === "undefined") return html || "";
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const raw = doc.body?.innerText || doc.body?.textContent || "";
+  return raw.replace(/\n{3,}/g, "\n\n").trim();
+};
+
+const createBrowserTranslator = async () => {
+  if (typeof window === "undefined") return null;
+  const options = { sourceLanguage: "ja", targetLanguage: "en" };
+
+  if (window.Translator?.create) {
+    return window.Translator.create(options);
+  }
+  if (window.translation?.createTranslator) {
+    return window.translation.createTranslator(options);
+  }
+
+  return null;
+};
+
+const translateWithBrowser = async (translator, text = "") => {
+  const value = text.trim();
+  if (!value) return "";
+  if (typeof translator?.translate === "function") {
+    return translator.translate(value);
+  }
+  return "";
+};
+
+const translateHtmlWithBrowser = async (translator, html = "") => {
+  if (!isHtmlBody(html) || typeof DOMParser === "undefined") {
+    return { html: "", text: await translateWithBrowser(translator, html), hasImageAssets: false };
+  }
+
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const translatableAttributes = ["alt", "title", "aria-label"];
+  const walker = doc.createTreeWalker(
+    doc.body,
+    window.NodeFilter?.SHOW_TEXT ?? 4,
+    {
+      acceptNode: (node) => {
+        const value = node.nodeValue || "";
+        const parentTag = node.parentElement?.tagName?.toLowerCase();
+        if (!value.trim() || !hasJapaneseText(value) || ["script", "style", "noscript"].includes(parentTag)) {
+          return 2;
+        }
+        return 1;
+      },
+    },
+  );
+
+  const textNodes = [];
+  let current = walker.nextNode();
+  while (current) {
+    textNodes.push(current);
+    current = walker.nextNode();
+  }
+
+  await Promise.all(
+    textNodes.map(async (node) => {
+      const translated = await translateWithBrowser(translator, node.nodeValue || "");
+      if (translated) node.nodeValue = translated;
+    }),
+  );
+
+  const attributeUpdates = [];
+  doc.body.querySelectorAll(translatableAttributes.map((attr) => `[${attr}]`).join(",")).forEach((element) => {
+    translatableAttributes.forEach((attr) => {
+      const value = element.getAttribute(attr);
+      if (value && hasJapaneseText(value)) {
+        attributeUpdates.push(
+          translateWithBrowser(translator, value).then((translated) => {
+            if (translated) element.setAttribute(attr, translated);
+          }),
+        );
+      }
+    });
+  });
+  await Promise.all(attributeUpdates);
+
+  return {
+    html: `<!DOCTYPE html>\n${doc.documentElement.outerHTML}`,
+    text: "",
+    hasImageAssets: doc.body.querySelectorAll("img, picture, svg image").length > 0,
+  };
+};
+
+const textToHtmlBody = (originalHtml = "", text = "") => {
+  if (!isHtmlBody(originalHtml) || typeof DOMParser === "undefined") return text;
+  const doc = new DOMParser().parseFromString(originalHtml, "text/html");
+  doc.body.innerHTML = "";
+
+  const wrapper = doc.createElement("div");
+  wrapper.setAttribute(
+    "style",
+    "font-family: Hiragino Kaku Gothic ProN, Meiryo, sans-serif; color: #222; line-height: 1.7; padding: 24px;",
+  );
+
+  text
+    .split(/\n{2,}/)
+    .map((chunk) => chunk.trim())
+    .filter(Boolean)
+    .forEach((chunk) => {
+      const p = doc.createElement("p");
+      p.setAttribute("style", "margin: 0 0 16px;");
+      p.textContent = chunk;
+      wrapper.appendChild(p);
+    });
+
+  doc.body.appendChild(wrapper);
+  return `<!DOCTYPE html>\n${doc.documentElement.outerHTML}`;
+};
+
 const ReviewDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -44,8 +161,12 @@ const ReviewDetail = () => {
   const [notFound, setNotFound] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [editMode, setEditMode] = useState(false);
+  const [previewLanguage, setPreviewLanguage] = useState("ja");
+  const [englishPreview, setEnglishPreview] = useState(null);
+  const [englishLoading, setEnglishLoading] = useState(false);
+  const [englishError, setEnglishError] = useState("");
   const [editedSubject, setEditedSubject] = useState("");
-  const [editedBody, setEditedBody] = useState("");
+  const [editedBodyText, setEditedBodyText] = useState("");
   const [reviewerNotes, setReviewerNotes] = useState("");
   const [actionError, setActionError] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
@@ -66,7 +187,10 @@ const ReviewDetail = () => {
         if (!cancelled) {
           setData(detail || null);
           setEditedSubject(detail?.draft_subject || "");
-          setEditedBody(detail?.draft_body || "");
+          setEditedBodyText(htmlToEditableText(detail?.draft_body || ""));
+          setPreviewLanguage("ja");
+          setEnglishPreview(null);
+          setEnglishError("");
         }
       } catch (e) {
         if (cancelled) return;
@@ -118,7 +242,12 @@ const ReviewDetail = () => {
     try {
       const body =
         action === "edited"
-          ? { action, edited_subject: editedSubject, edited_body: editedBody, reviewer_notes: reviewerNotes }
+          ? {
+              action,
+              edited_subject: editedSubject,
+              edited_body: textToHtmlBody(data?.draft_body || "", editedBodyText),
+              reviewer_notes: reviewerNotes,
+            }
           : { action, reviewer_notes: reviewerNotes };
       await approveHitl(token, id, body);
       const okMsg =
@@ -132,6 +261,38 @@ const ReviewDetail = () => {
       setActionError(e.message || "Action failed.");
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const showEnglishPreview = async () => {
+    setPreviewLanguage("en");
+    setEnglishError("");
+    if (englishPreview || englishLoading) return;
+    setEnglishLoading(true);
+    try {
+      const translator = await createBrowserTranslator();
+      if (!translator) {
+        setEnglishPreview({ subject: "", body: "" });
+        setEnglishError("Browser translation is not available in this browser. Use Chrome's page translation for now.");
+        return;
+      }
+
+      const sourceSubject = data?.draft_subject || "";
+      const sourceBody = data?.draft_body || "";
+      const [subject, translatedBody] = await Promise.all([
+        hasJapaneseText(sourceSubject) ? translateWithBrowser(translator, sourceSubject) : sourceSubject,
+        translateHtmlWithBrowser(translator, sourceBody),
+      ]);
+      setEnglishPreview({
+        subject,
+        body: translatedBody.text,
+        bodyHtml: translatedBody.html,
+        hasImageAssets: translatedBody.hasImageAssets,
+      });
+    } catch (e) {
+      setEnglishError(e.message || "Unable to generate English preview.");
+    } finally {
+      setEnglishLoading(false);
     }
   };
 
@@ -174,6 +335,7 @@ const ReviewDetail = () => {
   }
 
   const leadId = data?.lead_id != null ? String(data.lead_id) : "";
+  const editedPreviewBody = textToHtmlBody(data?.draft_body || "", editedBodyText);
 
   return (
     <section className="space-y-3">
@@ -270,40 +432,116 @@ const ReviewDetail = () => {
               </div>
             </div>
 
-            <button
-              type="button"
-              disabled={decisionLocked}
-              onClick={() => setEditMode((v) => !v)}
-              className="inline-flex h-8 items-center gap-2 rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 hover:border-indigo-200 hover:text-indigo-700 disabled:opacity-60 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted dark:hover:border-volt-border dark:hover:text-white"
-            >
-              <PencilIcon className="h-4 w-4" />
-              {editMode ? "Close edit" : "Edit"}
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              {!editMode ? (
+                <div className="inline-flex rounded-full border border-gray-200 bg-white p-1 text-[11px] dark:border-volt-borderSoft dark:bg-volt-card/60">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewLanguage("ja")}
+                    className={`rounded-full px-3 py-1 font-semibold ${
+                      previewLanguage === "ja"
+                        ? "bg-indigo-600 text-white"
+                        : "text-gray-600 hover:text-indigo-700 dark:text-volt-muted"
+                    }`}
+                  >
+                    Japanese
+                  </button>
+                  <button
+                    type="button"
+                    onClick={showEnglishPreview}
+                    className={`rounded-full px-3 py-1 font-semibold ${
+                      previewLanguage === "en"
+                        ? "bg-indigo-600 text-white"
+                        : "text-gray-600 hover:text-indigo-700 dark:text-volt-muted"
+                    }`}
+                  >
+                    English
+                  </button>
+                </div>
+              ) : null}
+              <button
+                type="button"
+                disabled={decisionLocked}
+                onClick={() => setEditMode((v) => !v)}
+                className="inline-flex h-8 items-center gap-2 rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 hover:border-indigo-200 hover:text-indigo-700 disabled:opacity-60 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted dark:hover:border-volt-border dark:hover:text-white"
+              >
+                <PencilIcon className="h-4 w-4" />
+                {editMode ? "Close edit" : "Edit"}
+              </button>
+            </div>
           </div>
 
           <div className="mt-3 rounded-xl bg-gray-50 p-4 text-xs text-gray-700 dark:bg-volt-card/60 dark:text-volt-text">
             {!editMode ? (
               <>
-                <p className="font-semibold text-gray-700 dark:text-volt-text">Subject: {data.draft_subject || "—"}</p>
-                {data.draft_body && data.draft_body.trim().startsWith("<") ? (
-                  <div className="mt-2 overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-volt-borderSoft">
-                    <iframe
-                      title="Email preview"
-                      sandbox=""
-                      srcDoc={data.draft_body}
-                      className="w-full border-0"
-                      style={{ minHeight: 320, background: "#fff" }}
-                      onLoad={(e) => {
-                        const doc = e.target.contentDocument;
-                        if (doc?.body) {
-                          const desired = doc.body.scrollHeight + 24;
-                          e.target.style.height = `${Math.min(520, desired)}px`;
-                        }
-                      }}
-                    />
+                {previewLanguage === "en" ? (
+                  <div>
+                    <p className="font-semibold text-gray-700 dark:text-volt-text">
+                      Subject (English): {englishPreview?.subject || (englishLoading ? "Generating..." : "—")}
+                    </p>
+                    {englishError ? (
+                      <p className="mt-2 rounded-lg border border-rose-100 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                        {englishError}
+                      </p>
+                    ) : englishPreview?.bodyHtml ? (
+                      <div className="mt-2 overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-volt-borderSoft">
+                        <iframe
+                          title="English email preview"
+                          sandbox=""
+                          srcDoc={englishPreview.bodyHtml}
+                          className="w-full border-0"
+                          style={{ minHeight: 320, background: "#fff" }}
+                          onLoad={(e) => {
+                            const doc = e.target.contentDocument;
+                            if (doc?.body) {
+                              const desired = doc.body.scrollHeight + 24;
+                              e.target.style.height = `${Math.min(520, desired)}px`;
+                            }
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="mt-2 rounded-lg border border-gray-200 bg-white p-4 text-sm leading-7 text-gray-800 dark:border-volt-borderSoft dark:bg-volt-panel dark:text-volt-text">
+                        {englishLoading ? (
+                          <p className="text-gray-500">Generating English preview...</p>
+                        ) : (
+                          <p className="whitespace-pre-wrap">{englishPreview?.body || "—"}</p>
+                        )}
+                      </div>
+                    )}
+                    {englishPreview?.hasImageAssets ? (
+                      <p className="mt-2 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-800">
+                        Some Japanese may remain when it is baked into image assets. The local translator can only change real HTML text.
+                      </p>
+                    ) : null}
+                    <p className="mt-2 text-[11px] text-gray-500 dark:text-volt-muted2">
+                      English preview is for reviewer understanding only. The customer email remains Japanese unless edited.
+                    </p>
                   </div>
                 ) : (
-                  <div className="mt-2 whitespace-pre-wrap">{data.draft_body || "—"}</div>
+                  <>
+                    <p className="font-semibold text-gray-700 dark:text-volt-text">Subject: {data.draft_subject || "—"}</p>
+                    {data.draft_body && data.draft_body.trim().startsWith("<") ? (
+                      <div className="mt-2 overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-volt-borderSoft">
+                        <iframe
+                          title="Email preview"
+                          sandbox=""
+                          srcDoc={data.draft_body}
+                          className="w-full border-0"
+                          style={{ minHeight: 320, background: "#fff" }}
+                          onLoad={(e) => {
+                            const doc = e.target.contentDocument;
+                            if (doc?.body) {
+                              const desired = doc.body.scrollHeight + 24;
+                              e.target.style.height = `${Math.min(520, desired)}px`;
+                            }
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="mt-2 whitespace-pre-wrap">{data.draft_body || "—"}</div>
+                    )}
+                  </>
                 )}
               </>
             ) : (
@@ -318,14 +556,26 @@ const ReviewDetail = () => {
                   />
                 </div>
                 <div>
-                  <p className="text-[11px] font-semibold text-gray-600 dark:text-volt-muted">Body</p>
+                  <p className="text-[11px] font-semibold text-gray-600 dark:text-volt-muted">Body text</p>
                   <textarea
-                    value={editedBody}
-                    onChange={(e) => setEditedBody(e.target.value)}
-                    rows={8}
+                    value={editedBodyText}
+                    onChange={(e) => setEditedBodyText(e.target.value)}
+                    rows={10}
                     className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-800 outline-none focus:border-indigo-300 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text"
-                    placeholder="Edited body"
+                    placeholder="Edit the visible email text only"
                   />
+                  <p className="mt-1 text-[11px] text-gray-500 dark:text-volt-muted2">
+                    Edit the readable email text here. The app will wrap it back into email HTML when you save.
+                  </p>
+                  <div className="mt-3 overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-volt-borderSoft">
+                    <iframe
+                      title="Edited email preview"
+                      sandbox=""
+                      srcDoc={editedPreviewBody || "<html><body></body></html>"}
+                      className="w-full border-0"
+                      style={{ minHeight: 280, background: "#fff" }}
+                    />
+                  </div>
                 </div>
               </div>
             )}

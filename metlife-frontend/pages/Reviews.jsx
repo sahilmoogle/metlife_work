@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { fetchHitlQueue } from "../src/services/hitlApi";
+import { approveHitl, fetchHitlQueue } from "../src/services/hitlApi";
 import { useTranslation } from "react-i18next";
 import { buildSseStreamUrl } from "../src/services/sseStream";
 import { formatRelativeTime } from "../src/utils/relativeTime";
 import { useRelativeClock } from "../src/hooks/useRelativeClock";
+import GuidePanel from "../components/GuidePanel";
 
 const queueTabs = [
   { key: "pending", label: "Pending" },
@@ -26,6 +27,14 @@ const gateFilters = [
   { key: "G5", labelKey: "reviews.gates.g5" },
 ];
 
+const hitlGateLegend = [
+  ["G1", "Compliance", "Review the drafted email before it can be sent."],
+  ["G2", "Persona", "Confirm or override low-confidence persona/scenario decisions."],
+  ["G3", "Campaign", "Approve dormant revival campaign before S4 resumes."],
+  ["G4", "Sales Handoff", "Accept or reject the sales briefing after A9."],
+  ["G5", "Score Override", "Force handoff or hold nurture when score is near threshold."],
+];
+
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
 
 const Reviews = () => {
@@ -43,6 +52,10 @@ const Reviews = () => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedThreads, setSelectedThreads] = useState(() => new Set());
+  const [bulkApproving, setBulkApproving] = useState(false);
+  const [bulkMessage, setBulkMessage] = useState("");
+  const [bulkError, setBulkError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -160,6 +173,95 @@ const Reviews = () => {
     return filtered.slice(start, start + pageSize);
   }, [filtered, safePage, pageSize]);
 
+  const selectablePaged = useMemo(
+    () => (activeTab === "pending" ? paged.filter((item) => item.thread_id) : []),
+    [activeTab, paged]
+  );
+
+  const selectedItems = useMemo(() => {
+    if (!selectedThreads.size) return [];
+    return pendingItems.filter((item) => selectedThreads.has(item.thread_id));
+  }, [pendingItems, selectedThreads]);
+
+  const selectedGateSummary = useMemo(() => {
+    const countsByGate = selectedItems.reduce((acc, item) => {
+      const gate = item.gate_type || "Unknown";
+      acc[gate] = (acc[gate] || 0) + 1;
+      return acc;
+    }, {});
+    return Object.entries(countsByGate)
+      .map(([gate, count]) => `${gate}: ${count}`)
+      .join(", ");
+  }, [selectedItems]);
+
+  const allPagedSelected =
+    selectablePaged.length > 0 && selectablePaged.every((item) => selectedThreads.has(item.thread_id));
+
+  const toggleThread = (threadId) => {
+    setBulkMessage("");
+    setBulkError("");
+    setSelectedThreads((current) => {
+      const next = new Set(current);
+      if (next.has(threadId)) next.delete(threadId);
+      else next.add(threadId);
+      return next;
+    });
+  };
+
+  const togglePagedSelection = () => {
+    setBulkMessage("");
+    setBulkError("");
+    setSelectedThreads((current) => {
+      const next = new Set(current);
+      if (allPagedSelected) {
+        selectablePaged.forEach((item) => next.delete(item.thread_id));
+      } else {
+        selectablePaged.forEach((item) => next.add(item.thread_id));
+      }
+      return next;
+    });
+  };
+
+  const handleBulkApprove = async () => {
+    if (!selectedItems.length || bulkApproving) return;
+    const summary = selectedGateSummary || `${selectedItems.length} selected`;
+    const ok = window.confirm(
+      `Bulk approve ${selectedItems.length} pending HITL item(s)?\n\n${summary}\n\nEach item will resume its workflow as approved.`
+    );
+    if (!ok) return;
+
+    setBulkApproving(true);
+    setBulkMessage("");
+    setBulkError("");
+
+    const successes = [];
+    const failures = [];
+    for (const item of selectedItems) {
+      try {
+        await approveHitl(token, item.thread_id, {
+          action: "approved",
+          reviewer_notes: "Bulk approved by reviewer",
+        });
+        successes.push(item.thread_id);
+      } catch (e) {
+        failures.push({
+          threadId: item.thread_id,
+          message: e.message || "Approval failed.",
+        });
+      }
+    }
+
+    setSelectedThreads((current) => {
+      const next = new Set(current);
+      successes.forEach((threadId) => next.delete(threadId));
+      return next;
+    });
+    setBulkMessage(`Bulk approval complete: ${successes.length} approved, ${failures.length} failed.`);
+    setBulkError(failures.length ? failures.map((f) => `${f.threadId}: ${f.message}`).join(" | ") : "");
+    setRefreshKey((k) => k + 1);
+    setBulkApproving(false);
+  };
+
   const pageNumbers = useMemo(() => {
     const nums = [];
     const delta = 2;
@@ -199,6 +301,26 @@ const Reviews = () => {
           </button>
         </div>
       </div>
+
+      <GuidePanel
+        title="HITL gateway guide"
+        subtitle="G1-G5 review gates and queue states"
+        tone="amber"
+      >
+        <div className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-gray-500 dark:text-volt-muted2">
+          <span>Pending = waiting now</span>
+          <span>Resolved = decision already recorded</span>
+          <span>Approval resumes the workflow from the paused gate</span>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+          {hitlGateLegend.map(([gate, label, detail]) => (
+            <div key={gate} className="rounded-xl border border-amber-100 bg-amber-50/60 px-3 py-2 text-[11px] dark:border-amber-500/25 dark:bg-amber-500/10">
+              <span className="font-semibold text-amber-900 dark:text-amber-100">{gate} · {label}</span>
+              <p className="mt-0.5 text-amber-900/80 dark:text-amber-100/80">{detail}</p>
+            </div>
+          ))}
+        </div>
+      </GuidePanel>
 
       {/* Pending / Resolved tabs */}
       <div className="app-surface-card p-3">
@@ -289,6 +411,27 @@ const Reviews = () => {
               className="h-9 w-full rounded-full border border-gray-200 bg-gray-50 pl-9 pr-4 text-xs text-gray-800 outline-none transition focus:border-indigo-300 focus:bg-white dark:border-volt-borderSoft dark:bg-white/5 dark:text-volt-text dark:focus:border-indigo-500/40 dark:focus:bg-volt-card"
             />
           </div>
+          {activeTab === "pending" ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={!selectablePaged.length || bulkApproving}
+                onClick={togglePagedSelection}
+                className="inline-flex h-8 items-center gap-2 rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition hover:border-[#a7c4f2] hover:text-[#004EB2] disabled:cursor-not-allowed disabled:opacity-50 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
+              >
+                {allPagedSelected ? "Clear visible" : "Select visible"}
+              </button>
+              <button
+                type="button"
+                disabled={!selectedItems.length || bulkApproving}
+                onClick={handleBulkApprove}
+                title={selectedGateSummary ? `Selected gates: ${selectedGateSummary}` : "Select pending reviews first"}
+                className="inline-flex h-8 items-center gap-2 rounded-full bg-[#004EB2] px-3 text-xs font-semibold text-white shadow-sm transition hover:bg-[#003f93] disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
+              >
+                {bulkApproving ? "Approving..." : `Bulk approve (${selectedItems.length})`}
+              </button>
+            </div>
+          ) : null}
           <div className="flex items-center gap-4">
             <p className="text-xs text-gray-500 dark:text-volt-muted2">
               {filtered.length === 0
@@ -313,6 +456,17 @@ const Reviews = () => {
           </div>
           </div>
         </div>
+
+        {bulkMessage ? (
+          <div className="mb-3 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-200">
+            {bulkMessage}
+          </div>
+        ) : null}
+        {bulkError ? (
+          <div className="mb-3 rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-200">
+            {bulkError}
+          </div>
+        ) : null}
 
         <div className="space-y-2">
           {loadError ? (
@@ -343,10 +497,24 @@ const Reviews = () => {
             return (
               <article
                 key={item.thread_id}
-              className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-[0_1px_0_rgba(0,0,0,0.02)] transition hover:border-[#cfe0ff] hover:bg-[#eaf2ff]/40 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:shadow-none dark:hover:border-indigo-500/20 dark:hover:bg-white/10"
+                className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border px-4 py-3 shadow-[0_1px_0_rgba(0,0,0,0.02)] transition hover:border-[#cfe0ff] hover:bg-[#eaf2ff]/40 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:shadow-none dark:hover:border-indigo-500/20 dark:hover:bg-white/10 ${
+                  selectedThreads.has(item.thread_id)
+                    ? "border-[#a7c4f2] bg-[#eaf2ff]/50 dark:border-indigo-500/30 dark:bg-indigo-500/10"
+                    : "border-gray-100 bg-white"
+                }`}
                 onClick={() => navigate(`/reviews/${item.thread_id}`)}
               >
                 <div className="flex min-w-0 items-center gap-3">
+                  {activeTab === "pending" ? (
+                    <input
+                      type="checkbox"
+                      checked={selectedThreads.has(item.thread_id)}
+                      onChange={() => toggleThread(item.thread_id)}
+                      onClick={(e) => e.stopPropagation()}
+                      aria-label={`Select ${name} for bulk approval`}
+                      className="h-4 w-4 flex-none rounded border-gray-300 text-[#004EB2] focus:ring-[#004EB2]"
+                    />
+                  ) : null}
                   <div className="flex h-10 w-10 flex-none items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-500/15">
                     <div className="h-4 w-1.5 rounded-full bg-amber-400" />
                   </div>

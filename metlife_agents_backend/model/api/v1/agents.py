@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class StartWorkflowRequest(BaseModel):
@@ -159,6 +159,12 @@ class BatchRunResponse(BaseModel):
     started_at: Optional[str] = None
     completed_at: Optional[str] = None
     pct: int = 0  # 0–100 progress percentage
+
+
+class BatchRunRequest(BaseModel):
+    """Optional lead scoping for batch runs."""
+
+    lead_ids: list[str] = Field(default_factory=list)
 
 
 class WorkflowStateResponse(BaseModel):

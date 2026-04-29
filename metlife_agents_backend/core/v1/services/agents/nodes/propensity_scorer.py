@@ -42,6 +42,7 @@ async def propensity_scorer(state: dict, *, db=None) -> dict:
     elif email_number > 0:
         delta = calculate_score_delta("email_sent")
         state["engagement_score"] = round(state.get("engagement_score", 0.0) + delta, 4)
+    state["post_send_route"] = False
 
     state["current_node"] = NODE_ID
 

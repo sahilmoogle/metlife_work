@@ -137,6 +137,21 @@ const SCENARIO_BAR = {
   S7: "bg-amber-500",
 };
 
+const SCENARIO_LABEL_FALLBACK = {
+  S1: "Young Professional",
+  S2: "Life Event",
+  S3: "Senior",
+  S4: "Dormant Revival",
+  S5: "Active Buyer",
+  S6: "Face-to-Face",
+  S7: "Web-to-Call",
+};
+
+const scenarioLabel = (row) => {
+  if (row?.scenario_id === "S2" && row?.label === "Married") return "Life Event";
+  return row?.label || SCENARIO_LABEL_FALLBACK[row?.scenario_id] || row?.scenario_id || "Unknown";
+};
+
 const AGENT_ROW_TONE = {
   A1_Identity: "text-cyan-700 dark:text-cyan-200",
   A2_Persona: "text-cyan-700 dark:text-cyan-200",
@@ -468,7 +483,7 @@ const Analytics = () => {
                 <div key={s.scenario_id} className="flex items-center gap-3">
                   <div className="w-24 shrink-0 sm:w-28">
                     <p className="text-xs font-semibold text-gray-700 dark:text-volt-text">
-                      {s.scenario_id} <span className="text-gray-400">·</span> {s.label}
+                      {s.scenario_id} <span className="text-gray-400">·</span> {scenarioLabel(s)}
                     </p>
                   </div>
                   <div className="flex-1">
