@@ -111,7 +111,7 @@ const Login = () => {
   };
 
   const inputClass =
-    "relative z-[1] h-12 w-full rounded-xl border border-gray-200 bg-white pl-12 pr-12 text-sm text-gray-900 shadow-sm outline-none transition placeholder:text-gray-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 dark:border-volt-borderSoft dark:bg-volt-card/85 dark:text-volt-text dark:placeholder:text-volt-muted2 dark:focus:ring-indigo-500/15";
+    "relative z-[1] h-12 w-full rounded-xl border border-gray-200 bg-white pl-12 pr-12 text-sm text-gray-900 shadow-sm outline-none transition duration-200 ease-out placeholder:text-gray-400 hover:border-gray-300 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 dark:border-volt-borderSoft dark:bg-volt-card/85 dark:text-volt-text dark:placeholder:text-volt-muted2 dark:hover:border-volt-border dark:focus:ring-indigo-500/15";
 
   return (
     <div className="h-screen overflow-hidden bg-white dark:bg-volt-bg0">
@@ -249,7 +249,7 @@ const Login = () => {
         {/* Auth panel */}
         <section className="app-dark-main-fill relative flex w-full flex-col bg-gradient-to-b from-slate-50 to-white px-6 py-6 sm:px-10 lg:px-14 xl:px-20 dark:from-transparent dark:to-transparent">
           <div className="flex items-center justify-end">
-            <div className="relative inline-flex items-center rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs shadow-sm dark:border-volt-borderSoft/80 dark:bg-[linear-gradient(180deg,rgba(20,38,74,0.9),rgba(12,22,46,0.88))] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+            <div className="relative inline-flex items-center rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs shadow-sm transition duration-200 ease-out hover:border-indigo-200 hover:shadow-md dark:border-volt-borderSoft/80 dark:bg-[linear-gradient(180deg,rgba(20,38,74,0.9),rgba(12,22,46,0.88))] dark:hover:border-volt-accent/40 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
               <span className="inline-block h-2 w-2 rounded-full bg-indigo-500/80" />
               <select
                 value={i18n.language}
@@ -279,7 +279,7 @@ const Login = () => {
               </p>
             </div>
 
-            <div className="app-surface-card mt-6 p-5 sm:p-6">
+            <div className="app-surface-card mt-6 p-5 shadow-[0_14px_45px_rgba(15,23,42,0.06)] transition duration-300 ease-out hover:shadow-[0_18px_50px_rgba(15,23,42,0.09)] sm:p-6 dark:hover:shadow-[0_22px_55px_rgba(0,0,0,0.45)]">
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
                   <label htmlFor="login-email" className="mb-2 block text-xs font-semibold text-gray-700 dark:text-volt-text">
@@ -345,7 +345,7 @@ const Login = () => {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="mt-1 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#4c27ff] via-[#3b1fe8] to-[#2a20b8] text-sm font-semibold text-white shadow-[0_12px_30px_rgba(59,31,232,0.32)] transition hover:brightness-[1.05] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 dark:shadow-[0_12px_30px_rgba(0,0,0,0.35)]"
+                  className="mt-1 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#4c27ff] via-[#3b1fe8] to-[#2a20b8] text-sm font-semibold text-white shadow-[0_12px_30px_rgba(59,31,232,0.32)] transition duration-200 ease-out hover:brightness-[1.06] hover:shadow-[0_16px_36px_rgba(59,31,232,0.4)] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/80 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100 dark:shadow-[0_12px_30px_rgba(0,0,0,0.35)] dark:focus-visible:ring-offset-volt-bg0"
                 >
                   {isSubmitting ? (
                     <>

@@ -671,7 +671,7 @@ const Campaigns = () => {
 
   return (
     <section className="space-y-3">
-      <div className="app-surface-card p-4">
+      <div className="app-surface-card app-surface-card-interactive p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold text-[#1e2a52] dark:text-white">{t("campaigns.title")}</h2>
@@ -682,11 +682,11 @@ const Campaigns = () => {
 
           <div className="flex flex-wrap items-center gap-2">
             {status === "complete" ? (
-              <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-200 dark:ring-emerald-500/20">
+              <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100 transition duration-200 hover:shadow-sm dark:bg-emerald-500/10 dark:text-emerald-200 dark:ring-emerald-500/20">
                 {t("campaigns.status.complete")}
               </span>
             ) : status === "running" ? (
-              <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 ring-1 ring-amber-100 dark:bg-amber-500/10 dark:text-amber-200 dark:ring-amber-500/20">
+              <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 ring-1 ring-amber-100 transition duration-200 hover:shadow-sm dark:bg-amber-500/10 dark:text-amber-200 dark:ring-amber-500/20">
                 {t("campaigns.status.batchRunning")}
               </span>
             ) : (
@@ -702,7 +702,7 @@ const Campaigns = () => {
                   ? t("campaigns.runButton.runningTitle")
                   : undefined
               }
-              className="inline-flex h-10 items-center gap-2 rounded-full bg-gradient-to-r from-[#0b4aa6] via-[#004EB2] to-[#003B86] px-5 text-xs font-semibold text-white shadow-[0_12px_30px_rgba(0,78,178,0.22)] transition hover:brightness-[1.05] disabled:cursor-not-allowed disabled:opacity-60 dark:shadow-[0_12px_30px_rgba(0,0,0,0.35)]"
+              className="inline-flex h-10 items-center gap-2 rounded-full bg-gradient-to-r from-[#0b4aa6] via-[#004EB2] to-[#003B86] px-5 text-xs font-semibold text-white shadow-[0_12px_30px_rgba(0,78,178,0.22)] transition duration-200 ease-out hover:brightness-[1.06] hover:shadow-[0_14px_34px_rgba(0,78,178,0.28)] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#004EB2]/50 disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100 dark:shadow-[0_12px_30px_rgba(0,0,0,0.35)]"
             >
               {status === "complete"
                 ? t("campaigns.runButton.complete")
@@ -790,7 +790,7 @@ const Campaigns = () => {
 
             <div className="mt-3 h-2 rounded-full bg-gray-100 dark:bg-white/10">
               <div
-                className="h-2 rounded-full bg-gradient-to-r from-emerald-500 via-cyan-500 to-indigo-500 transition-[width] duration-300"
+                className="h-2 rounded-full bg-gradient-to-r from-emerald-500 via-cyan-500 to-indigo-500 motion-safe:transition-[width] motion-safe:duration-700 motion-safe:ease-out"
                 style={{ width: `${Math.min(100, progressPct)}%` }}
               />
             </div>
@@ -803,10 +803,10 @@ const Campaigns = () => {
             {scenarioCards.map((s) => (
               <div
                 key={s.id}
-                className="app-surface-nested p-3"
+                className="group app-surface-nested p-3 transition duration-200 ease-out hover:border-indigo-200/60 hover:bg-blue-50/50 hover:shadow-sm motion-safe:hover:-translate-y-0.5 dark:hover:border-volt-accent/30 dark:hover:bg-white/[0.05]"
               >
                 <div className="flex items-center justify-between">
-                  <span className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ring-1 ${s.tone}`}>
+                  <span className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ring-1 transition duration-200 motion-safe:group-hover:scale-110 ${s.tone}`}>
                     {s.id}
                   </span>
                   <span className="text-[11px] font-semibold text-gray-400">
@@ -824,7 +824,7 @@ const Campaigns = () => {
             ))}
           </div>
 
-          <div className="app-surface-card p-4">
+          <div className="app-surface-card app-surface-card-interactive p-4">
             <div className="mb-3">
               <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("campaigns.pipeline.title")}</p>
             </div>
@@ -866,7 +866,7 @@ const Campaigns = () => {
                     key={stage.key}
                     className={`app-surface-nested p-4 ${
                       isHitl && awaitingHitl > 0 ? "ring-1 ring-amber-200" : ""
-                    }`}
+                    } transition duration-200 ease-out hover:border-indigo-200/60 hover:shadow-sm motion-safe:hover:-translate-y-0.5 dark:hover:border-volt-accent/30`}
                   >
                     <div className={`text-[11px] font-semibold ${stage.accent}`}>
                       {stage.key === "conv"

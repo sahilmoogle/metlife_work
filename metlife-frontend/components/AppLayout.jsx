@@ -263,7 +263,7 @@ const AppLayout = () => {
 
           <div className="relative z-10 flex h-full min-h-0 flex-col overflow-y-auto px-4 pt-4 pb-3">
             <div className={`mb-7 ${sidebarCollapsed ? "lg:flex lg:flex-col lg:items-center lg:gap-2" : "flex items-center gap-3"}`}>
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-sm ring-1 ring-gray-200 dark:bg-white/10 dark:ring-white/15">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-sm ring-1 ring-gray-200 transition-shadow duration-200 ease-out dark:bg-white/10 dark:ring-white/15">
                 <img src={mainIcon} alt="icon" className="h-8 w-8" />
               </div>
 
@@ -281,7 +281,7 @@ const AppLayout = () => {
               {/* Mobile close */}
               <button
                 type="button"
-                className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 bg-white text-slate-600 shadow-sm transition hover:border-blue-200 hover:text-blue-700 lg:hidden dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
+                className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 bg-white text-slate-600 shadow-sm transition duration-200 ease-out hover:border-blue-200 hover:text-blue-700 active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5fff]/35 lg:hidden dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
                 aria-label="Close sidebar"
                 onClick={() => setSidebarOpen(false)}
               >
@@ -298,10 +298,10 @@ const AppLayout = () => {
                     to={item.path}
                     title={sidebarCollapsed ? t(`nav.${item.key}`, { defaultValue: item.key }) : undefined}
                     className={({ isActive }) =>
-                      `flex items-center gap-3 rounded-xl px-3 py-2.5 transition ${sidebarCollapsed ? "lg:justify-center" : ""
+                      `flex items-center gap-3 rounded-xl px-3 py-2.5 outline-none transition duration-200 ease-out motion-safe:hover:translate-x-0.5 ${sidebarCollapsed ? "lg:justify-center motion-safe:hover:translate-x-0" : ""
                       } ${isActive
                         ? "bg-gradient-to-r from-[#0b5fff] to-[#0b5fff] font-semibold text-white shadow-[0_10px_25px_rgba(11,95,255,0.22)]"
-                        : "text-slate-600 hover:bg-white/70 hover:text-slate-900 dark:text-volt-muted dark:hover:bg-white/10 dark:hover:text-volt-text"
+                        : "text-slate-600 hover:bg-white/70 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-[#0b5fff]/40 dark:text-volt-muted dark:hover:bg-white/10 dark:hover:text-volt-text dark:focus-visible:ring-white/30"
                       }`
                     }
                   >
@@ -326,7 +326,7 @@ const AppLayout = () => {
               <div className={`mt-4 flex items-center ${sidebarCollapsed ? "justify-center" : "justify-between"}`}>
                 <button
                   type="button"
-                  className="hidden h-9 w-9 items-center justify-center rounded-xl border border-gray-200 bg-white text-slate-600 shadow-sm transition hover:border-blue-200 hover:text-blue-700 lg:inline-flex dark:border-white/10 dark:bg-white/5 dark:text-white/70 dark:hover:bg-white/10"
+                  className="hidden h-9 w-9 items-center justify-center rounded-xl border border-gray-200 bg-white text-slate-600 shadow-sm transition duration-200 ease-out hover:border-blue-200 hover:text-blue-700 active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5fff]/35 lg:inline-flex dark:border-white/10 dark:bg-white/5 dark:text-white/70 dark:hover:bg-white/10"
                   aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                   title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                   onClick={() => setSidebarCollapsed((v) => !v)}
@@ -339,12 +339,12 @@ const AppLayout = () => {
           </div>
         </aside>
 
-        <main className="flex-1 flex flex-col">
-          <header className="sticky top-0 z-20 flex flex-none items-start justify-between gap-3 border-b border-gray-100 bg-white px-4 py-3 shadow-sm sm:px-6 dark:border-volt-borderSoft/70 dark:bg-[linear-gradient(165deg,rgba(22,40,78,0.94),rgba(11,22,46,0.9))] dark:backdrop-blur-md dark:shadow-[0_18px_55px_rgba(0,0,0,0.58)]">
+        <main className="flex min-w-0 flex-1 flex-col">
+          <header className="sticky top-0 z-20 flex min-w-0 flex-none items-start justify-between gap-3 border-b border-gray-100 bg-white/95 px-4 py-3 shadow-sm backdrop-blur-md sm:px-6 dark:border-volt-borderSoft/70 dark:bg-[linear-gradient(165deg,rgba(22,40,78,0.94),rgba(11,22,46,0.9))] dark:backdrop-blur-md dark:shadow-[0_18px_55px_rgba(0,0,0,0.58)]">
             <div className="flex min-w-0 items-start gap-3">
               <button
                 type="button"
-                className="mt-0.5 inline-flex h-9 w-9 flex-none items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition hover:border-indigo-200 hover:text-indigo-700 lg:hidden dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
+                className="mt-0.5 inline-flex h-9 w-9 flex-none items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition duration-200 ease-out hover:border-indigo-200 hover:text-indigo-700 active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/70 lg:hidden dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
                 aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
                 onClick={() => setSidebarOpen((v) => !v)}
               >
@@ -357,13 +357,13 @@ const AppLayout = () => {
                 <p className="text-xs text-gray-500 dark:text-volt-muted">{t(meta.subtitleKey)}</p>
               </div>
             </div>
-            <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-              <div className="relative inline-flex items-center rounded-full border border-gray-200 bg-white px-2 py-1.5 text-xs shadow-sm sm:px-3 dark:border-volt-borderSoft/80 dark:bg-[linear-gradient(180deg,rgba(20,38,74,0.9),rgba(12,22,46,0.88))] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+            <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 sm:gap-3">
+              <div className="relative inline-flex items-center rounded-full border border-gray-200 bg-white px-2 py-1.5 text-xs shadow-sm transition duration-200 ease-out hover:border-indigo-200 hover:shadow-md sm:px-3 dark:border-volt-borderSoft/80 dark:bg-[linear-gradient(180deg,rgba(20,38,74,0.9),rgba(12,22,46,0.88))] dark:hover:border-volt-accent/40 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
                 <span className="mr-2 inline-block h-2 w-2 rounded-full bg-indigo-500/80" />
                 <select
                   value={i18n.language}
                   onChange={(e) => i18n.changeLanguage(e.target.value)}
-                  className="cursor-pointer appearance-none bg-transparent pr-5 text-xs font-semibold text-gray-900 outline-none sm:pr-6 dark:text-white"
+                  className="cursor-pointer appearance-none bg-transparent pr-5 text-xs font-semibold text-gray-900 outline-none transition hover:text-indigo-700 focus-visible:ring-2 focus-visible:ring-indigo-400/60 sm:pr-6 dark:text-white dark:hover:text-volt-accent dark:focus-visible:ring-volt-accent/50"
                   aria-label="Language"
                 >
                   <option value="en">{t("language.en")}</option>
@@ -374,7 +374,7 @@ const AppLayout = () => {
               <button
                 type="button"
                 onClick={() => setIsDark((v) => !v)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm transition hover:border-indigo-200 hover:text-[#004EB2] dark:border-volt-borderSoft/80 dark:bg-[linear-gradient(180deg,rgba(20,38,74,0.9),rgba(12,22,46,0.88))] dark:text-white dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm transition duration-200 ease-out hover:border-indigo-200 hover:text-[#004EB2] hover:shadow-md motion-safe:hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/70 dark:border-volt-borderSoft/80 dark:bg-[linear-gradient(180deg,rgba(20,38,74,0.9),rgba(12,22,46,0.88))] dark:text-white dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
                 aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
                 title={isDark ? "Light mode" : "Dark mode"}
               >
@@ -403,7 +403,7 @@ const AppLayout = () => {
                   <div
                     role="menu"
                     aria-label="Notifications"
-                    className="absolute right-0 top-[calc(100%+10px)] z-[120] w-[min(340px,calc(100vw-24px))] max-h-[calc(100vh-96px)] overflow-auto rounded-2xl border border-gray-200 bg-white shadow-[0_20px_55px_rgba(0,0,0,0.18)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-[0_20px_55px_rgba(0,0,0,0.55)]"
+                    className="app-dropdown-panel absolute right-0 top-[calc(100%+10px)] z-[120] w-[min(340px,calc(100vw-24px))] max-h-[calc(100vh-96px)] overflow-auto rounded-2xl border border-gray-200 bg-white shadow-[0_20px_55px_rgba(0,0,0,0.18)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-[0_20px_55px_rgba(0,0,0,0.55)]"
                   >
                     <div className="flex items-start justify-between gap-3 border-b border-gray-100 px-4 py-3 dark:border-volt-borderSoft/70">
                       <div>
@@ -428,7 +428,7 @@ const AppLayout = () => {
                           type="button"
                           role="menuitem"
                           onClick={() => setNotificationsOpen(false)}
-                          className="flex w-full items-start gap-3 rounded-2xl px-3 py-2 text-left transition hover:bg-gray-50 dark:hover:bg-white/10"
+                          className="flex w-full items-start gap-3 rounded-2xl px-3 py-2 text-left transition duration-150 ease-out hover:bg-gray-50 active:bg-gray-100 dark:hover:bg-white/10 dark:active:bg-white/[0.08]"
                         >
                           <span
                             className={`mt-2 inline-flex h-2.5 w-2.5 flex-none rounded-full ${n.unread ? "bg-indigo-500" : "bg-gray-300 dark:bg-white/20"
@@ -479,7 +479,7 @@ const AppLayout = () => {
                 <button
                   type="button"
                   onClick={() => setUserMenuOpen((v) => !v)}
-                  className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white p-1 text-left text-xs shadow-sm transition hover:border-indigo-200 sm:px-2 sm:py-1.5 dark:border-volt-borderSoft/80 dark:bg-[linear-gradient(180deg,rgba(20,38,74,0.9),rgba(12,22,46,0.88))] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
+                  className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white p-1 text-left text-xs shadow-sm transition duration-200 ease-out hover:border-indigo-300 hover:shadow-md motion-safe:hover:-translate-y-0.5 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60 sm:px-2 sm:py-1.5 dark:border-volt-borderSoft/80 dark:bg-[linear-gradient(180deg,rgba(20,38,74,0.9),rgba(12,22,46,0.88))] dark:hover:border-volt-accent/50 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
                   aria-haspopup="menu"
                   aria-expanded={userMenuOpen}
                 >
@@ -503,7 +503,7 @@ const AppLayout = () => {
                   <div
                     role="menu"
                     aria-label="User menu"
-                    className="absolute right-0 top-[calc(100%+10px)] z-[120] w-[min(280px,calc(100vw-24px))] max-h-[calc(100vh-96px)] overflow-auto rounded-2xl border border-gray-200 bg-white shadow-[0_20px_55px_rgba(0,0,0,0.18)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-[0_20px_55px_rgba(0,0,0,0.55)]"
+                    className="app-dropdown-panel absolute right-0 top-[calc(100%+10px)] z-[120] w-[min(280px,calc(100vw-24px))] max-h-[calc(100vh-96px)] overflow-auto rounded-2xl border border-gray-200 bg-white shadow-[0_20px_55px_rgba(0,0,0,0.18)] dark:border-volt-borderSoft dark:bg-volt-panel dark:shadow-[0_20px_55px_rgba(0,0,0,0.55)]"
                   >
                     <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-3 dark:border-volt-borderSoft/70">
                       <img
@@ -526,7 +526,7 @@ const AppLayout = () => {
                         type="button"
                         role="menuitem"
                         onClick={() => navigate("/profile")}
-                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-gray-700 transition hover:bg-gray-50 hover:text-gray-900 dark:text-volt-text dark:hover:bg-white/10"
+                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-gray-700 transition duration-150 ease-out hover:bg-gray-50 hover:text-gray-900 active:bg-gray-100 dark:text-volt-text dark:hover:bg-white/10 dark:active:bg-white/[0.08]"
                       >
                         <User className="h-4 w-4" />
                         Profile
@@ -535,7 +535,7 @@ const AppLayout = () => {
                         type="button"
                         role="menuitem"
                         onClick={() => navigate("/settings")}
-                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-gray-700 transition hover:bg-gray-50 hover:text-gray-900 dark:text-volt-text dark:hover:bg-white/10"
+                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-gray-700 transition duration-150 ease-out hover:bg-gray-50 hover:text-gray-900 active:bg-gray-100 dark:text-volt-text dark:hover:bg-white/10 dark:active:bg-white/[0.08]"
                       >
                         <Settings className="h-4 w-4" />
                         Account settings
@@ -544,7 +544,7 @@ const AppLayout = () => {
                         type="button"
                         role="menuitem"
                         onClick={() => window.open("mailto:support@metlife.co.jp", "_blank", "noopener,noreferrer")}
-                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-gray-700 transition hover:bg-gray-50 hover:text-gray-900 dark:text-volt-text dark:hover:bg-white/10"
+                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-gray-700 transition duration-150 ease-out hover:bg-gray-50 hover:text-gray-900 active:bg-gray-100 dark:text-volt-text dark:hover:bg-white/10 dark:active:bg-white/[0.08]"
                       >
                         <HelpCircle className="h-4 w-4" />
                         Support
@@ -556,7 +556,7 @@ const AppLayout = () => {
                         type="button"
                         role="menuitem"
                         onClick={logout}
-                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-500/10"
+                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-rose-700 transition duration-150 ease-out hover:bg-rose-50 active:bg-rose-100/80 dark:text-rose-300 dark:hover:bg-rose-500/10 dark:active:bg-rose-500/20"
                       >
                         <LogOut className="h-4 w-4" />
                         {t("common.logout")}
@@ -568,7 +568,7 @@ const AppLayout = () => {
             </div>
           </header>
 
-          <div className="app-dark-main-fill flex-1 overflow-y-auto bg-transparent p-2 sm:p-3">
+          <div className="app-dark-main-fill min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-transparent p-2 sm:p-3">
             <Outlet />
           </div>
         </main>

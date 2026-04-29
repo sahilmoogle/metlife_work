@@ -218,9 +218,9 @@ const Leads = () => {
                 key={filter}
                 type="button"
                 onClick={() => setActiveFilter(filter)}
-                className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+                className={`rounded-full px-4 py-1.5 text-xs font-semibold outline-none transition duration-200 ease-out active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[#004EB2]/35 ${
                   isActive
-                    ? "bg-[#004EB2] text-white"
+                    ? "bg-[#004EB2] text-white shadow-md shadow-blue-900/15 dark:shadow-black/40"
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-white/10 dark:text-volt-muted dark:hover:bg-white/15"
                 }`}
               >
@@ -231,7 +231,7 @@ const Leads = () => {
         </div>
 
         <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
-          <div className="flex h-10 w-full items-center gap-2 rounded-full border border-gray-200 bg-white px-3 text-sm text-gray-400 shadow-sm sm:w-[320px] dark:border-volt-borderSoft dark:bg-volt-panel/60 dark:text-volt-muted2 dark:shadow-none">
+          <div className="flex h-10 w-full items-center gap-2 rounded-full border border-gray-200 bg-white px-3 text-sm text-gray-400 shadow-sm transition duration-200 ease-out focus-within:border-indigo-300 focus-within:shadow-md focus-within:ring-2 focus-within:ring-indigo-200/50 sm:w-[320px] dark:border-volt-borderSoft dark:bg-volt-panel/60 dark:text-volt-muted2 dark:shadow-none dark:focus-within:border-volt-accent/50 dark:focus-within:ring-volt-accent/25">
             <span className="select-none text-gray-400 dark:text-volt-muted2">Q</span>
             <input
               type="text"
@@ -245,7 +245,7 @@ const Leads = () => {
             type="button"
             disabled={loading || !filteredLeads.length}
             onClick={handleExport}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#0b4aa6] via-[#004EB2] to-[#003B86] px-5 text-xs font-semibold text-white shadow-[0_12px_30px_rgba(0,78,178,0.22)] transition hover:brightness-[1.05] disabled:cursor-not-allowed disabled:opacity-50 dark:shadow-[0_12px_30px_rgba(0,0,0,0.35)]"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#0b4aa6] via-[#004EB2] to-[#003B86] px-5 text-xs font-semibold text-white shadow-[0_12px_30px_rgba(0,78,178,0.22)] transition duration-200 ease-out hover:brightness-[1.06] hover:shadow-[0_14px_34px_rgba(0,78,178,0.28)] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#004EB2]/50 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 dark:shadow-[0_12px_30px_rgba(0,0,0,0.35)]"
             title={
               selected.size > 0
                 ? `Export ${selected.size} selected lead(s)`
@@ -302,7 +302,7 @@ const Leads = () => {
                   return (
                     <tr
                       key={lead.id}
-                      className="cursor-pointer border-t border-gray-100 text-sm text-gray-700 hover:bg-gray-50/60 dark:border-volt-borderSoft dark:text-volt-text dark:hover:bg-white/10"
+                      className="cursor-pointer border-t border-gray-100  text-sm text-gray-700 transition-colors duration-150 ease-out hover:bg-gray-50/90 dark:border-volt-borderSoft dark:text-volt-text dark:hover:bg-white/10"
                       onClick={() => navigate(`/leads/${lead.id}`)}
                     >
                       <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
@@ -365,7 +365,7 @@ const Leads = () => {
           <select
             value={rowsPerPage}
             onChange={(event) => setRowsPerPage(Number(event.target.value))}
-            className="h-8 rounded-full border border-gray-200 bg-white px-3 text-xs text-gray-700 outline-none dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text"
+            className="h-8 cursor-pointer rounded-full border border-gray-200 bg-white px-3 text-xs text-gray-700 outline-none transition duration-200 hover:border-indigo-300 focus-visible:ring-2 focus-visible:ring-indigo-300/60 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text dark:hover:border-volt-accent/40"
           >
             <option value={5}>5</option>
             <option value={10}>10</option>
@@ -386,7 +386,7 @@ const Leads = () => {
               type="button"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1 || loading}
-              className="h-8 rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 transition hover:border-indigo-200 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text dark:hover:border-volt-border dark:hover:text-white"
+              className="h-8 rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 transition duration-200 ease-out hover:border-indigo-200 hover:text-indigo-700 active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300/60 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text dark:hover:border-volt-border dark:hover:text-white"
             >
               {t("common.prev")}
             </button>
@@ -414,11 +414,11 @@ const Leads = () => {
                     type="button"
                     onClick={() => setPage(p)}
                     disabled={loading}
-                    className={`h-8 min-w-8 rounded-full border px-3 text-xs font-semibold transition ${
+                    className={`h-8 min-w-8 rounded-full border px-3 text-xs font-semibold outline-none transition duration-200 ease-out active:scale-[0.96] focus-visible:ring-2 focus-visible:ring-[#004EB2]/40 disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100 ${
                       p === page
-                        ? "border-[#004EB2] bg-[#004EB2] text-white"
+                        ? "border-[#004EB2] bg-[#004EB2] text-white shadow-sm"
                         : "border-gray-200 bg-white text-gray-700 hover:border-[#a7c4f2] hover:text-[#004EB2] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text dark:hover:border-volt-border dark:hover:text-white"
-                    } disabled:cursor-not-allowed disabled:opacity-60`}
+                    }`}
                   >
                     {p}
                   </button>
@@ -429,7 +429,7 @@ const Leads = () => {
               type="button"
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page >= totalPages || loading}
-              className="h-8 rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 transition hover:border-indigo-200 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text dark:hover:border-volt-border dark:hover:text-white"
+              className="h-8 rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 transition duration-200 ease-out hover:border-indigo-200 hover:text-indigo-700 active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300/60 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text dark:hover:border-volt-border dark:hover:text-white"
             >
               {t("common.next")}
             </button>

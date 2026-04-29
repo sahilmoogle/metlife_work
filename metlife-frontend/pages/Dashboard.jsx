@@ -292,7 +292,11 @@ const Dashboard = () => {
       {error ? (
         <div className="mb-3 rounded-3xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
           {error}{" "}
-          <button type="button" className="ml-2 font-semibold underline" onClick={refresh}>
+          <button
+            type="button"
+            className="ml-2 rounded-md font-semibold underline decoration-rose-400/80 underline-offset-2 transition hover:bg-rose-100/80 hover:text-rose-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/60 dark:hover:bg-rose-500/20 dark:hover:text-rose-100"
+            onClick={refresh}
+          >
             {t("common.retry")}
           </button>
         </div>
@@ -300,19 +304,24 @@ const Dashboard = () => {
 
       {loading ? (
         <div className="app-surface-card mb-3 px-4 py-3 text-sm text-gray-500 dark:text-volt-muted">
-          {t("dashboard.loading")}
+          <span className="inline-flex items-center gap-2">
+            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-[#004EB2] dark:border-white/20 dark:border-t-volt-accent" />
+            {t("dashboard.loading")}
+          </span>
         </div>
       ) : null}
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-5">
         {kpiCards.map((item) => (
           <article
             key={item.title}
-            className="app-surface-card p-4"
+            className="app-surface-card app-surface-card-interactive group relative p-4"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
-                <div className={`flex h-10 w-10 flex-none items-center justify-center rounded-2xl ring-1 ${item.iconBadge}`}>
+                <div
+                  className={`flex h-10 w-10 flex-none items-center justify-center rounded-2xl ring-1 transition duration-300 ease-out group-hover:scale-105 ${item.iconBadge}`}
+                >
                   <MetricIcon variant={item.icon} />
                 </div>
                 <div className="min-w-0">
@@ -329,7 +338,7 @@ const Dashboard = () => {
                 <button
                   type="button"
                   onClick={() => navigate(item.footerAction)}
-                  className={`text-xs font-semibold ${item.footerClass} hover:underline`}
+                  className={`text-left text-xs font-semibold underline-offset-2 transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#004EB2]/40 ${item.footerClass} dark:focus-visible:ring-indigo-400/50`}
                 >
                   {item.footer}
                 </button>
@@ -342,17 +351,17 @@ const Dashboard = () => {
         ))}
       </section>
 
-      <section className="mt-4 grid gap-3 xl:grid-cols-2">
-        <article className="app-surface-card p-4">
+      <section className="mt-4 grid min-w-0 gap-3 lg:grid-cols-2">
+        <article className="group app-surface-card app-surface-card-interactive min-w-0 p-4">
           <div className="flex items-center gap-2">
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 ring-1 ring-blue-100">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 ring-1 ring-blue-100 transition duration-200 ease-out motion-safe:group-hover:scale-105">
               <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
                 <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
               </svg>
             </span>
             <h3 className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("dashboard.funnel.title")}</h3>
           </div>
-          <p className="mb-4 text-xs font-medium text-gray-500 dark:text-volt-muted">{t("dashboard.funnel.subtitle")}</p>
+          <p className="mb-4 text-xs font-medium text-gray-500 dark:text-volt-muted pt-2">{t("dashboard.funnel.subtitle")}</p>
           <div className="space-y-3">
             {funnelBars.map((bar) => (
               <div key={bar.label}>
@@ -360,9 +369,9 @@ const Dashboard = () => {
                   <span className="truncate pr-3">{bar.label}</span>
                   <span>{bar.value}%</span>
                 </div>
-                <div className={`h-2 rounded-full ${bar.track} dark:bg-white/5`}>
+                <div className={`h-2 overflow-hidden rounded-full ${bar.track} dark:bg-white/5`}>
                   <div
-                    className={`h-full rounded-full ${bar.color} dark:opacity-90`}
+                    className={`h-full rounded-full ${bar.color} motion-safe:transition-[width] motion-safe:duration-700 motion-safe:ease-out dark:opacity-90`}
                     style={{ width: `${Math.min(100, bar.value)}%` }}
                   />
                 </div>
@@ -371,10 +380,10 @@ const Dashboard = () => {
           </div>
         </article>
 
-        <article className="app-surface-card p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 ring-1 ring-blue-100">
+        <article className="group app-surface-card app-surface-card-interactive min-w-0 p-4">
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="inline-flex h-8 w-8 flex-none items-center justify-center rounded-2xl bg-blue-50 text-blue-700 ring-1 ring-blue-100 transition duration-200 ease-out motion-safe:group-hover:scale-105">
                 <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
                   <path
                     d="M4 7h16M4 12h10M4 17h14"
@@ -384,30 +393,30 @@ const Dashboard = () => {
                   />
                 </svg>
               </span>
-              <h3 className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("dashboard.scenarios.title")}</h3>
+              <h3 className="min-w-0 text-sm font-semibold text-[#1e2a52] dark:text-white">{t("dashboard.scenarios.title")}</h3>
             </div>
 
             <button
               type="button"
               onClick={() => navigate("/analytics")}
-              className="text-xs font-semibold text-[#004EB2] hover:underline dark:text-indigo-300"
+              className="rounded-lg text-xs font-semibold text-[#004EB2] transition duration-200 ease-out hover:bg-blue-50 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#004EB2]/40 dark:text-indigo-300 dark:hover:bg-white/10 dark:focus-visible:ring-indigo-400/50"
             >
               {t("dashboard.scenarios.viewAnalytics", { defaultValue: "View analytics →" })}
             </button>
           </div>
-          <p className="mb-4 text-[11px] text-gray-500 dark:text-volt-muted">{t("dashboard.scenarios.subtitle")}</p>
+          <p className="mb-4 text-[11px] text-gray-500 dark:text-volt-muted pt-2">{t("dashboard.scenarios.subtitle")}</p>
           <div className="grid gap-2 sm:grid-cols-2">
             {scenarioRows.map((scenario) => (
               <div
                 key={scenario.id}
-                className="app-surface-nested flex items-center gap-3 p-3"
+                className="group/tile app-surface-nested flex min-w-0 cursor-default items-center gap-3 p-3 transition duration-200 ease-out hover:border-indigo-200/60 hover:bg-blue-50/50 hover:shadow-sm motion-safe:hover:-translate-y-0.5 dark:hover:border-volt-accent/30 dark:hover:bg-white/[0.05]"
               >
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#eaf2ff] text-xs font-semibold text-[#004EB2] ring-1 ring-[#cfe0ff]">
+                <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-[#eaf2ff] text-xs font-semibold text-[#004EB2] ring-1 ring-[#cfe0ff] transition duration-200 motion-safe:group-hover/tile:scale-110 motion-safe:group-hover/tile:bg-[#dfe9ff] dark:motion-safe:group-hover/tile:bg-white/10">
                   {scenario.id}
                 </span>
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm font-semibold text-gray-800 dark:text-white">{scenario.value}</p>
-                  <p className="text-xs text-gray-600 dark:text-volt-muted">{scenario.label}</p>
+                  <p className="truncate text-xs text-gray-600 dark:text-volt-muted">{scenario.label}</p>
                 </div>
               </div>
             ))}
@@ -415,11 +424,11 @@ const Dashboard = () => {
         </article>
       </section>
 
-      <section className="app-surface-card mt-4 p-4">
-        <div className="mb-4 flex items-center justify-between gap-3">
+      <section className="app-surface-card app-surface-card-interactive mt-4 p-4">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 ring-1 ring-blue-100">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 ring-1 ring-blue-100 transition duration-200 hover:scale-105">
                 <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
                   <path
                     d="M4 17h16M6 14l3-3 3 3 6-6"
@@ -436,7 +445,10 @@ const Dashboard = () => {
           </div>
 
           <span className="inline-flex flex-none items-center gap-2 text-xs text-gray-400 dark:text-volt-muted2">
-            <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
+            <span className="relative inline-flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-40 motion-reduce:animate-none" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.65)]" />
+            </span>
             {t("dashboard.feed.fromActiveNodes")}
           </span>
         </div>
@@ -447,9 +459,9 @@ const Dashboard = () => {
               feedItems.map((item) => (
                 <div
                   key={item.title}
-                  className="flex items-start gap-3 border-b border-gray-100 pb-3 text-sm text-gray-600 last:border-none last:pb-0 dark:border-volt-borderSoft dark:text-volt-muted"
+                  className="group/feed flex items-start gap-3 rounded-xl border-b border-gray-100 px-1 pb-2 pt-2 text-sm text-gray-600 transition duration-150 ease-out last:border-none last:pb-0 hover:bg-gray-50/90  dark:border-volt-borderSoft dark:text-volt-muted dark:hover:bg-white/[0.06]"
                 >
-                  <span className="mt-1.5 h-2 w-2 flex-none rounded-full bg-blue-500" />
+                  <span className="mt-1.5 h-2 w-2 flex-none rounded-full bg-blue-500 shadow-[0_0_6px_rgba(59,130,246,0.5)] transition duration-200 group-hover/feed:scale-125" />
                   <div className="min-w-0">
                     <p className="truncate text-sm text-gray-700 dark:text-volt-text">{item.title}</p>
                     <p className="mt-0.5 text-xs font-medium text-gray-500 dark:text-volt-muted">{item.meta}</p>

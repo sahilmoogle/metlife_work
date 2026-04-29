@@ -155,14 +155,14 @@ const Toggle = ({ checked, onChange, ariaLabel }) => {
       aria-pressed={checked}
       onClick={onChange}
       title={ "Deactivate user" }
-      className={`relative inline-flex h-5 w-9 items-center rounded-full border transition ${
+      className={`relative inline-flex h-5 w-9 items-center rounded-full border transition duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/70 ${
         checked
           ? "border-emerald-200 bg-emerald-500"
           : "border-gray-200 bg-gray-100 dark:border-volt-borderSoft dark:bg-white/10"
       }`}
     >
       <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition ${
+        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition duration-200 ease-out ${
           checked ? "translate-x-4" : "translate-x-0.5"
         }`}
       />
@@ -521,7 +521,11 @@ const Settings = () => {
       {loadError ? (
         <div className="rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
           {loadError}{" "}
-          <button type="button" className="ml-2 font-semibold underline" onClick={refresh}>
+          <button
+            type="button"
+            className="ml-2 rounded-md font-semibold underline decoration-rose-400/80 underline-offset-2 transition hover:bg-rose-100/80 hover:text-rose-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/60 dark:hover:bg-rose-500/20 dark:hover:text-rose-100"
+            onClick={refresh}
+          >
             {t("common.retry")}
           </button>
         </div>
@@ -532,7 +536,7 @@ const Settings = () => {
         </div>
       ) : null}
 
-      <div className="app-surface-panel p-4">
+      <div className="app-surface-panel app-surface-card-interactive p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold text-[#1e2a52] dark:text-white">{t("settings.accessControlTitle")}</h2>
@@ -545,7 +549,7 @@ const Settings = () => {
             type="button"
             disabled={!canManage || actionLoading}
             onClick={openAdd}
-            className="inline-flex h-9 items-center gap-2 rounded-full bg-[#004EB2] px-4 text-xs font-semibold text-white shadow-[0_10px_25px_rgba(0,78,178,0.16)] transition hover:bg-[#003B86] disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-9 items-center gap-2 rounded-full bg-[#004EB2] px-4 text-xs font-semibold text-white shadow-[0_10px_25px_rgba(0,78,178,0.16)] transition duration-200 ease-out hover:bg-[#003B86] hover:shadow-[0_14px_34px_rgba(0,78,178,0.2)] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#004EB2]/50 disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100"
             title={canManage ? "Add user" : "You do not have permission to manage users"}
           >
             {t("settings.addUser")}
@@ -556,14 +560,14 @@ const Settings = () => {
           {roles.map((r) => (
             <div
               key={r.key}
-              className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:shadow-none"
+              className="group relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] transition duration-200 ease-out hover:border-indigo-200/60 hover:shadow-sm motion-safe:hover:-translate-y-0.5 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:shadow-none dark:hover:border-volt-accent/30"
             >
               <div className={`absolute left-0 top-0 h-1 w-full ${r.topBar}`} />
               <p className="text-2xl font-semibold tracking-tight text-[#1e2a52] dark:text-white">
                 {loading ? "—" : roleCounts[r.key]}
               </p>
               <p className="mt-1 text-xs font-medium text-gray-600 dark:text-volt-muted">{r.label}</p>
-              <span className={`mt-3 inline-flex rounded-full px-3 py-1 text-[11px] font-semibold ring-1 ${r.tone}`}>
+              <span className={`mt-3 inline-flex rounded-full px-3 py-1 text-[11px] font-semibold ring-1 transition duration-200 motion-safe:group-hover:scale-[1.02] ${r.tone}`}>
                 {r.subtitle}
               </span>
             </div>
@@ -571,7 +575,7 @@ const Settings = () => {
         </div>
       </div>
 
-      <div className="app-surface-panel p-4">
+      <div className="app-surface-panel app-surface-card-interactive p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-amber-50 text-amber-700 ring-1 ring-amber-100 dark:bg-amber-500/15 dark:text-amber-200 dark:ring-amber-500/20">
@@ -605,7 +609,7 @@ const Settings = () => {
               return (
                 <div
                   key={u.user_id}
-                  className="rounded-3xl border border-gray-100 bg-white p-4 shadow-sm dark:border-volt-borderSoft dark:bg-volt-card/60"
+                  className="app-surface-card-interactive rounded-3xl border border-gray-100 bg-white p-4 shadow-sm dark:border-volt-borderSoft dark:bg-volt-card/60"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
@@ -652,21 +656,21 @@ const Settings = () => {
                     <button
                       type="button"
                       onClick={() => openView(u)}
-                      className="inline-flex h-9 flex-1 items-center justify-center rounded-2xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 transition hover:border-indigo-200 hover:text-indigo-700 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text dark:hover:bg-white/10"
+                      className="inline-flex h-9 flex-1 items-center justify-center rounded-2xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 transition duration-200 ease-out hover:border-indigo-200 hover:text-indigo-700 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300/60 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text dark:hover:bg-white/10"
                     >
                       View
                     </button>
                     <button
                       type="button"
                       onClick={() => openPermissions(u)}
-                      className="inline-flex h-9 flex-1 items-center justify-center rounded-2xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 transition hover:border-violet-200 hover:text-violet-700 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text dark:hover:bg-white/10"
+                      className="inline-flex h-9 flex-1 items-center justify-center rounded-2xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 transition duration-200 ease-out hover:border-violet-200 hover:text-violet-700 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/60 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text dark:hover:bg-white/10"
                     >
                       Permissions
                     </button>
                     <button
                       type="button"
                       onClick={() => openEdit(u)}
-                      className="inline-flex h-9 flex-1 items-center justify-center rounded-2xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 transition hover:border-emerald-200 hover:text-emerald-700 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text dark:hover:bg-white/10"
+                      className="inline-flex h-9 flex-1 items-center justify-center rounded-2xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 transition duration-200 ease-out hover:border-emerald-200 hover:text-emerald-700 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text dark:hover:bg-white/10"
                     >
                       Edit
                     </button>
@@ -711,7 +715,7 @@ const Settings = () => {
               ) : null}
 
               {!loading ? pagedUsers.map((u) => (
-                <tr key={u.user_id} className="border-t border-gray-100 text-xs text-gray-700 hover:bg-gray-50/60 dark:border-volt-borderSoft dark:text-volt-text dark:hover:bg-white/10">
+                <tr key={u.user_id} className="border-t border-gray-100 text-xs text-gray-700 transition-colors duration-150 ease-out hover:bg-gray-50/90 dark:border-volt-borderSoft dark:text-volt-text dark:hover:bg-white/10">
                   <td className="px-3 py-3">
                     <div className="flex items-center gap-3">
                       <div className={`flex h-8 w-8 items-center justify-center rounded-lg text-[11px] font-bold text-white ${avatarTone[normalizeRoleKey(u.role)] || avatarTone.viewer}`}>
@@ -751,7 +755,7 @@ const Settings = () => {
                         type="button"
                         onClick={() => openView(u)}
                         title="View user"
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition hover:border-[#a7c4f2] hover:bg-[#eaf2ff] hover:text-[#004EB2] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted2 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition duration-200 ease-out hover:border-[#a7c4f2] hover:bg-[#eaf2ff] hover:text-[#004EB2] active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#004EB2]/35 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted2 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
                       >
                         <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
                           <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -763,7 +767,7 @@ const Settings = () => {
                         type="button"
                         onClick={() => openPermissions(u)}
                         title="Manage permissions"
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-600 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted2 dark:hover:border-violet-500/40 dark:hover:bg-violet-500/10 dark:hover:text-violet-300"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition duration-200 ease-out hover:border-violet-200 hover:bg-violet-50 hover:text-violet-600 active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/60 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted2 dark:hover:border-violet-500/40 dark:hover:bg-violet-500/10 dark:hover:text-violet-300"
                       >
                         <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
                           <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6l-8-4Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -776,7 +780,7 @@ const Settings = () => {
                         disabled={!canManage || actionLoading}
                         onClick={() => openEdit(u)}
                         title={canManage ? "Edit user" : "You do not have permission to manage users"}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition hover:border-amber-200 hover:bg-amber-50 hover:text-amber-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted2 dark:hover:border-amber-500/40 dark:hover:bg-amber-500/10 dark:hover:text-amber-300"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition duration-200 ease-out hover:border-amber-200 hover:bg-amber-50 hover:text-amber-600 active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/60 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted2 dark:hover:border-amber-500/40 dark:hover:bg-amber-500/10 dark:hover:text-amber-300"
                       >
                         <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
                           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -811,7 +815,7 @@ const Settings = () => {
               <select
                 value={pageSize}
                 onChange={(e) => setPageSize(Number(e.target.value))}
-                className="h-8 rounded-full border border-gray-200 bg-white px-3 text-xs text-gray-700 outline-none dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text"
+                className="h-8 cursor-pointer rounded-full border border-gray-200 bg-white px-3 text-xs text-gray-700 outline-none transition duration-200 hover:border-indigo-300 focus-visible:ring-2 focus-visible:ring-indigo-300/60 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text dark:hover:border-volt-accent/40"
               >
                 <option value={5}>5</option>
                 <option value={10}>10</option>
@@ -834,7 +838,7 @@ const Settings = () => {
                   type="button"
                   disabled={safePage === 1}
                   onClick={() => setPage((p) => p - 1)}
-                  className="inline-flex h-8 items-center justify-center rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition hover:border-[#a7c4f2] hover:text-[#004EB2] disabled:cursor-not-allowed disabled:opacity-40 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
+                  className="inline-flex h-8 items-center justify-center rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition duration-200 ease-out hover:border-[#a7c4f2] hover:text-[#004EB2] active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#004EB2]/40 disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
                 >
                   {t("common.prev")}
                 </button>
@@ -845,7 +849,7 @@ const Settings = () => {
                   type="button"
                   disabled={safePage === totalPages}
                   onClick={() => setPage((p) => p + 1)}
-                  className="inline-flex h-8 items-center justify-center rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition hover:border-[#a7c4f2] hover:text-[#004EB2] disabled:cursor-not-allowed disabled:opacity-40 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
+                  className="inline-flex h-8 items-center justify-center rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition duration-200 ease-out hover:border-[#a7c4f2] hover:text-[#004EB2] active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#004EB2]/40 disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted"
                 >
                   {t("common.next")}
                 </button>
@@ -1140,15 +1144,15 @@ const Settings = () => {
       ) : null}
 
       <div className="grid gap-3 lg:grid-cols-2">
-        <div className="app-surface-panel p-4">
+        <div className="app-surface-panel app-surface-card-interactive p-4">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">Role Definitions</p>
           </div>
 
           <div className="space-y-3">
-            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 dark:border-volt-borderSoft dark:bg-white/5">
+            <div className="group rounded-2xl border border-gray-100 bg-gray-50 p-4 transition duration-200 ease-out hover:border-indigo-200/60 hover:bg-white hover:shadow-sm motion-safe:hover:-translate-y-0.5 dark:border-volt-borderSoft dark:bg-white/5 dark:hover:border-volt-accent/30 dark:hover:bg-white/[0.07]">
               <div className="flex items-center gap-3">
-                <span className="inline-flex rounded-full bg-rose-50 px-3 py-1 text-[11px] font-semibold text-rose-700 ring-1 ring-rose-100">
+                <span className="inline-flex rounded-full bg-rose-50 px-3 py-1 text-[11px] font-semibold text-rose-700 ring-1 ring-rose-100 transition duration-200 motion-safe:group-hover:scale-105">
                   ADMIN
                 </span>
                 <p className="text-xs font-semibold text-gray-700 dark:text-volt-text">Full platform access</p>
@@ -1159,9 +1163,9 @@ const Settings = () => {
               </p>
             </div>
 
-            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 dark:border-volt-borderSoft dark:bg-white/5">
+            <div className="group rounded-2xl border border-gray-100 bg-gray-50 p-4 transition duration-200 ease-out hover:border-indigo-200/60 hover:bg-white hover:shadow-sm motion-safe:hover:-translate-y-0.5 dark:border-volt-borderSoft dark:bg-white/5 dark:hover:border-volt-accent/30 dark:hover:bg-white/[0.07]">
               <div className="flex items-center gap-3">
-                <span className="inline-flex rounded-full bg-violet-50 px-3 py-1 text-[11px] font-semibold text-violet-700 ring-1 ring-violet-100">
+                <span className="inline-flex rounded-full bg-violet-50 px-3 py-1 text-[11px] font-semibold text-violet-700 ring-1 ring-violet-100 transition duration-200 motion-safe:group-hover:scale-105">
                   MANAGER
                 </span>
                 <p className="text-xs font-semibold text-gray-700 dark:text-volt-text">Workflow + HITL</p>
@@ -1172,9 +1176,9 @@ const Settings = () => {
               </p>
             </div>
 
-            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 dark:border-volt-borderSoft dark:bg-white/5">
+            <div className="group rounded-2xl border border-gray-100 bg-gray-50 p-4 transition duration-200 ease-out hover:border-indigo-200/60 hover:bg-white hover:shadow-sm motion-safe:hover:-translate-y-0.5 dark:border-volt-borderSoft dark:bg-white/5 dark:hover:border-volt-accent/30 dark:hover:bg-white/[0.07]">
               <div className="flex items-center gap-3">
-                <span className="inline-flex rounded-full bg-amber-50 px-3 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-100">
+                <span className="inline-flex rounded-full bg-amber-50 px-3 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-100 transition duration-200 motion-safe:group-hover:scale-105">
                   REVIEWER
                 </span>
                 <p className="text-xs font-semibold text-gray-700 dark:text-volt-text">HITL only</p>
@@ -1185,9 +1189,9 @@ const Settings = () => {
               </p>
             </div>
 
-            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 dark:border-volt-borderSoft dark:bg-white/5">
+            <div className="group rounded-2xl border border-gray-100 bg-gray-50 p-4 transition duration-200 ease-out hover:border-indigo-200/60 hover:bg-white hover:shadow-sm motion-safe:hover:-translate-y-0.5 dark:border-volt-borderSoft dark:bg-white/5 dark:hover:border-volt-accent/30 dark:hover:bg-white/[0.07]">
               <div className="flex items-center gap-3">
-                <span className="inline-flex rounded-full bg-gray-100 px-3 py-1 text-[11px] font-semibold text-gray-700 ring-1 ring-gray-200">
+                <span className="inline-flex rounded-full bg-gray-100 px-3 py-1 text-[11px] font-semibold text-gray-700 ring-1 ring-gray-200 transition duration-200 motion-safe:group-hover:scale-105">
                   VIEWER
                 </span>
                 <p className="text-xs font-semibold text-gray-700 dark:text-volt-text">Read-only</p>
@@ -1199,7 +1203,7 @@ const Settings = () => {
           </div>
         </div>
 
-        <div className="app-surface-panel p-4">
+        <div className="app-surface-panel app-surface-card-interactive p-4">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">Access Audit Log</p>
             <div className="flex items-center gap-2">
@@ -1209,7 +1213,7 @@ const Settings = () => {
                 onClick={fetchAuditLog}
                 disabled={auditLoading}
                 title="Refresh audit log"
-                className="inline-flex h-6 w-6 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-400 transition hover:border-[#a7c4f2] hover:text-[#004EB2] disabled:cursor-not-allowed disabled:opacity-40 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted2 dark:hover:border-indigo-500/40 dark:hover:text-indigo-300"
+                className="inline-flex h-6 w-6 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-400 transition duration-200 ease-out hover:border-[#a7c4f2] hover:bg-[#eaf2ff] hover:text-[#004EB2] active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#004EB2]/35 disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted2 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
               >
                 <svg viewBox="0 0 24 24" fill="none" className={`h-3.5 w-3.5 ${auditLoading ? "animate-spin" : ""}`} aria-hidden="true">
                   <path d="M23 4v6h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -1251,9 +1255,9 @@ const Settings = () => {
               accessAuditLog.slice(0, auditVisibleCount).map((item, idx) => (
                 <div
                   key={`${item.at}-${idx}`}
-                  className="flex items-start gap-3 rounded-2xl border border-gray-100 bg-white px-3 py-3 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:shadow-none"
+                  className="group flex items-start gap-3 rounded-2xl border border-gray-100 bg-white px-3 py-3 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] transition duration-200 ease-out hover:border-indigo-200/60 hover:bg-[#f6f9ff] hover:shadow-sm motion-safe:hover:-translate-y-0.5 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:shadow-none dark:hover:border-volt-accent/30 dark:hover:bg-white/[0.06]"
                 >
-                  <span className={`mt-1.5 h-2 w-2 flex-none rounded-full ${item.dot}`} />
+                  <span className={`mt-1.5 h-2 w-2 flex-none rounded-full ${item.dot} transition duration-200 motion-safe:group-hover:scale-125`} />
                   <div className="min-w-0">
                     <p className="text-xs font-semibold text-gray-800 dark:text-white">{item.text}</p>
                     <p
@@ -1273,7 +1277,7 @@ const Settings = () => {
               <button
                 type="button"
                 onClick={() => setAuditVisibleCount((n) => Math.min(accessAuditLog.length, n + 20))}
-                className="inline-flex h-9 items-center justify-center rounded-full border border-gray-200 bg-white px-4 text-xs font-semibold text-gray-700 shadow-sm transition hover:border-[#a7c4f2] hover:text-[#004EB2] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text dark:shadow-none dark:hover:border-volt-border dark:hover:text-white"
+                className="inline-flex h-9 items-center justify-center rounded-full border border-gray-200 bg-white px-4 text-xs font-semibold text-gray-700 shadow-sm transition duration-200 ease-out hover:border-[#a7c4f2] hover:text-[#004EB2] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#004EB2]/40 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text dark:shadow-none dark:hover:border-volt-border dark:hover:text-white"
               >
                 Read more
               </button>
@@ -1285,7 +1289,7 @@ const Settings = () => {
               <button
                 type="button"
                 onClick={() => setAuditVisibleCount(6)}
-                className="text-xs font-semibold text-gray-500 hover:underline dark:text-volt-muted2"
+                className="rounded-md px-2 py-1 text-xs font-semibold text-gray-500 transition hover:bg-gray-100 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#004EB2]/30 dark:text-volt-muted2 dark:hover:bg-white/[0.08]"
               >
                 Show less
               </button>
