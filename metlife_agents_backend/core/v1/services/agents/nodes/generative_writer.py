@@ -84,24 +84,10 @@ async def generative_writer(
                 parsed.get("compliance_checklist", [])
             )
         except Exception as exc:
-            logger.warning("A5 LLM failed, using fallback: %s", exc)
-            state["draft_email_subject"] = (
-                f"[MetLife] Email #{state.get('email_number', 1)} for "
-                f"{state.get('first_name', 'Customer')}"
-            )
-            state["draft_email_body"] = (
-                f"Personalised content for scenario {scenario}. "
-                f"LLM generation unavailable — fallback content."
-            )
+            logger.error("A5 LLM generation failed for lead %s: %s", lead_id, exc)
+            raise RuntimeError("LLM email generation failed.") from exc
     else:
-        # ── No LLM — fallback content ────────────────────────────────
-        state["draft_email_subject"] = (
-            f"[MetLife] Follow-up #{state.get('email_number', 1)}"
-        )
-        state["draft_email_body"] = (
-            f"Follow-up content for {state.get('first_name', 'Customer')} "
-            f"in scenario {state.get('scenario', 'S1')}."
-        )
+        raise RuntimeError("LLM client not configured for generated email path.")
 
     state["current_node"] = NODE_ID
 

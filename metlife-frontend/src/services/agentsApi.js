@@ -114,10 +114,12 @@ export const getLatestBatch = async (token) => {
   return payload?.data;
 };
 
-export const runBatch = async (token) => {
+export const runBatch = async (token, { leadIds } = {}) => {
+  const body = Array.isArray(leadIds) && leadIds.length ? { lead_ids: leadIds } : null;
   const response = await fetch(`${buildUrl(envConfig.agentsPath)}/batch/run`, {
     method: "POST",
-    headers: authedHeaders(token),
+    headers: authedHeaders(token, body ? { "Content-Type": "application/json" } : {}),
+    ...(body ? { body: JSON.stringify(body) } : {}),
   });
 
   // Note: backend returns 200 with success=false when no leads found.

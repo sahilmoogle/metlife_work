@@ -288,6 +288,7 @@ async def send_engine(state: dict, *, db: AsyncSession | None = None) -> dict:
     state["hitl_status"] = "idle"
     state["hitl_gate"] = None
     state["current_node"] = NODE_ID
+    state["post_send_route"] = True
 
     latency_ms = int((time.perf_counter() - start) * 1000)
     await event_manager.publish(
