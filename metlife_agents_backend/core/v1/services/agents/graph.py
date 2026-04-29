@@ -371,8 +371,7 @@ def _route_after_classifier(state: dict) -> str:
     Priority:
     1. Suppressed (OPT_IN) → END
     2. G2 fires for ALL scenarios including S6/S7 (confidence always < 0.60)
-    3. S6/S7 high-intent → intent_analyser (bypass email nurture loop)
-    4. Everything else → content_strategist (start email nurture)
+    3. Otherwise → intent_analyser (A3 runs before email strategy)
     """
     if state.get("workflow_status") == "suppressed":
         return "end"
@@ -381,28 +380,22 @@ def _route_after_classifier(state: dict) -> str:
     if should_fire_g2(state):
         return "prep_g2"
 
-    # S6/S7 skip the regular email nurture loop entirely; A3 MEMO analysis is next
-    if state.get("scenario") in ("S6", "S7"):
-        return "intent_analyser"
-
-    return "content_strategy"
+    # Run A3 for all scenarios so LLM emails (and scoring) can use intent context.
+    return "intent_analyser"
 
 
 def _route_after_g2(state: dict) -> str:
     """Route after G2 pause resumes.
 
-    S6/S7 go to MEMO intent analysis (no nurture loop).
-    All others enter the email content strategy.
+    Resume into intent analysis for all scenarios.
     """
-    if state.get("scenario") in ("S6", "S7"):
-        return "intent_analyser"
-    return "content_strategist"
+    return "intent_analyser"
 
 
 def _route_after_intent(state: dict) -> str:
     """Route after A3 Intent Analyser.
 
-    S1–S5: feed into propensity_scorer (A8) as normal.
+    S1–S5: proceed into content strategy to draft/send the next email.
     S6: send one LLM email only when email is captured; otherwise handoff.
     S7: if email captured → send one post-call email;
         if no email → skip directly to sales_handoff.
@@ -422,8 +415,8 @@ def _route_after_intent(state: dict) -> str:
             return "content_strategist"
         return "propensity_scorer"
 
-    # S1–S5 (and S4) follow the standard scoring path
-    return "propensity_scorer"
+    # S1–S5 (and S4/S5) enter the standard email strategy path.
+    return "content_strategist"
 
 
 def _route_after_scoring(state: dict) -> str:
