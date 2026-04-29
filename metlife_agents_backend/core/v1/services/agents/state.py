@@ -114,6 +114,7 @@ class LeadState(dict):
     workflow_status: str  # active | paused | completed | failed | suppressed
     current_node: Optional[str]
     is_converted: bool
+    post_send_route: bool
 
     # ── Language ─────────────────────────────────────────────────────
     target_language: str  # EN | JA
@@ -204,6 +205,7 @@ def create_initial_state(
         "workflow_status": "active",
         "current_node": None,
         "is_converted": False,
+        "post_send_route": False,
         # Language
         "target_language": target_language,
         # Handoff

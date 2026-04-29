@@ -6,6 +6,7 @@ import { fetchDashboardStats } from "../src/services/dashboardApi";
 import { getBatchStatus, getLatestBatch, runBatch } from "../src/services/agentsApi";
 import { buildSseStreamUrl } from "../src/services/sseStream";
 import { useTranslation } from "react-i18next";
+import GuidePanel from "../components/GuidePanel";
 
 const SCENARIO_IDS = ["S1", "S2", "S3", "S4", "S5", "S6", "S7"];
 
@@ -17,6 +18,25 @@ const scenarioCards = [
   { id: "S5", label: "Buyer", tone: "text-cyan-700 bg-cyan-50 ring-cyan-100" },
   { id: "S6", label: "F2F", tone: "text-teal-700 bg-teal-50 ring-teal-100" },
   { id: "S7", label: "W2C", tone: "text-rose-700 bg-rose-50 ring-rose-100" },
+];
+
+const workflowDefinitions = [
+  ["Run All", "Starts every eligible lead that is new or ready for dormant revival."],
+  ["Run Selected", "From Leads, starts only checked eligible leads and reuses the same batch progress."],
+  ["Succeeded", "The graph invocation completed without a backend exception; it may still pause at HITL."],
+  ["Awaiting HITL", "A human review gate is open and the workflow is waiting before continuing."],
+  ["Cadence", "After a send, the next email waits for the scenario cadence timer instead of sending immediately."],
+  ["Revival", "Old dormant leads re-enter through S4 after the dormancy window, not immediately after completion."],
+];
+
+const scenarioLegend = [
+  ["S1", "Young Professional", "Survey path for younger leads without a life-event answer."],
+  ["S2", "Life Event", "Life event such as marriage, birth, home, or job change."],
+  ["S3", "Senior", "Older survey path with more formal communication rules."],
+  ["S4", "Dormant Revival", "Reactivation path for old inactive leads."],
+  ["S5", "Active Buyer", "High intent quote/survey answer path with product interest."],
+  ["S6", "Face-to-Face", "Consultation form path, usually one email then handoff."],
+  ["S7", "Web-to-Call", "Callback or call-based path, may skip email when none captured."],
 ];
 
 /** Maps backend ``Lead.current_agent_node`` values → pipeline card keys (see agent NODE_ID constants). */
@@ -96,6 +116,18 @@ const pipelineStages = [
     accent: "text-emerald-700",
     icon: "check",
   },
+];
+
+const pipelineLegend = [
+  ["A1", "Identity", "Loads lead profile, contact, survey, quote, and consultation context."],
+  ["A2", "Persona", "Classifies scenario/persona and applies scenario config like max emails."],
+  ["A3", "Intent", "Reads memo/events and extracts urgency, intent, and product interest."],
+  ["A4/A5", "Content", "Chooses a template or creates an AI draft, then opens G1 if needed."],
+  ["A6", "Send", "Records the communication or pauses during quiet hours."],
+  ["A8", "Scoring", "Updates propensity and decides cadence, handoff, G5, or dormant."],
+  ["A11", "Cadence", "Timer pause before the next nurture email."],
+  ["A9/G4", "Handoff", "Creates sales briefing, then waits for sales acceptance."],
+  ["G1-G5", "HITL", "Human approval gates for compliance, persona, campaign, sales, and score override."],
 ];
 
 const emptyExecutedCounts = () =>
@@ -721,6 +753,17 @@ const Campaigns = () => {
         </div>
 
         <div className="mt-4 space-y-3">
+          <GuidePanel title="Workflow guide" subtitle="Batch counts, cadence, and selected runs" tone="indigo">
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {workflowDefinitions.map(([term, detail]) => (
+                <div key={term} className="rounded-xl bg-white/75 px-3 py-2 text-[11px] dark:bg-volt-panel/60">
+                  <span className="font-semibold text-gray-800 dark:text-white">{term}:</span>{" "}
+                  <span className="text-gray-600 dark:text-volt-muted">{detail}</span>
+                </div>
+              ))}
+            </div>
+          </GuidePanel>
+
           {runError ? (
             <div className="rounded-2xl border border-amber-100 bg-amber-50/80 p-4 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
               {runError}
@@ -799,6 +842,16 @@ const Campaigns = () => {
           <p className="px-1 text-[10px] leading-snug text-gray-500 dark:text-volt-muted2">
             {t("campaigns.scenarios.subtitle")}
           </p>
+          <GuidePanel title="Scenario legend" subtitle="S1-S7 routing definitions">
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              {scenarioLegend.map(([id, label, detail]) => (
+                <div key={id} className="rounded-xl bg-gray-50 px-3 py-2 text-[11px] dark:bg-white/5">
+                  <span className="font-semibold text-indigo-700 dark:text-indigo-200">{id} · {label}</span>
+                  <p className="mt-0.5 text-gray-600 dark:text-volt-muted2">{detail}</p>
+                </div>
+              ))}
+            </div>
+          </GuidePanel>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
             {scenarioCards.map((s) => (
               <div
@@ -827,6 +880,21 @@ const Campaigns = () => {
           <div className="app-surface-card p-4">
             <div className="mb-3">
               <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("campaigns.pipeline.title")}</p>
+              <p className="mt-1 text-[11px] text-gray-500 dark:text-volt-muted2">
+                Agent tiles show this batch's node completions; subtext shows current DB queue position.
+              </p>
+              <div className="mt-3">
+                <GuidePanel title="Pipeline legend" subtitle="Agent steps, cadence, and HITL gates">
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    {pipelineLegend.map(([code, label, detail]) => (
+                      <div key={code} className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2 text-[11px] dark:border-volt-borderSoft dark:bg-white/5">
+                        <span className="font-semibold text-gray-800 dark:text-white">{code} · {label}</span>
+                        <p className="mt-0.5 text-gray-600 dark:text-volt-muted2">{detail}</p>
+                      </div>
+                    ))}
+                  </div>
+                </GuidePanel>
+              </div>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">

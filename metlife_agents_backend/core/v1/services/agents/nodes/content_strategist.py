@@ -30,6 +30,11 @@ NODE_ID = "A4_ContentStrategy"
 
 # Scenarios where Email #1 is always LLM-generated (MEMO-based, no pre-approved asset)
 LLM_FIRST_EMAIL_SCENARIOS = ("S6", "S7")
+INLINE_ONLY_TEMPLATE_NAMES = {
+    "s4_revival_p1_brand_campaign",
+    "s4_revival_p2_product_sim_invite",
+    "s4_revival_p3_consultation_campaign",
+}
 
 
 async def content_strategist(state: dict, *, db=None) -> dict:
@@ -111,6 +116,16 @@ async def content_strategist(state: dict, *, db=None) -> dict:
                 db_template = result.scalar_one_or_none()
 
             if db_template:
+                # Inline-only seeded templates are not treated as approved assets anymore.
+                if db_template.template_name in INLINE_ONLY_TEMPLATE_NAMES:
+                    logger.info(
+                        "A4 ignoring inline-only template for lead %s: %s",
+                        lead_id,
+                        db_template.template_name,
+                    )
+                    db_template = None
+
+            if db_template:
                 name = state.get("first_name") or "お客様"
                 state["content_type"] = "existing_asset"
                 state["draft_email_subject"] = db_template.subject
@@ -123,45 +138,10 @@ async def content_strategist(state: dict, *, db=None) -> dict:
                 )
                 state["template_name"] = db_template.template_name
             else:
-                # ── Fallback: hardcoded placeholders (no templates seeded yet) ──
-                if scenario == "S5":
-                    state["content_type"] = "existing_asset"
-                    state["draft_email_subject"] = (
-                        "[MetLife] 3つの保険プランをご比較ください"
-                    )
-                    state["draft_email_body"] = (
-                        "3-CTA comparison email: Medical Insurance / "
-                        "Life Insurance / Asset Formation. "
-                        "CTAクリックにより商品カテゴリを選択できます。"
-                    )
-                elif scenario == "S4":
-                    segment = state.get("revival_segment", "P1")
-                    _S4_FALLBACKS = {
-                        "P1": {
-                            "subject": "【メットライフ生命】お久しぶりです。保険の見直しはお済みですか？",
-                            "body": "ブランドキャンペーン: お久しぶりです。改めて保障内容をご確認ください。",
-                        },
-                        "P2": {
-                            "subject": "【メットライフ生命】新商品のご案内 ＋ 無料シミュレーション",
-                            "body": "新商品＋シミュレーション招待: 5分でわかる最適プランをお試しください。",
-                        },
-                        "P3": {
-                            "subject": "【メットライフ生命】専門家への無料相談のご案内",
-                            "body": "コンサルテーションキャンペーン: 専門のライフプランナーにご相談ください。",
-                        },
-                    }
-                    fb = _S4_FALLBACKS.get(segment, _S4_FALLBACKS["P1"])
-                    state["content_type"] = "existing_asset"
-                    state["draft_email_subject"] = fb["subject"]
-                    state["draft_email_body"] = fb["body"]
-                else:
-                    name = state.get("first_name") or "お客様"
-                    state["content_type"] = "existing_asset"
-                    state["draft_email_subject"] = f"[MetLife] {name}様、保険のご案内"
-                    state["draft_email_body"] = (
-                        f"Welcome email for scenario {scenario}. "
-                        f"Pre-approved brand asset with name personalisation."
-                    )
+                # No approved file-backed template -> route to A5 LLM generation.
+                state["content_type"] = "llm_generated"
+                state["draft_email_subject"] = None
+                state["draft_email_body"] = None
 
     else:
         # ── LLM-generated content path (retries or emails #2-5) ───────
@@ -189,7 +169,13 @@ async def content_strategist(state: dict, *, db=None) -> dict:
             result = await db.execute(query.limit(1))
             ref_template = result.scalar_one_or_none()
             if ref_template:
-                state["template_style_reference"] = ref_template.subject
+                # Provide A5 with real HTML structure reference so generated drafts
+                # can mirror brand layout instead of only subject-line style.
+                state["template_style_reference"] = (
+                    ref_template.body_html[:3000]
+                    if ref_template.body_html
+                    else ref_template.subject
+                )
                 state["template_name"] = ref_template.template_name
 
     state["current_node"] = NODE_ID

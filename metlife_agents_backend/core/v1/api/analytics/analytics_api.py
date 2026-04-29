@@ -37,18 +37,19 @@ from model.database.v1.communications import Communication
 from model.database.v1.emails import EmailEvent
 from model.database.v1.hitl import HITLQueue
 from model.database.v1.leads import Lead
+from model.database.v1.scenarios import ScenarioConfig
 from utils.v1.connections import get_db
 
 router = APIRouter()
 
 SCENARIO_META: dict[str, str] = {
-    "S1": "Young",
-    "S2": "Married",
+    "S1": "Young Professional",
+    "S2": "Life Event",
     "S3": "Senior",
-    "S4": "Dormant",
-    "S5": "Buyer",
-    "S6": "F2F",
-    "S7": "W2C",
+    "S4": "Dormant Revival",
+    "S5": "Active Buyer",
+    "S6": "Face-to-Face",
+    "S7": "Web-to-Call",
 }
 
 GATE_LABELS: dict[str, str] = {
@@ -293,6 +294,14 @@ async def _scenario_conversion(
     db: AsyncSession, start: datetime | None
 ) -> list[ScenarioConversionRow]:
     out: list[ScenarioConversionRow] = []
+    config_result = await db.execute(
+        select(ScenarioConfig.scenario_id, ScenarioConfig.name)
+    )
+    scenario_labels = {
+        scenario_id: name
+        for scenario_id, name in config_result.all()
+        if scenario_id and name
+    }
     for sid in ["S5", "S6", "S7", "S3", "S1", "S2", "S4"]:
         q_tot = select(func.count(Lead.id)).where(Lead.scenario_id == sid)
         if start is not None:
@@ -311,7 +320,7 @@ async def _scenario_conversion(
         out.append(
             ScenarioConversionRow(
                 scenario_id=sid,
-                label=SCENARIO_META[sid],
+                label=scenario_labels.get(sid, SCENARIO_META[sid]),
                 conversion_pct=round(pct, 1),
                 converted_count=conv,
                 total_leads_in_period=total,

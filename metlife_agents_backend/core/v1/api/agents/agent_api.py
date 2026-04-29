@@ -22,6 +22,7 @@ from model.api.v1.agents import (
     WorkflowStateResponse,
     ExecutionLogEntry,
     BatchRunResponse,
+    BatchRunRequest,
     IntakeQuoteRequest,
     IntakeConsultationRequest,
     TrackClickRequest,
@@ -573,6 +574,7 @@ async def get_workflow_history(
 )
 async def run_batch_orchestrator(
     background_tasks: BackgroundTasks,
+    request: BatchRunRequest | None = None,
     _: dict = Depends(require_permission("run_workflow")),
     db: AsyncSession = Depends(get_db),
 ):
@@ -606,38 +608,69 @@ async def run_batch_orchestrator(
             return dt.replace(tzinfo=timezone.utc)
         return dt
 
-    eligible_result = await db.execute(
-        select(Lead.id, Lead.last_active_at, Lead.cooldown_flag, Lead.commit_time)
-        .where(
-            Lead.opt_in == False,  # noqa: E712
-            Lead.is_converted == False,  # noqa: E712
-            sa.or_(
-                Lead.thread_id.is_(None),
-                Lead.workflow_completed.is_(True),
-            ),
-        )
-        .order_by(Lead.id.asc())
+    requested_ids = {
+        str(x).strip()
+        for x in ((request.lead_ids if request else []) or [])
+        if str(x).strip()
+    }
+
+    eligibility_query = select(
+        Lead.id,
+        Lead.last_active_at,
+        Lead.cooldown_flag,
+        Lead.commit_time,
+        Lead.thread_id,
+        Lead.workflow_completed,
+        Lead.completed_at,
+    ).where(
+        Lead.opt_in == False,  # noqa: E712
+        Lead.is_converted == False,  # noqa: E712
+        sa.or_(
+            Lead.thread_id.is_(None),
+            Lead.workflow_completed.is_(True),
+        ),
     )
+    if requested_ids:
+        eligibility_query = eligibility_query.where(Lead.id.in_(list(requested_ids)))
+
+    eligible_result = await db.execute(eligibility_query.order_by(Lead.id.asc()))
 
     standard_lead_ids: list[str] = []
     dormant_lead_ids: list[str] = []
-    for lid, la, cooldown, commit_t in eligible_result.all():
+    for (
+        lid,
+        la,
+        cooldown,
+        commit_t,
+        thread_id,
+        workflow_completed,
+        completed_at,
+    ) in eligible_result.all():
         lid_str = str(lid)
         la_u = _naive_utc(la)
         commit_u = _naive_utc(commit_t)
+        completed_u = _naive_utc(completed_at)
         stale_by_activity = la_u is not None and la_u <= dormancy_cutoff
         stale_by_commit_only = (
             la_u is None and commit_u is not None and commit_u <= dormancy_cutoff
         )
-        revival = cooldown is not True and (stale_by_activity or stale_by_commit_only)
+        completed_long_enough = not workflow_completed or (
+            completed_u is not None and completed_u <= dormancy_cutoff
+        )
+        revival = (
+            cooldown is not True
+            and completed_long_enough
+            and (stale_by_activity or stale_by_commit_only)
+        )
         if revival:
             dormant_lead_ids.append(lid_str)
-        else:
+        elif thread_id is None and not workflow_completed:
             standard_lead_ids.append(lid_str)
 
     new_lead_ids = standard_lead_ids
     total = len(new_lead_ids) + len(dormant_lead_ids)
     if total == 0:
+        mode_suffix = " among selected leads" if requested_ids else " for batch"
         return APIResponse(
             success=False,
             status_code=status.HTTP_200_OK,
@@ -652,7 +685,10 @@ async def run_batch_orchestrator(
                 failed_count=0,
                 pct=0,
             ),
-            message="No eligible leads for batch (opt-out, converted, or in-flight thread without completion).",
+            message=(
+                "No eligible leads found"
+                f"{mode_suffix} (opt-out, converted, or in-flight thread without completion)."
+            ),
         )
 
     batch = BatchRun(
@@ -806,6 +842,7 @@ async def run_batch_orchestrator(
         message=(
             f"Batch started (id={batch_id}): "
             f"{len(new_lead_ids)} standard path(s), {len(dormant_lead_ids)} S4 revival(s). "
+            f"{'Selected-lead mode. ' if requested_ids else ''}"
             f"Watch SSE batch_progress events or poll GET /agents/batch/{batch_id}."
         ),
     )

@@ -9,6 +9,7 @@ import { downloadBlob, leadDetailToJson } from "../src/utils/exportFile";
 import { buildSseStreamUrl } from "../src/services/sseStream";
 import { formatRelativeTime } from "../src/utils/relativeTime";
 import { useRelativeClock } from "../src/hooks/useRelativeClock";
+import GuidePanel from "../components/GuidePanel";
 
 const statusStyles = {
   Active: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200",
@@ -693,6 +694,14 @@ const LeadDetail = () => {
                 </span>
               ) : null}
             </div>
+            <div className="mt-2">
+              <GuidePanel title="Communication guide" subtitle="Email sequence and cadence" tone="indigo">
+                <p className="text-[11px] text-gray-600 dark:text-volt-muted2">
+                  This list shows all recorded emails for this lead. Email #N is the nurture sequence number; after a send,
+                  the next email should wait for cadence unless quiet-hours or HITL pauses intervene.
+                </p>
+              </GuidePanel>
+            </div>
             <div className="mt-3 max-h-[300px] space-y-3 overflow-auto pr-1">
               {lead.communications?.length ? (
                 lead.communications.map((c) => {
@@ -825,6 +834,14 @@ const LeadDetail = () => {
 
             <div className="mb-4 rounded-xl border border-gray-100 bg-gray-50/80 p-3 dark:border-volt-borderSoft dark:bg-white/5">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-volt-muted2">Run details</p>
+              <details className="mt-1 text-[11px] text-gray-500 dark:text-volt-muted2">
+                <summary className="cursor-pointer font-semibold text-indigo-700 dark:text-indigo-200">
+                  What do these fields mean?
+                </summary>
+                <p className="mt-1">
+                  Checkpoint node is the current LangGraph position. Paused usually means cadence, quiet-hours, or HITL is waiting before the next step.
+                </p>
+              </details>
               <dl className="mt-2 grid grid-cols-1 gap-x-6 gap-y-2 text-[11px] sm:grid-cols-2">
                 <div className="flex justify-between gap-2">
                   <dt className="text-gray-500 dark:text-volt-muted2">LangGraph thread</dt>

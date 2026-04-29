@@ -403,6 +403,12 @@ def _route_after_intent(state: dict) -> str:
     scenario = state.get("scenario")
     email_number = state.get("email_number", 0)
 
+    # After an email send or an external engagement event, score first so the
+    # graph can either hand off, pause for cadence, or mark dormant. Without
+    # this guard, S1-S5 loop directly into the next email in the same run.
+    if state.get("post_send_route") or state.get("event_pending_route"):
+        return "propensity_scorer"
+
     if scenario == "S6":
         if email_number == 0 and state.get("email_captured", False):
             return "content_strategist"
