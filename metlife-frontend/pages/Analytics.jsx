@@ -221,7 +221,6 @@ const Analytics = () => {
       1,
       ...rows.flatMap((w) => [toNum(w?.new_leads), toNum(w?.engaged), toNum(w?.converted)]),
     );
-    const sum = (key) => rows.reduce((acc, r) => acc + (Number(r?.[key]) || 0), 0);
     return {
       rows,
       maxVal,
@@ -330,7 +329,7 @@ const Analytics = () => {
             : kpisWithStyle.map((k) => (
                 <div
                   key={k.title}
-                  className="group relative overflow-hidden rounded-3xl border border-gray-200/90 bg-[linear-gradient(180deg,#ffffff_0%,#f7faff_100%)] p-4 shadow-[0_1px_0_rgba(15,23,42,0.02)] transition hover:-translate-y-[1px] hover:shadow-[0_18px_55px_rgba(15,23,42,0.08)] dark:border-volt-borderSoft dark:bg-volt-card/75 dark:[background-image:none] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] dark:hover:shadow-[0_28px_70px_rgba(0,0,0,0.55)] dark:ring-1 dark:ring-white/[0.06]"
+                  className="app-surface-nested group relative overflow-hidden rounded-3xl border border-gray-200/90 bg-[linear-gradient(180deg,#ffffff_0%,#f7faff_100%)] p-4 shadow-[0_1px_0_rgba(15,23,42,0.02)] transition hover:-translate-y-[1px] hover:shadow-[0_18px_55px_rgba(15,23,42,0.08)] dark:border-volt-borderSoft dark:bg-volt-card/75 dark:[background-image:none] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] dark:hover:shadow-[0_28px_70px_rgba(0,0,0,0.55)] dark:ring-1 dark:ring-white/[0.06]"
                 >
                   <div className={`absolute left-0 top-0 h-1 w-full dark:h-0.5 dark:opacity-90 ${k.bar}`} />
                   <div className="flex items-start justify-between gap-3">

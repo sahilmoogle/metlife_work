@@ -2,7 +2,7 @@
 Seed Email Templates — loads all Phase 1 & Phase 2 pre-approved brand assets
 into the ``email_templates`` table.
 
-Template catalogue mirrors the email_template/ folder structure:
+HTML bodies are parsed directly from the source files in email_template/:
 
   Phase 1
   ├── ライフイベントきっかけ        → S2  (Life Event,    5 emails)
@@ -13,6 +13,8 @@ Template catalogue mirrors the email_template/ folder structure:
 
   Phase 2  (general campaign, 4 emails)          → scenario_id = "ALL"
 
+  S4  (dormant revival, 3 segments — no source files, uses inline HTML)
+
 Usage:
     python -m scripts.seed_email_templates
     # or: python metlife_agents_backend/scripts/seed_email_templates.py
@@ -21,8 +23,11 @@ Usage:
 from __future__ import annotations
 
 import asyncio
+import email as _email_lib
 import sys
 import os
+import warnings
+from pathlib import Path
 
 # Allow running from project root
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -33,12 +38,82 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from model.database.v1.emails import EmailTemplate
 from utils.v1.connections import SessionLocal
 
+try:
+    import extract_msg as _extract_msg
 
-# ── HTML helpers ─────────────────────────────────────────────────────────────
+    _HAS_EXTRACT_MSG = True
+except ImportError:  # pragma: no cover
+    _HAS_EXTRACT_MSG = False
+    warnings.warn(
+        "extract-msg not installed — .msg files will fall back to placeholder HTML. "
+        "Install with: pip install extract-msg",
+        stacklevel=1,
+    )
 
 
-def _html(subject: str, body_paragraphs: list[str], cta: str = "詳しく見る") -> str:
-    """Minimal brand-safe HTML wrapper for a MetLife Japan email."""
+# ── Paths ─────────────────────────────────────────────────────────────────────
+
+_SCRIPT_DIR = Path(__file__).parent                    # …/scripts/
+_REPO_ROOT = _SCRIPT_DIR.parent.parent                 # …/metlife/
+_TEMPLATE_DIR = _REPO_ROOT / "email_template"
+
+
+# ── File loaders ──────────────────────────────────────────────────────────────
+
+
+def _load_html_from_eml(path: Path) -> str:
+    """Extract the HTML body from a MIME .eml file."""
+    with open(path, "rb") as fh:
+        msg = _email_lib.message_from_bytes(fh.read())
+
+    # Prefer an explicit text/html part; fall back to text/plain (Adobe
+    # Campaign sometimes encodes full HTML inside the plain-text part).
+    for preferred in ("text/html", "text/plain"):
+        for part in msg.walk():
+            if part.get_content_type() == preferred:
+                payload = part.get_payload(decode=True)
+                if payload:
+                    charset = part.get_content_charset() or "utf-8"
+                    return payload.decode(charset, errors="replace")
+
+    raise ValueError(f"No usable body found in {path}")
+
+
+def _load_html_from_msg(path: Path) -> str:
+    """Extract the HTML body from an Outlook .msg file."""
+    if not _HAS_EXTRACT_MSG:
+        raise RuntimeError(
+            f"extract-msg is not installed; cannot load {path.name}. "
+            "Run: pip install extract-msg"
+        )
+    msg = _extract_msg.Message(str(path))
+    html = msg.htmlBody
+    if html:
+        return html.decode("utf-8", errors="replace") if isinstance(html, bytes) else html
+    body = msg.body
+    if body:
+        return f"<pre>{body}</pre>"
+    raise ValueError(f"No HTML body found in {path}")
+
+
+def _load_html(rel_path: str) -> str:
+    """Load and return the HTML body from *rel_path* relative to email_template/."""
+    path = _TEMPLATE_DIR / rel_path
+    if not path.exists():
+        raise FileNotFoundError(
+            f"Email template file not found: {path}\n"
+            "Make sure the email_template/ folder is present at the repo root."
+        )
+    suffix = path.suffix.lower()
+    if suffix == ".eml":
+        return _load_html_from_eml(path)
+    if suffix == ".msg":
+        return _load_html_from_msg(path)
+    raise ValueError(f"Unsupported template file type: {suffix!r} ({path})")
+
+
+def _fallback_html(subject: str, body_paragraphs: list[str], cta: str = "詳しく見る") -> str:
+    """Minimal inline HTML — used only for S4 revival templates that have no source file."""
     paras = "".join(f"<p>{p}</p>\n" for p in body_paragraphs)
     return f"""<!DOCTYPE html>
 <html lang="ja">
@@ -52,7 +127,6 @@ def _html(subject: str, body_paragraphs: list[str], cta: str = "詳しく見る"
     .wrapper {{ max-width: 600px; margin: 0 auto; background: #fff;
                border-radius: 8px; overflow: hidden; }}
     .header {{ background: #003087; padding: 24px 32px; }}
-    .header img {{ height: 32px; }}
     .header-text {{ color: #fff; font-size: 18px; font-weight: bold; margin-top: 8px; }}
     .body {{ padding: 32px; line-height: 1.8; }}
     .body p {{ margin: 0 0 16px; }}
@@ -87,8 +161,6 @@ def _html(subject: str, body_paragraphs: list[str], cta: str = "詳しく見る"
 
 
 # ── English subject labels (operator dashboard — EN mode) ────────────────────
-# Maps template_name → English subject shown to operators when the UI is set to EN.
-# The Japanese subject column is unchanged; it is what gets sent to the lead.
 
 _SUBJECT_EN: dict[str, str] = {
     # S2 · Life Event
@@ -136,6 +208,9 @@ _SUBJECT_EN: dict[str, str] = {
 
 
 # ── Template catalogue ────────────────────────────────────────────────────────
+# body_html is loaded directly from the source .msg / .eml file for all
+# Phase 1 & Phase 2 templates.  S4 revival templates have no source files and
+# use _fallback_html() instead.
 
 TEMPLATES: list[dict] = [
     # ── S2 · Life Event (ライフイベントきっかけ) ─────────────────────────────
@@ -146,15 +221,9 @@ TEMPLATES: list[dict] = [
         "subject": "後回しにしていない？見直すべき家族のお金の貯め方・使い方",
         "version": 1,
         "keigo_level": "casual",
-        "body_html": _html(
-            "後回しにしていない？見直すべき家族のお金の貯め方・使い方",
-            [
-                "{{FIRST_NAME}}様、こんにちは。",
-                "ライフイベントを迎えたいま、家族のためのお金の管理を見直してみませんか？",
-                "「いつかやろう」と後回しにしている方も多いのですが、早めに動くことで将来の選択肢が大きく広がります。",
-                "まずは現在の家計を把握するところから。メットライフ生命のファイナンシャルプランナーが無料でサポートいたします。",
-            ],
-            cta="無料相談を予約する",
+        "body_html": _load_html(
+            "Phase1/ライフイベントきっかけ"
+            "/_EXT_ _MARKETING_ 後回しにしていない？見直すべき家族のお金の貯め方・使い方【第1回】.msg"
         ),
     },
     {
@@ -164,15 +233,9 @@ TEMPLATES: list[dict] = [
         "subject": "保険はどうして必要？気になる基本のキをFPに聞いてみた",
         "version": 2,
         "keigo_level": "casual",
-        "body_html": _html(
-            "保険はどうして必要？気になる基本のキをFPに聞いてみた",
-            [
-                "{{FIRST_NAME}}様、こんにちは。",
-                "「保険って、本当に必要なの？」——そう思ったことはありませんか？",
-                "ファイナンシャルプランナーが「保険の基本のキ」をわかりやすく解説します。",
-                "万が一の備えと、将来のための資産形成を両立させる方法をご紹介します。",
-            ],
-            cta="FPに相談してみる",
+        "body_html": _load_html(
+            "Phase1/ライフイベントきっかけ"
+            "/_EXT_ _MARKETING_ 保険はどうして必要？気になる基本のキをFPに聞いてみた【第2回】.msg"
         ),
     },
     {
@@ -182,15 +245,9 @@ TEMPLATES: list[dict] = [
         "subject": "我が家の保険を見直すタイミングは？賢い保険の入り方",
         "version": 3,
         "keigo_level": "casual",
-        "body_html": _html(
-            "我が家の保険を見直すタイミングは？賢い保険の入り方",
-            [
-                "{{FIRST_NAME}}様、こんにちは。",
-                "結婚・出産・転職など、人生の転機は保険を見直す絶好のタイミングです。",
-                "ライフステージが変わると、必要な保障も変わります。今のご家族の状況に合った保険を一緒に考えてみましょう。",
-                "賢い保険の選び方を、専門家が丁寧にご説明いたします。",
-            ],
-            cta="保険を見直す",
+        "body_html": _load_html(
+            "Phase1/ライフイベントきっかけ"
+            "/_EXT_ _MARKETING_ 我が家の保険を見直すタイミングは？賢い保険の入り方【第3回】.msg"
         ),
     },
     {
@@ -200,16 +257,9 @@ TEMPLATES: list[dict] = [
         "subject": "誰に相談する？我が家の保険選びの3つのポイント",
         "version": 4,
         "keigo_level": "casual",
-        "body_html": _html(
-            "誰に相談する？我が家の保険選びの3つのポイント",
-            [
-                "{{FIRST_NAME}}様、こんにちは。",
-                "保険を選ぶとき、誰に相談すればよいか迷いますよね。",
-                "今回は「我が家にぴったりの保険を選ぶ3つのポイント」をお伝えします。",
-                "①必要な保障額を知る、②ライフプランと合わせて考える、③専門家の意見を聞く。",
-                "メットライフ生命の保険のプロが、あなたに寄り添ってサポートします。",
-            ],
-            cta="保険のプロに相談",
+        "body_html": _load_html(
+            "Phase1/ライフイベントきっかけ"
+            "/_EXT_ _MARKETING_ 誰に相談する？我が家の保険選びの3つのポイント【第4回】.msg"
         ),
     },
     {
@@ -219,15 +269,9 @@ TEMPLATES: list[dict] = [
         "subject": "今の我が家にぴったりの保険は？ライフプランをもとに保険のプロに相談を",
         "version": 5,
         "keigo_level": "casual",
-        "body_html": _html(
-            "今の我が家にぴったりの保険は？ライフプランをもとに保険のプロに相談を",
-            [
-                "{{FIRST_NAME}}様、こんにちは。",
-                "これまで保険についての基礎から見直しポイントまでお伝えしてきました。",
-                "いよいよ最終回。「今のご家族に最適な保険」を見つけるために、ライフプランに基づいた専門家への無料相談をおすすめします。",
-                "不安なことや疑問点はすべて解消して、安心できるプランを手に入れましょう。",
-            ],
-            cta="無料相談を予約する（最終回特典あり）",
+        "body_html": _load_html(
+            "Phase1/ライフイベントきっかけ"
+            "/_EXT_ _MARKETING_ 今の我が家にぴったりの保険は？ライフプランをもとに保険のプロに相談を【第5回】.msg"
         ),
     },
     # ── S1 · Young Professional (年齢きっかけ×34歳以下) ──────────────────────
@@ -238,15 +282,9 @@ TEMPLATES: list[dict] = [
         "subject": "20〜30代のお金事情。人生の選択肢を増やすために今できること",
         "version": 1,
         "keigo_level": "casual",
-        "body_html": _html(
-            "20〜30代のお金事情。人生の選択肢を増やすために今できること",
-            [
-                "{{FIRST_NAME}}様、こんにちは。",
-                "20〜30代は将来に向けた資産形成の黄金期。でも「何から始めればいいの？」という声もよく聞きます。",
-                "実は、今から少し行動するだけで、10年後・20年後の人生の選択肢が大きく変わるんです。",
-                "まずは自分のお金の現状を把握することから。メットライフ生命がわかりやすくサポートします。",
-            ],
-            cta="今すぐチェック",
+        "body_html": _load_html(
+            "Phase1/年齢きっかけ×34歳以下"
+            "/_EXT_ _MARKETING_ 20〜30代のお金事情。人生の選択肢を増やすために今できること【第1回】.msg"
         ),
     },
     {
@@ -256,15 +294,9 @@ TEMPLATES: list[dict] = [
         "subject": "ずっと気になる保険のこと。まず何から始めたらいい？",
         "version": 2,
         "keigo_level": "casual",
-        "body_html": _html(
-            "ずっと気になる保険のこと。まず何から始めたらいい？",
-            [
-                "{{FIRST_NAME}}様、こんにちは。",
-                "「保険に入ったほうがいい気はするけど、何から手をつければ…」という方に。",
-                "保険選びのファーストステップを3つに絞りました。①自分のリスクを知る、②必要な保障を絞る、③プロに相談する。",
-                "シンプルに始めて、あとは専門家にお任せしましょう。",
-            ],
-            cta="保険の第一歩を踏み出す",
+        "body_html": _load_html(
+            "Phase1/年齢きっかけ×34歳以下"
+            "/_EXT_ _MARKETING_ ずっと気になる保険のこと。まず何から始めたらいい？【第2回】.msg"
         ),
     },
     {
@@ -274,14 +306,9 @@ TEMPLATES: list[dict] = [
         "subject": '若くても備えておきたい"急なお金のリスク"を考えよう',
         "version": 3,
         "keigo_level": "casual",
-        "body_html": _html(
-            '若くても備えておきたい"急なお金のリスク"を考えよう',
-            [
-                "{{FIRST_NAME}}様、こんにちは。",
-                "若いうちは病気や事故のリスクを実感しにくいもの。でも「まさか」が起きたとき、備えがあるとないとでは大違いです。",
-                "急な出費に焦らないための「お金のリスク対策」を一緒に考えましょう。",
-            ],
-            cta="リスク対策を確認する",
+        "body_html": _load_html(
+            "Phase1/年齢きっかけ×34歳以下"
+            "/_EXT_ _MARKETING_ 若くても備えておきたい\u201c急なお金のリスク\u201dを考えよう【第3回】.msg"
         ),
     },
     {
@@ -291,15 +318,9 @@ TEMPLATES: list[dict] = [
         "subject": "4人の事例から学ぶ！自分らしい保険の選び方を考えよう",
         "version": 4,
         "keigo_level": "casual",
-        "body_html": _html(
-            "4人の事例から学ぶ！自分らしい保険の選び方を考えよう",
-            [
-                "{{FIRST_NAME}}様、こんにちは。",
-                "同世代の4人がどのように保険を選んだか、リアルな事例をご紹介します。",
-                "独身・共働き・子育て中・フリーランス——それぞれの状況で「正解」は違います。",
-                "あなたに合ったスタイルを見つけるヒントにしてください。",
-            ],
-            cta="事例を読む",
+        "body_html": _load_html(
+            "Phase1/年齢きっかけ×34歳以下"
+            "/_EXT_ _MARKETING_ 4人の事例から学ぶ！自分らしい保険の選び方を考えよう【第4回】.msg"
         ),
     },
     {
@@ -309,15 +330,9 @@ TEMPLATES: list[dict] = [
         "subject": 'あなただけの"納得できる選択"を。保険のプロに無料相談！',
         "version": 5,
         "keigo_level": "casual",
-        "body_html": _html(
-            'あなただけの"納得できる選択"を。保険のプロに無料相談！',
-            [
-                "{{FIRST_NAME}}様、こんにちは。",
-                "シリーズ最終回。ここまでお読みいただきありがとうございます。",
-                "「自分に合った保険」を見つけるには、あなた自身の状況をプロに話すのが一番の近道です。",
-                "無料相談では、納得できるまで何でも聞けます。まずはお気軽にどうぞ。",
-            ],
-            cta="無料相談を予約する",
+        "body_html": _load_html(
+            "Phase1/年齢きっかけ×34歳以下"
+            "/_EXT_ _MARKETING_ あなただけの\u201c納得できる選択\u201dを。保険のプロに無料相談！【第5回】.msg"
         ),
     },
     # ── S3 · Senior (年齢きっかけ×35歳以上) ─────────────────────────────────
@@ -328,15 +343,9 @@ TEMPLATES: list[dict] = [
         "subject": '未来の私にはいくら必要？目標額達成の鍵は"早めのスタート"！',
         "version": 1,
         "keigo_level": "丁寧語",
-        "body_html": _html(
-            '未来の私にはいくら必要？目標額達成の鍵は"早めのスタート"！',
-            [
-                "{{FIRST_NAME}}様、こんにちは。",
-                "老後の生活に必要な資金はいくらでしょうか？公的年金だけでは不十分と感じている方も多いことでしょう。",
-                "目標額を早めに設定し、計画的に備えることで、将来への安心感が大きく変わります。",
-                "メットライフ生命のライフプランニングで、あなたの未来を一緒に描きましょう。",
-            ],
-            cta="ライフプランを考える",
+        "body_html": _load_html(
+            "Phase1/年齢きっかけ×35歳以上"
+            "/_EXT_ _MARKETING_ 未来の私にはいくら必要？  目標額達成の鍵は\u201d早めのスタート\u201d！【第1回】.msg"
         ),
     },
     {
@@ -346,15 +355,9 @@ TEMPLATES: list[dict] = [
         "subject": "子育て中のお金の悩みって？プロに聞く資産形成術",
         "version": 2,
         "keigo_level": "丁寧語",
-        "body_html": _html(
-            "子育て中のお金の悩みって？プロに聞く資産形成術",
-            [
-                "{{FIRST_NAME}}様、こんにちは。",
-                "教育費、住宅ローン、老後の備え——子育て中は何かとお金の心配が重なりますよね。",
-                "ファイナンシャルプランナーが「子育て世代の資産形成術」をわかりやすく解説します。",
-                "優先順位の付け方から、無理なく続けられる積立の方法まで、実践的なアドバイスをお届けします。",
-            ],
-            cta="資産形成を相談する",
+        "body_html": _load_html(
+            "Phase1/年齢きっかけ×35歳以上"
+            "/_EXT_ _MARKETING_ 子育て中のお金の悩みって？ プロに聞く資産形成術【第2回】.msg"
         ),
     },
     {
@@ -364,14 +367,9 @@ TEMPLATES: list[dict] = [
         "subject": "放っておくと後悔することも？保険を見直さないデメリットとは",
         "version": 3,
         "keigo_level": "丁寧語",
-        "body_html": _html(
-            "放っておくと後悔することも？保険を見直さないデメリットとは",
-            [
-                "{{FIRST_NAME}}様、こんにちは。",
-                "「保険はとりあえず入っているからいいや」——そのままにしておくと、思わぬ落とし穴があるかもしれません。",
-                "保険の見直しを先送りにすることで生じるリスクと、見直すことで得られるメリットをご紹介します。",
-            ],
-            cta="見直しポイントを確認",
+        "body_html": _load_html(
+            "Phase1/年齢きっかけ×35歳以上"
+            "/_EXT_ _MARKETING_ 放っておくと後悔することも？保険を見直さないデメリットとは【第3回】.msg"
         ),
     },
     {
@@ -381,14 +379,9 @@ TEMPLATES: list[dict] = [
         "subject": "今見直さないと後悔する？人生のターニングポイントの保険見直し3ステップ",
         "version": 4,
         "keigo_level": "丁寧語",
-        "body_html": _html(
-            "今見直さないと後悔する？人生のターニングポイントの保険見直し3ステップ",
-            [
-                "{{FIRST_NAME}}様、こんにちは。",
-                "人生のターニングポイント（就職・結婚・出産・マイホーム・子の独立）は保険見直しの絶好タイミングです。",
-                "3ステップで簡単に見直せる方法をお伝えします。まずはお気軽にチェックしてみてください。",
-            ],
-            cta="3ステップで見直す",
+        "body_html": _load_html(
+            "Phase1/年齢きっかけ×35歳以上"
+            "/_EXT_ _MARKETING_ 今見直さないと後悔する？人生のターニングポイントの保険見直し3ステップ【第4回】.msg"
         ),
     },
     {
@@ -398,15 +391,9 @@ TEMPLATES: list[dict] = [
         "subject": "ライフステージが変わったら保険の見直しを！プロへの相談が安心です",
         "version": 5,
         "keigo_level": "丁寧語",
-        "body_html": _html(
-            "ライフステージが変わったら保険の見直しを！プロへの相談が安心です",
-            [
-                "{{FIRST_NAME}}様、こんにちは。",
-                "シリーズ最終回をお届けします。",
-                "ライフステージの変化に合わせた保険見直しは、将来の安心につながります。",
-                "専門家に相談することで、不利益を避け、ご自身とご家族にとって最適なプランが見つかります。どうぞお気軽にご相談ください。",
-            ],
-            cta="専門家に相談する",
+        "body_html": _load_html(
+            "Phase1/年齢きっかけ×35歳以上"
+            "/_EXT_ _MARKETING_ ライフステージが変わったら保険の見直しを！不利益が生じるケースもあるからこそ、プロへの相談が安心です【第5回】.msg"
         ),
     },
     # ── S5 · Active Buyer (情報きっかけ) ─────────────────────────────────────
@@ -417,14 +404,9 @@ TEMPLATES: list[dict] = [
         "subject": "ミッツさんの資産形成哲学！失敗から得た教訓とは",
         "version": 1,
         "keigo_level": "casual",
-        "body_html": _html(
-            "ミッツさんの資産形成哲学！失敗から得た教訓とは",
-            [
-                "{{FIRST_NAME}}様、こんにちは。",
-                "投資家・ミッツさんが語る「資産形成で失敗から学んだこと」。実体験に基づいた生きたアドバイスをご紹介します。",
-                "リスクと向き合いながら、長期的な視点で資産を育てる哲学とは？",
-            ],
-            cta="詳しく読む",
+        "body_html": _load_html(
+            "Phase1/情報きっかけ"
+            "/_EXT_ _MARKETING_ ミッツさんの資産形成哲学！ 失敗から得た教訓とは【第1回】.msg"
         ),
     },
     {
@@ -434,14 +416,9 @@ TEMPLATES: list[dict] = [
         "subject": "短期投資への傾注はリスク大！「長期」「積立」「分散」の3原則",
         "version": 2,
         "keigo_level": "casual",
-        "body_html": _html(
-            "短期投資への傾注はリスク大！「長期」「積立」「分散」の3原則",
-            [
-                "{{FIRST_NAME}}様、こんにちは。",
-                "短期で大きなリターンを狙いたい気持ちはわかります。でも、長期的な資産形成には「長期・積立・分散」の3原則が鉄則です。",
-                "なぜこの3つが大切なのか、わかりやすく解説します。",
-            ],
-            cta="3原則を学ぶ",
+        "body_html": _load_html(
+            "Phase1/情報きっかけ"
+            "/_EXT_ _MARKETING_ 短期投資への傾注はリスク大！改めて立ち返る「長期」「積立」「分散」 の3原則【第2回】.msg"
         ),
     },
     {
@@ -451,14 +428,9 @@ TEMPLATES: list[dict] = [
         "subject": "資産形成が続けられなくなるリスク、考えたことがありますか？",
         "version": 3,
         "keigo_level": "casual",
-        "body_html": _html(
-            "資産形成が続けられなくなるリスク、考えたことがありますか？",
-            [
-                "{{FIRST_NAME}}様、こんにちは。",
-                "積立を途中でやめなければならない状況——病気、事故、失業——は誰にでも起こりえます。",
-                "そのリスクに備えることが、長期的な資産形成を「守る」うえで欠かせません。",
-            ],
-            cta="リスクへの備えを知る",
+        "body_html": _load_html(
+            "Phase1/情報きっかけ"
+            "/_EXT_ _MARKETING_ 資産形成が続けられなくなるリスク、考えたことがありますか？【第3回】.msg"
         ),
     },
     {
@@ -468,14 +440,9 @@ TEMPLATES: list[dict] = [
         "subject": "ライフイベントの実現を叶える！金融商品選択のコツ",
         "version": 4,
         "keigo_level": "casual",
-        "body_html": _html(
-            "ライフイベントの実現を叶える！金融商品選択のコツ",
-            [
-                "{{FIRST_NAME}}様、こんにちは。",
-                "マイホーム購入、お子様の教育、海外旅行——夢を実現するための資金をどう用意するか。",
-                "目的別に適した金融商品の選び方のコツをご紹介します。",
-            ],
-            cta="金融商品を比較する",
+        "body_html": _load_html(
+            "Phase1/情報きっかけ"
+            "/_EXT_ _MARKETING_ ライフイベントの実現を叶える！金融商品選択のコツ【第4回】.msg"
         ),
     },
     {
@@ -485,15 +452,9 @@ TEMPLATES: list[dict] = [
         "subject": "不測の事態でも資産形成を断念しないために！保険のプロに相談を",
         "version": 5,
         "keigo_level": "casual",
-        "body_html": _html(
-            "不測の事態でも資産形成を断念しないために！保険のプロに相談を",
-            [
-                "{{FIRST_NAME}}様、こんにちは。",
-                "シリーズ最終回です。資産形成を長く続けるためには「守り」が重要です。",
-                "万が一の際にも積立を続けられるよう、保険と資産形成を組み合わせた最適なプランをご提案します。",
-                "保険のプロへの無料相談で、あなたの夢の実現をサポートします。",
-            ],
-            cta="無料相談を予約する",
+        "body_html": _load_html(
+            "Phase1/情報きっかけ"
+            "/_EXT_ _MARKETING_ 不測の事態が起きても資産形成を断念しないために！ 保険のプロに商品選択を相談しませんか？【第5回】.msg"
         ),
     },
     # ── S1–S3 Shared · Medical (共通シナリオ 医療) ───────────────────────────
@@ -505,14 +466,9 @@ TEMPLATES: list[dict] = [
         "subject": "データで見る「入院日数」あなたに合った備え方を考えよう",
         "version": 1,
         "keigo_level": "casual",
-        "body_html": _html(
-            "データで見る「入院日数」あなたに合った備え方を考えよう",
-            [
-                "{{FIRST_NAME}}様、こんにちは。",
-                "実際の統計データで見る平均入院日数はどのくらいでしょうか？世代別の傾向と、入院に備えるためのポイントを解説します。",
-                "自分に合った医療保険の選び方を一緒に考えましょう。",
-            ],
-            cta="データを見る",
+        "body_html": _load_html(
+            "Phase1/共通シナリオ医療・死亡"
+            "/[医療Step1] データで見る「入院日数」あなたに合った備え方を考えよう【第1回】.msg"
         ),
     },
     {
@@ -523,14 +479,9 @@ TEMPLATES: list[dict] = [
         "subject": "入院費用は1日どれくらい？あなたに合う備え方を一緒に考えませんか？",
         "version": 2,
         "keigo_level": "casual",
-        "body_html": _html(
-            "入院費用は1日どれくらい？あなたに合う備え方を一緒に考えませんか？",
-            [
-                "{{FIRST_NAME}}様、こんにちは。",
-                "入院1日あたりの自己負担費用は、高額療養費制度を使っても意外とかかります。",
-                "実際の費用感を知り、自分に合った医療保険を選ぶためのヒントをご紹介します。",
-            ],
-            cta="費用シミュレーションを見る",
+        "body_html": _load_html(
+            "Phase1/共通シナリオ医療・死亡"
+            "/[医療Step2]入院費用は1日どれくらい？ あなたに合う備え方を一緒に考えませんか？【第2回】.msg"
         ),
     },
     {
@@ -541,14 +492,9 @@ TEMPLATES: list[dict] = [
         "subject": "もう迷わない！あなたに合った医療保険を選ぶための2つのポイント",
         "version": 3,
         "keigo_level": "casual",
-        "body_html": _html(
-            "もう迷わない！あなたに合った医療保険を選ぶための2つのポイント",
-            [
-                "{{FIRST_NAME}}様、こんにちは。",
-                "医療保険を選ぶとき、「入院日額」と「特約の種類」が重要な判断ポイントです。",
-                "この2つを押さえるだけで、自分に合ったプランが見つかりやすくなります。専門家に相談しながら、最適な選択をしましょう。",
-            ],
-            cta="医療保険を比較する",
+        "body_html": _load_html(
+            "Phase1/共通シナリオ医療・死亡"
+            "/[医療Step3]もう迷わない！あなたに合った医療保険を選ぶための2つのポイント【第3回】.msg"
         ),
     },
     # ── S1–S3 Shared · Death (共通シナリオ 死亡) ─────────────────────────────
@@ -560,14 +506,9 @@ TEMPLATES: list[dict] = [
         "subject": "我が家にぴったりの死亡保険をどう選ぶ？ライフステージに合わせて検討を",
         "version": 1,
         "keigo_level": "casual",
-        "body_html": _html(
-            "我が家にぴったりの死亡保険をどう選ぶ？ライフステージに合わせて検討を",
-            [
-                "{{FIRST_NAME}}様、こんにちは。",
-                "死亡保険は「いつ・いくら・誰のために」を明確にすることが選び方の第一歩です。",
-                "ライフステージ別の選び方のポイントを解説します。",
-            ],
-            cta="死亡保険を検討する",
+        "body_html": _load_html(
+            "Phase1/共通シナリオ医療・死亡"
+            "/[死亡Step1]我が家にぴったりの死亡保険をどう選ぶ？ライフステージに合わせて検討を【第1回】.msg"
         ),
     },
     {
@@ -578,14 +519,9 @@ TEMPLATES: list[dict] = [
         "subject": "遺族年金はいくらもらえる？遺族の必要保障額算出のはじめの一歩",
         "version": 2,
         "keigo_level": "casual",
-        "body_html": _html(
-            "遺族年金はいくらもらえる？遺族の必要保障額算出のはじめの一歩",
-            [
-                "{{FIRST_NAME}}様、こんにちは。",
-                "万が一のとき、遺族年金でいくる受け取れるかご存知ですか？",
-                "遺族年金の仕組みを理解したうえで、必要な保障額を計算してみましょう。あなたのご家族に必要な備えがわかります。",
-            ],
-            cta="必要保障額を計算する",
+        "body_html": _load_html(
+            "Phase1/共通シナリオ医療・死亡"
+            "/[死亡Step2]遺族年金はいくらもらえる？遺族の必要保障額算出のはじめの一歩【第2回】.msg"
         ),
     },
     {
@@ -596,15 +532,9 @@ TEMPLATES: list[dict] = [
         "subject": "3ステップで簡単！自分に合った死亡保険の選び方",
         "version": 3,
         "keigo_level": "casual",
-        "body_html": _html(
-            "3ステップで簡単！自分に合った死亡保険の選び方",
-            [
-                "{{FIRST_NAME}}様、こんにちは。",
-                "死亡保険の選び方は、3ステップで整理できます。",
-                "①必要保障額を計算する、②保険期間を決める、③保険料とのバランスを取る。",
-                "シンプルに考えて、まず動いてみることが大切です。専門家が無料でサポートします。",
-            ],
-            cta="専門家に相談する",
+        "body_html": _load_html(
+            "Phase1/共通シナリオ医療・死亡"
+            "/[死亡Step3]3ステップで簡単！自分に合った死亡保険の選び方【第3回】.msg"
         ),
     },
     # ── Phase 2 · General Campaign ────────────────────────────────────────────
@@ -615,16 +545,7 @@ TEMPLATES: list[dict] = [
         "subject": "【メットライフ生命】あなたにぴったりの保険、一緒に探しませんか？",
         "version": 1,
         "keigo_level": "casual",
-        "body_html": _html(
-            "あなたにぴったりの保険、一緒に探しませんか？",
-            [
-                "{{FIRST_NAME}}様、こんにちは。",
-                "メットライフ生命です。日頃よりご愛顧いただきありがとうございます。",
-                "今回は、あなたのライフスタイルに合った保険のご提案をさせてください。",
-                "無料相談では、現在の状況を詳しくお聞きしたうえで、最適なプランをご提案します。",
-            ],
-            cta="無料相談に申し込む",
-        ),
+        "body_html": _load_html("Phase2/20251016_第1配信.eml"),
     },
     {
         "scenario_id": "ALL",
@@ -633,15 +554,7 @@ TEMPLATES: list[dict] = [
         "subject": "【メットライフ生命】保険の見直しを検討されていませんか？",
         "version": 2,
         "keigo_level": "casual",
-        "body_html": _html(
-            "保険の見直しを検討されていませんか？",
-            [
-                "{{FIRST_NAME}}様、こんにちは。",
-                "ライフスタイルの変化とともに、最適な保険も変わっていきます。",
-                "今の保険が本当に自分に合っているか、一度プロに確認してもらうことをおすすめします。",
-            ],
-            cta="今すぐ見直す",
-        ),
+        "body_html": _load_html("Phase2/20251016_第2配信.eml"),
     },
     {
         "scenario_id": "ALL",
@@ -650,15 +563,7 @@ TEMPLATES: list[dict] = [
         "subject": "【メットライフ生命】知っておきたい！保険活用の賢い方法",
         "version": 3,
         "keigo_level": "casual",
-        "body_html": _html(
-            "知っておきたい！保険活用の賢い方法",
-            [
-                "{{FIRST_NAME}}様、こんにちは。",
-                "保険は「もしもの備え」だけではありません。賢く活用することで、資産形成や節税にも役立てることができます。",
-                "「保険の賢い活用術」を専門家がわかりやすく解説します。",
-            ],
-            cta="賢い保険活用術を見る",
-        ),
+        "body_html": _load_html("Phase2/20251016_第3配信.eml"),
     },
     {
         "scenario_id": "ALL",
@@ -667,19 +572,10 @@ TEMPLATES: list[dict] = [
         "subject": "【メットライフ生命】ご不明な点はありませんか？無料相談受付中",
         "version": 4,
         "keigo_level": "casual",
-        "body_html": _html(
-            "ご不明な点はありませんか？無料相談受付中",
-            [
-                "{{FIRST_NAME}}様、こんにちは。",
-                "保険についてご不明な点や気になることがあれば、いつでもお気軽にご相談ください。",
-                "メットライフ生命の専門家が、あなたの疑問に丁寧にお答えします。相談は何度でも無料です。",
-            ],
-            cta="無料相談を予約する",
-        ),
+        "body_html": _load_html("Phase2/20251016_第4配信.eml"),
     },
     # ── S4 Dormant Revival · P1 / P2 / P3 segment templates ──────────────────
-    # product_code stores the revival segment (P1/P2/P3) so content_strategist
-    # can look up the right asset for each dormant lead's behaviour profile.
+    # No source files exist for these; inline HTML is used as the approved asset.
     {
         "scenario_id": "S4",
         "product_code": "P1",
@@ -687,7 +583,7 @@ TEMPLATES: list[dict] = [
         "subject": "【メットライフ生命】お久しぶりです。保険の見直しはお済みですか？",
         "version": 1,
         "keigo_level": "casual",
-        "body_html": _html(
+        "body_html": _fallback_html(
             "お久しぶりです。保険の見直しはお済みですか？",
             [
                 "{{FIRST_NAME}}様、ご無沙汰しております。メットライフ生命です。",
@@ -705,7 +601,7 @@ TEMPLATES: list[dict] = [
         "subject": "【メットライフ生命】新商品のご案内 ＋ 無料シミュレーション",
         "version": 1,
         "keigo_level": "casual",
-        "body_html": _html(
+        "body_html": _fallback_html(
             "新商品のご案内 ＋ 無料シミュレーション",
             [
                 "{{FIRST_NAME}}様、メットライフ生命からの最新情報をお届けします。",
@@ -723,12 +619,12 @@ TEMPLATES: list[dict] = [
         "subject": "【メットライフ生命】専門家への無料相談のご案内",
         "version": 1,
         "keigo_level": "casual",
-        "body_html": _html(
+        "body_html": _fallback_html(
             "専門家への無料相談のご案内",
             [
                 "{{FIRST_NAME}}様、以前、メットライフ生命の保険についてご関心をお持ちいただきありがとうございました。",
                 "お客様のご状況に合わせて、専門のライフプランナーが最適な保障プランをご提案します。",
-                "相談は完全無料・完全無料です。お気軽にご予約ください。",
+                "相談は完全無料です。お気軽にご予約ください。",
                 "今なら最短翌日にオンライン・対面のどちらでもご相談いただけます。",
             ],
             cta="今すぐ相談を予約する",

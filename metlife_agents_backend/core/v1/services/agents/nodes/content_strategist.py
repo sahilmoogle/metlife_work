@@ -179,7 +179,9 @@ async def content_strategist(state: dict, *, db=None) -> dict:
                 .where(EmailTemplate.language == language)
             )
             if scenario == "S5" and state.get("product_interest"):
-                query = query.where(EmailTemplate.product_code == state["product_interest"])
+                query = query.where(
+                    EmailTemplate.product_code == state["product_interest"]
+                )
             if scenario == "S4":
                 query = query.where(
                     EmailTemplate.product_code == state.get("revival_segment", "P1")
