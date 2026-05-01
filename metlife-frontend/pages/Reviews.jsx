@@ -314,9 +314,14 @@ const Reviews = () => {
         </div>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
           {hitlGateLegend.map(([gate, label, detail]) => (
-            <div key={gate} className="rounded-xl border border-amber-100 bg-amber-50/60 px-3 py-2 text-[11px] dark:border-amber-500/25 dark:bg-amber-500/10">
-              <span className="font-semibold text-amber-900 dark:text-amber-100">{gate} · {label}</span>
-              <p className="mt-0.5 text-amber-900/80 dark:text-amber-100/80">{detail}</p>
+            <div
+              key={gate}
+              className="rounded-xl border border-amber-100 bg-amber-50/60 px-3 py-2 text-[11px] transition duration-200 ease-out hover:shadow-sm motion-safe:hover:-translate-y-0.5 dark:border-volt-borderSoft dark:bg-white/[0.05]"
+            >
+              <span className="font-semibold text-amber-900 dark:text-amber-200">
+                {gate} · {label}
+              </span>
+              <p className="mt-0.5 text-amber-900/80 dark:text-volt-muted2">{detail}</p>
             </div>
           ))}
         </div>

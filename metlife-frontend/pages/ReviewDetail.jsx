@@ -438,7 +438,8 @@ const ReviewDetail = () => {
                   <button
                     type="button"
                     onClick={() => setPreviewLanguage("ja")}
-                    className={`rounded-full px-3 py-1 font-semibold ${
+                    disabled={englishLoading}
+                    className={`rounded-full px-3 py-1 font-semibold transition duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300/60 disabled:opacity-60 ${
                       previewLanguage === "ja"
                         ? "bg-indigo-600 text-white"
                         : "text-gray-600 hover:text-indigo-700 dark:text-volt-muted"
@@ -449,12 +450,19 @@ const ReviewDetail = () => {
                   <button
                     type="button"
                     onClick={showEnglishPreview}
-                    className={`rounded-full px-3 py-1 font-semibold ${
+                    disabled={englishLoading}
+                    className={`inline-flex items-center gap-2 rounded-full px-3 py-1 font-semibold transition duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300/60 disabled:cursor-not-allowed disabled:opacity-60 ${
                       previewLanguage === "en"
                         ? "bg-indigo-600 text-white"
                         : "text-gray-600 hover:text-indigo-700 dark:text-volt-muted"
                     }`}
                   >
+                    {englishLoading ? (
+                      <span
+                        className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent"
+                        aria-hidden="true"
+                      />
+                    ) : null}
                     English
                   </button>
                 </div>
@@ -503,7 +511,10 @@ const ReviewDetail = () => {
                     ) : (
                       <div className="mt-2 rounded-lg border border-gray-200 bg-white p-4 text-sm leading-7 text-gray-800 dark:border-volt-borderSoft dark:bg-volt-panel dark:text-volt-text">
                         {englishLoading ? (
-                          <p className="text-gray-500">Generating English preview...</p>
+                          <div className="inline-flex items-center gap-2 text-gray-500 dark:text-volt-muted2">
+                            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-indigo-500 dark:border-white/15 dark:border-t-volt-accent" />
+                            Generating English preview…
+                          </div>
                         ) : (
                           <p className="whitespace-pre-wrap">{englishPreview?.body || "—"}</p>
                         )}
