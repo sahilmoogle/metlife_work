@@ -37,6 +37,18 @@ LLM_FIRST_EMAIL_SCENARIOS = ("S6", "S7")
 INLINE_ONLY_TEMPLATE_NAMES: frozenset[str] = frozenset()
 
 
+def _template_product_code(product_interest: str | None) -> str | None:
+    """Map A3's canonical product_interest to EmailTemplate.product_code."""
+    if not product_interest:
+        return None
+    normalized = str(product_interest).strip().lower().replace("-", "_")
+    if normalized in ("medical", "medical_insurance"):
+        return "MEDICAL"
+    if normalized in ("life", "life_insurance", "death"):
+        return "LIFE"
+    return None
+
+
 async def content_strategist(state: dict, *, db=None) -> dict:
     """Decide the email content strategy for the current sequence step."""
     lead_id = state["lead_id"]
@@ -52,17 +64,20 @@ async def content_strategist(state: dict, *, db=None) -> dict:
         and state.get("hitl_resume_value") == "rejected"
         and state.get("email_number", 0) > 0
     )
+    regenerate_current_email = bool(state.get("regenerate_current_email"))
     email_number = (
         state.get("email_number", 0)
-        if is_g1_rejection
+        if is_g1_rejection or regenerate_current_email
         else state.get("email_number", 0) + 1
     )
     state["email_number"] = email_number
+    if regenerate_current_email:
+        state["regenerate_current_email"] = False
     scenario = state.get("scenario", "S1")
     language = str(state.get("target_language") or "JA").upper()
 
     if scenario == "S5" and email_number > 1 and not state.get("product_interest"):
-        state["product_interest"] = "medical_insurance"
+        state["product_interest"] = "medical"
 
     if scenario == "S4" and email_number > 1:
         base_score = float(state.get("base_score") or 0.0)
@@ -91,7 +106,9 @@ async def content_strategist(state: dict, *, db=None) -> dict:
 
     if not is_g1_rejection and email_number == 1:
         # ── S6/S7: first email is always LLM-generated (MEMO context) ──
-        if scenario in LLM_FIRST_EMAIL_SCENARIOS:
+        if scenario in LLM_FIRST_EMAIL_SCENARIOS and not _template_product_code(
+            state.get("product_interest")
+        ):
             state["content_type"] = "llm_generated"
             state["draft_email_subject"] = None  # A5 will populate
             state["draft_email_body"] = None
@@ -101,19 +118,40 @@ async def content_strategist(state: dict, *, db=None) -> dict:
             # S4 revival emails are keyed by revival_segment (P1/P2/P3) stored
             # in product_code so each segment gets its own campaign asset.
             db_template = None
+            product_template_code = _template_product_code(
+                state.get("product_interest")
+            )
             if db is not None:
-                query = (
-                    select(EmailTemplate)
-                    .where(EmailTemplate.scenario_id == scenario)
-                    .where(EmailTemplate.is_active == True)  # noqa: E712
-                    .where(EmailTemplate.version == 1)
-                    .where(EmailTemplate.language == language)
-                )
-                if scenario == "S4":
-                    segment = state.get("revival_segment", "P1")
-                    query = query.where(EmailTemplate.product_code == segment)
-                result = await db.execute(query.limit(1))
-                db_template = result.scalar_one_or_none()
+                if product_template_code:
+                    # If A3 already knows product intent, prefer a product-specific
+                    # approved asset for email #1 before scenario defaults.
+                    product_query = (
+                        select(EmailTemplate)
+                        .where(EmailTemplate.product_code == product_template_code)
+                        .where(EmailTemplate.is_active == True)  # noqa: E712
+                        .where(EmailTemplate.version == 1)
+                        .where(EmailTemplate.language == language)
+                        .order_by(
+                            (EmailTemplate.scenario_id == scenario).desc(),
+                            EmailTemplate.template_name,
+                        )
+                    )
+                    product_result = await db.execute(product_query.limit(1))
+                    db_template = product_result.scalar_one_or_none()
+
+                if db_template is None:
+                    query = (
+                        select(EmailTemplate)
+                        .where(EmailTemplate.scenario_id == scenario)
+                        .where(EmailTemplate.is_active == True)  # noqa: E712
+                        .where(EmailTemplate.version == 1)
+                        .where(EmailTemplate.language == language)
+                    )
+                    if scenario == "S4":
+                        segment = state.get("revival_segment", "P1")
+                        query = query.where(EmailTemplate.product_code == segment)
+                    result = await db.execute(query.limit(1))
+                    db_template = result.scalar_one_or_none()
 
             if db_template:
                 # Inline-only seeded templates are not treated as approved assets anymore.
@@ -158,10 +196,11 @@ async def content_strategist(state: dict, *, db=None) -> dict:
                 .where(EmailTemplate.version == email_number)
                 .where(EmailTemplate.language == language)
             )
-            if scenario == "S5" and state.get("product_interest"):
-                query = query.where(
-                    EmailTemplate.product_code == state["product_interest"]
-                )
+            product_template_code = _template_product_code(
+                state.get("product_interest")
+            )
+            if product_template_code:
+                query = query.where(EmailTemplate.product_code == product_template_code)
             if scenario == "S4":
                 query = query.where(
                     EmailTemplate.product_code == state.get("revival_segment", "P1")
