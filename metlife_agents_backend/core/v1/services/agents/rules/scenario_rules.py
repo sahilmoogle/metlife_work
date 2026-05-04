@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from typing import Optional
 
+from config.v1.api_config import api_config
+
 
 # ── Scenario configuration defaults ──────────────────────────────────
 SCENARIO_DEFAULTS: dict[str, dict] = {
@@ -17,7 +19,7 @@ SCENARIO_DEFAULTS: dict[str, dict] = {
         "persona_code": "F-1",
         "base_score": 0.40,
         "handoff_threshold": 0.80,
-        "cadence_days": 3,
+        "cadence_days": api_config.CADENCE_DAYS_S1,
         "max_emails": 5,
         "keigo": "casual",
         "tone": "casual",
@@ -27,7 +29,7 @@ SCENARIO_DEFAULTS: dict[str, dict] = {
         "persona_code": "E",
         "base_score": 0.45,
         "handoff_threshold": 0.80,
-        "cadence_days": 3,
+        "cadence_days": api_config.CADENCE_DAYS_S2,
         "max_emails": 5,
         "keigo": "casual",
         "tone": "empathetic",
@@ -37,7 +39,7 @@ SCENARIO_DEFAULTS: dict[str, dict] = {
         "persona_code": "F-2",
         "base_score": 0.35,
         "handoff_threshold": 0.80,
-        "cadence_days": 1,
+        "cadence_days": api_config.CADENCE_DAYS_S3,
         "max_emails": 5,
         "keigo": "丁寧語",  # refined at runtime by age
         "tone": "formal",
@@ -47,7 +49,7 @@ SCENARIO_DEFAULTS: dict[str, dict] = {
         "persona_code": None,
         "base_score": 0.30,
         "handoff_threshold": 0.90,
-        "cadence_days": 7,
+        "cadence_days": api_config.CADENCE_DAYS_S4,
         "max_emails": 2,
         "keigo": None,
         "tone": "check-in",
@@ -57,7 +59,7 @@ SCENARIO_DEFAULTS: dict[str, dict] = {
         "persona_code": None,
         "base_score": 0.60,
         "handoff_threshold": 0.80,
-        "cadence_days": 3,
+        "cadence_days": api_config.CADENCE_DAYS_S5,
         "max_emails": 5,
         "keigo": "casual",
         "tone": "direct",
@@ -67,7 +69,7 @@ SCENARIO_DEFAULTS: dict[str, dict] = {
         "persona_code": None,
         "base_score": 0.85,
         "handoff_threshold": 0.85,
-        "cadence_days": 0,
+        "cadence_days": api_config.CADENCE_DAYS_S6,
         "max_emails": 1,
         "keigo": None,
         "tone": "professional",
@@ -77,7 +79,7 @@ SCENARIO_DEFAULTS: dict[str, dict] = {
         "persona_code": None,
         "base_score": 0.88,
         "handoff_threshold": 0.85,
-        "cadence_days": 0,
+        "cadence_days": api_config.CADENCE_DAYS_S7,
         "max_emails": 1,
         "keigo": None,
         "tone": "professional",

@@ -88,7 +88,22 @@ async def generative_writer(
             logger.error("A5 LLM generation failed for lead %s: %s", lead_id, exc)
             raise RuntimeError("LLM email generation failed.") from exc
     else:
-        raise RuntimeError("LLM client not configured for generated email path.")
+        # Azure OpenAI not configured — deterministic placeholder so local demo / HITL tests proceed.
+        if state.get("draft_email_subject") and state.get("draft_email_body"):
+            logger.info("A5 reusing existing draft for lead %s (no LLM)", lead_id)
+        else:
+            scenario = state.get("scenario", "S1")
+            n = state.get("email_number", 1)
+            state["draft_email_subject"] = f"[Demo] {scenario} touch #{n}"
+            state["draft_email_body"] = (
+                "このメールは LLM 未設定のためプレースホルダーです。"
+                "本番では Azure OpenAI が本文を生成します。"
+            )
+            logger.warning(
+                "A5 placeholder email for lead %s (LLM not configured, content_type=%s)",
+                lead_id,
+                content_type,
+            )
 
     state["current_node"] = NODE_ID
 
@@ -112,8 +127,11 @@ async def generative_writer(
         )
     )
 
+    used_placeholder = content_type != "existing_asset" and llm is None
     content_label = (
-        "existing_asset" if content_type == "existing_asset" else "LLM-generated"
+        "existing_asset"
+        if content_type == "existing_asset"
+        else ("placeholder (no LLM)" if used_placeholder else "LLM-generated")
     )
     state["execution_log"] = [
         create_log_entry(
@@ -123,7 +141,9 @@ async def generative_writer(
             ),
             badges=["Pass-through"]
             if content_type == "existing_asset"
-            else ["LLM", "Azure OpenAI"],
+            else (
+                ["Demo", "Placeholder"] if used_placeholder else ["LLM", "Azure OpenAI"]
+            ),
         )
     ]
     return state

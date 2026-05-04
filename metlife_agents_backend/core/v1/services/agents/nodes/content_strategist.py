@@ -30,11 +30,11 @@ NODE_ID = "A4_ContentStrategy"
 
 # Scenarios where Email #1 is always LLM-generated (MEMO-based, no pre-approved asset)
 LLM_FIRST_EMAIL_SCENARIOS = ("S6", "S7")
-INLINE_ONLY_TEMPLATE_NAMES = {
-    "s4_revival_p1_brand_campaign",
-    "s4_revival_p2_product_sim_invite",
-    "s4_revival_p3_consultation_campaign",
-}
+
+# S4 revival templates are no longer seeded as inline placeholders — all DB templates
+# are real approved assets.  Keep this as an empty set so the guard at line 120
+# is a no-op and no DB template is skipped.
+INLINE_ONLY_TEMPLATE_NAMES: frozenset[str] = frozenset()
 
 
 async def content_strategist(state: dict, *, db=None) -> dict:

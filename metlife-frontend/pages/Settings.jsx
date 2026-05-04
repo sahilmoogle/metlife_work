@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useTranslation } from "react-i18next";
 import {
@@ -11,11 +12,17 @@ import {
   updateAdminUser,
   updateAdminUserPermissions,
 } from "../src/services/adminApi";
+import { getIntakeMode, intakeConsultation, intakeQuote, setIntakeMode } from "../src/services/agentsApi";
 import { fetchRecentSseEvents } from "../src/services/sseStream";
+import {
+  SCENARIO_DEMO_CREATABLE_IDS,
+  SCENARIO_DEMO_ORDER,
+  SCENARIO_DEMO_PRESETS,
+} from "../src/utils/scenarioDemoPresets";
 import { formatRelativeTime } from "../src/utils/relativeTime";
 import { useRelativeClock } from "../src/hooks/useRelativeClock";
 
-// ── Audit log helpers ─────────────────────────────────────────────────
+// â”€â”€ Audit log helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const EVENT_DOT = {
   workflow_state:   "bg-emerald-500",
@@ -28,7 +35,7 @@ const EVENT_DOT = {
   lead_converted:   "bg-teal-500",
 };
 
-/** Map an SSE event row from the backend → the shape the UI list expects. */
+/** Map an SSE event row from the backend â†’ the shape the UI list expects. */
 const sseEventToAuditRow = (ev) => {
   const actor = ev.actor_name || ev.actor_email || "System";
   const role  = ev.actor_role  || "System";
@@ -49,7 +56,7 @@ const sseEventToAuditRow = (ev) => {
       text = `${actor} submitted edits on ${ev.gate || "HITL gate"}${lead ? ` for ${lead}` : ""}`;
       break;
     case "hitl_rejected":
-      text = `${actor} rejected ${ev.gate || "HITL gate"}${lead ? ` for ${lead}` : ""}${ev.reason ? ` — ${ev.reason}` : ""}`;
+      text = `${actor} rejected ${ev.gate || "HITL gate"}${lead ? ` for ${lead}` : ""}${ev.reason ? ` â€” ${ev.reason}` : ""}`;
       break;
     case "node_transition":
       text = `${actor ? actor + ": " : ""}Node ${ev.node || ""} ${ev.status || "transitioned"}${lead ? ` (${lead})` : ""}`;
@@ -103,6 +110,37 @@ const roles = [
   },
 ];
 
+const roleDefinitions = {
+  admin: {
+    badge: "ADMIN",
+    badgeTone: "bg-rose-50 text-rose-700 ring-1 ring-rose-100",
+    title: "Full platform access",
+    description:
+      "Run/stop workflows, start any agent, approve all HITL gates, manage users, export data, configure scenarios. Can modify RBAC roles.",
+  },
+  manager: {
+    badge: "MANAGER",
+    badgeTone: "bg-violet-50 text-violet-700 ring-1 ring-violet-100",
+    title: "Workflow + HITL",
+    description:
+      'Start/pause/resume workflows, click "Run from here" on agents, approve G1â€“G5 gates, edit leads. Cannot manage users.',
+  },
+  reviewer: {
+    badge: "REVIEWER",
+    badgeTone: "bg-amber-50 text-amber-700 ring-1 ring-amber-100",
+    title: "HITL only",
+    description:
+      "Review and approve/reject HITL gates (G1â€“G5). Can view lead details and edit content. Cannot start workflows or agents.",
+  },
+  viewer: {
+    badge: "VIEWER",
+    badgeTone: "bg-gray-100 text-gray-700 ring-1 ring-gray-200",
+    title: "Read-only",
+    description:
+      "View dashboard, lead list, workflow status, analytics. No edit or action permissions.",
+  },
+};
+
 const roleBadge = {
   admin: "bg-rose-50 text-rose-700 ring-rose-100 dark:bg-rose-500/10 dark:text-rose-200 dark:ring-rose-500/20",
   manager: "bg-violet-50 text-violet-700 ring-violet-100 dark:bg-violet-500/10 dark:text-fuchsia-200 dark:ring-violet-500/20",
@@ -134,6 +172,16 @@ const roleCanManageUsers = (user) => {
   if (override === true) return true;
   if (override === false) return false;
   return user.role === "Admin";
+};
+
+/** Matches backend `has_permission` for `start_agent` (Admin/Manager by default, per-user override). */
+const roleCanStartAgent = (user) => {
+  if (!user) return false;
+  const override = user.custom_permissions?.start_agent;
+  if (override === true) return true;
+  if (override === false) return false;
+  const r = String(user.role || "").trim();
+  return r === "Admin" || r === "Manager";
 };
 
 const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
@@ -239,6 +287,141 @@ const Settings = () => {
   const [permOverridesUi, setPermOverridesUi] = useState(() => ({}));
 
   const canManage = roleCanManageUsers(currentUser);
+  const canStartAgent = roleCanStartAgent(currentUser);
+
+  // â”€â”€ Workflow Intake Mode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const [intakeMode, setIntakeModeState] = useState(null); // "automatic" | "manual" | null (loading)
+  const [intakeModeLoading, setIntakeModeLoading] = useState(true);
+  const [intakeModeError, setIntakeModeError] = useState("");
+  const [intakeModeSaving, setIntakeModeSaving] = useState(false);
+  const [intakeModeInfoOpen, setIntakeModeInfoOpen] = useState(false);
+  const [demoSelectedScenarios, setDemoSelectedScenarios] = useState(() => [...SCENARIO_DEMO_CREATABLE_IDS]);
+  const [demoSubmitting, setDemoSubmitting] = useState(false);
+  const [demoSubmitProgress, setDemoSubmitProgress] = useState(null); // { current: 1, total: 6 }
+  const [demoResults, setDemoResults] = useState(null); // { scenario, ok, data?, error? }[]
+  const [demoError, setDemoError] = useState("");
+  const [openRoleInfo, setOpenRoleInfo] = useState(null); // "admin"|"manager"|"reviewer"|"viewer"|null
+
+  const fetchIntakeMode = useCallback(async () => {
+    if (!token) return;
+    setIntakeModeLoading(true);
+    setIntakeModeError("");
+    try {
+      const data = await getIntakeMode(token);
+      setIntakeModeState(data?.mode ?? "automatic");
+    } catch (e) {
+      setIntakeModeError(e.message || "Failed to load intake mode.");
+    } finally {
+      setIntakeModeLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    void fetchIntakeMode();
+  }, [fetchIntakeMode]);
+
+  const handleToggleIntakeMode = async () => {
+    if (!token || !canStartAgent || intakeModeSaving || intakeModeLoading) return;
+    const next = intakeMode === "automatic" ? "manual" : "automatic";
+    setIntakeModeSaving(true);
+    setIntakeModeError("");
+    try {
+      const data = await setIntakeMode(token, next);
+      setIntakeModeState(data?.mode ?? next);
+    } catch (e) {
+      setIntakeModeError(e.message || "Failed to update intake mode.");
+    } finally {
+      setIntakeModeSaving(false);
+    }
+  };
+
+  const toggleDemoScenario = useCallback((id) => {
+    if (id === "S4") return;
+    setDemoSelectedScenarios((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      const next = [...prev, id];
+      next.sort((a, b) => SCENARIO_DEMO_ORDER.indexOf(a) - SCENARIO_DEMO_ORDER.indexOf(b));
+      return next;
+    });
+    setDemoError("");
+    setDemoResults(null);
+  }, []);
+
+  const selectAllCreatableScenarios = useCallback(() => {
+    setDemoSelectedScenarios([...SCENARIO_DEMO_CREATABLE_IDS]);
+    setDemoError("");
+    setDemoResults(null);
+  }, []);
+
+  const clearDemoScenarios = useCallback(() => {
+    setDemoSelectedScenarios([]);
+    setDemoError("");
+    setDemoResults(null);
+  }, []);
+
+  const handleDemoScenarioIntake = async (e) => {
+    e.preventDefault();
+    if (!token || !canStartAgent || demoSubmitting) return;
+
+    const ids = demoSelectedScenarios.filter((id) => SCENARIO_DEMO_PRESETS[id]?.path !== "none");
+    if (ids.length === 0) {
+      setDemoError("Select at least one scenario (S4 cannot be created here).");
+      return;
+    }
+
+    setDemoSubmitting(true);
+    setDemoError("");
+    setDemoResults(null);
+    const baseTs = Date.now();
+    const results = [];
+
+    try {
+      for (let i = 0; i < ids.length; i++) {
+        const sid = ids[i];
+        setDemoSubmitProgress({ current: i + 1, total: ids.length });
+        const preset = SCENARIO_DEMO_PRESETS[sid];
+        const suffix = `${baseTs}-${i}-${sid}`;
+        const email = `demo.${sid.toLowerCase()}.${baseTs}.${i}@example.com`;
+        const first = "Demo";
+        const last = `Lead ${sid}`;
+        try {
+          let data;
+          if (preset.path === "quote") {
+            data = await intakeQuote(token, {
+              quote_id: `settings-demo-${suffix}`,
+              first_name: first,
+              last_name: last,
+              email,
+              registration_source: `settings_demo_${sid.toLowerCase()}`,
+              product_code: "DEMO",
+              ...preset.build(),
+            });
+          } else {
+            data = await intakeConsultation(token, {
+              request_id: `settings-demo-${suffix}`,
+              first_name: first,
+              last_name: last,
+              email,
+              ...preset.build(),
+            });
+          }
+          results.push({ scenario: sid, ok: true, data });
+        } catch (err) {
+          results.push({
+            scenario: sid,
+            ok: false,
+            error: err.message || "Intake failed.",
+          });
+        }
+      }
+      setDemoResults(results);
+    } finally {
+      setDemoSubmitting(false);
+      setDemoSubmitProgress(null);
+    }
+  };
+
+  const hasDemoSelection = demoSelectedScenarios.some((id) => SCENARIO_DEMO_PRESETS[id]?.path !== "none");
 
   const refresh = useCallback(async () => {
     if (!token) return;
@@ -516,8 +699,268 @@ const Settings = () => {
     }
   };
 
+  const isAutomatic = intakeMode === "automatic";
+
   return (
     <section className="space-y-3">
+      {/* â”€â”€ Workflow Intake Mode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      <div className="app-surface-panel p-3">
+        <div className="flex items-center justify-between gap-4">
+
+          {/* Left: icon + title + i button */}
+          <div className="flex items-center gap-2 min-w-0">
+            <span
+              className={`inline-flex h-8 w-8 flex-none items-center justify-center rounded-xl ring-1 transition-colors ${
+                isAutomatic
+                  ? "bg-emerald-50 text-emerald-600 ring-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200 dark:ring-emerald-500/20"
+                  : "bg-amber-50 text-amber-600 ring-amber-100 dark:bg-amber-500/15 dark:text-amber-200 dark:ring-amber-500/20"
+              }`}
+            >
+              {isAutomatic ? (
+                <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
+                  <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
+                  <path d="M12 8v4l3 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              )}
+            </span>
+
+            <p className="text-sm font-semibold text-[#1e2a52] dark:text-white whitespace-nowrap">
+              Workflow Intake Mode
+            </p>
+
+            {/* Info button + popover */}
+            <div className="relative">
+              <button
+                type="button"
+                aria-label="Learn about intake modes"
+                onClick={() => setIntakeModeInfoOpen((v) => !v)}
+                className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-400 transition hover:border-indigo-200 hover:text-indigo-500 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted2 dark:hover:text-indigo-300"
+              >
+                <svg viewBox="0 0 24 24" fill="none" className="h-3 w-3" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                  <path d="M12 16v-4M12 8h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </button>
+
+              {intakeModeInfoOpen ? (
+                <>
+                  {/* Backdrop */}
+                  <div
+                    className="fixed inset-0 z-30"
+                    onClick={() => setIntakeModeInfoOpen(false)}
+                  />
+                  {/* Popover */}
+                  <div className="absolute left-0 top-7 z-40 w-72 rounded-2xl border border-gray-100 bg-white p-4 shadow-lg dark:border-volt-borderSoft dark:bg-volt-card">
+                    <p className="mb-3 text-xs font-semibold text-gray-700 dark:text-white">
+                      Intake Mode Definitions
+                    </p>
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-2">
+                        <span className="mt-0.5 inline-flex h-5 w-5 flex-none items-center justify-center rounded-full bg-emerald-500 text-white">
+                          <svg viewBox="0 0 24 24" fill="none" className="h-2.5 w-2.5" aria-hidden="true">
+                            <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </span>
+                        <div>
+                          <p className="text-[11px] font-semibold text-gray-800 dark:text-white">Automatic</p>
+                          <p className="mt-0.5 text-[11px] text-gray-500 dark:text-volt-muted2">
+                            Every new lead from an intake form immediately triggers the full AI agent workflow â€” scenario routing, content generation, and HITL queue.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="mt-0.5 inline-flex h-5 w-5 flex-none items-center justify-center rounded-full bg-amber-500 text-white">
+                          <svg viewBox="0 0 24 24" fill="none" className="h-2.5 w-2.5" aria-hidden="true">
+                            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.2" />
+                            <path d="M12 7v5l3 3" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+                          </svg>
+                        </span>
+                        <div>
+                          <p className="text-[11px] font-semibold text-gray-800 dark:text-white">Manual</p>
+                          <p className="mt-0.5 text-[11px] text-gray-500 dark:text-volt-muted2">
+                            Leads are saved but no workflow starts. A manager must go to the lead detail page and click "Start Workflow" to run the agent.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : null}
+            </div>
+
+            {intakeModeError ? (
+              <p className="text-xs font-medium text-rose-600 dark:text-rose-300">{intakeModeError}</p>
+            ) : null}
+          </div>
+
+          {/* Right: badge + toggle */}
+          <div className="flex flex-none items-center gap-3">
+            <span
+              className={`inline-flex rounded-full px-3 py-1 text-[11px] font-semibold ring-1 transition-colors ${
+                intakeModeLoading
+                  ? "bg-gray-50 text-gray-400 ring-gray-100 dark:bg-white/5 dark:text-volt-muted2 dark:ring-volt-borderSoft"
+                  : isAutomatic
+                  ? "bg-emerald-50 text-emerald-700 ring-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-200 dark:ring-emerald-500/20"
+                  : "bg-amber-50 text-amber-700 ring-amber-100 dark:bg-amber-500/10 dark:text-amber-200 dark:ring-amber-500/20"
+              }`}
+            >
+              {intakeModeLoading ? "â€”" : isAutomatic ? "AUTOMATIC" : "MANUAL"}
+            </span>
+
+            <button
+              type="button"
+              aria-label="Toggle workflow intake mode"
+              aria-pressed={isAutomatic}
+              disabled={!canStartAgent || intakeModeLoading || intakeModeSaving}
+              onClick={handleToggleIntakeMode}
+              title={
+                !canStartAgent
+                  ? "You need Start Agent permission (Admin/Manager) to change this."
+                  : isAutomatic
+                  ? "Switch to Manual mode"
+                  : "Switch to Automatic mode"
+              }
+              className={`relative inline-flex h-6 w-11 flex-none items-center rounded-full border transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                isAutomatic
+                  ? "border-emerald-200 bg-emerald-500"
+                  : "border-gray-200 bg-gray-100 dark:border-volt-borderSoft dark:bg-white/10"
+              }`}
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
+                  isAutomatic ? "translate-x-5" : "translate-x-0.5"
+                } ${intakeModeSaving ? "animate-pulse" : ""}`}
+              />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {canStartAgent && token ? (
+        <div className="app-surface-panel p-4">
+          <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">Demo scenario lead</p>
+          <p className="mt-1 text-xs text-gray-500 dark:text-volt-muted">
+            Select scenarios — each creates one lead with preset survey/consultation data for{" "}
+            <span className="font-medium text-gray-700 dark:text-volt-text">A2</span>. Names and email are generated
+            automatically (e.g. Demo Lead S1, <span className="font-mono text-[11px]">demo.s1…@example.com</span>). In{" "}
+            <span className="font-medium text-gray-700 dark:text-volt-text">Automatic</span> mode workflows start
+            immediately.
+          </p>
+          <form onSubmit={handleDemoScenarioIntake} className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-medium text-gray-600 dark:text-volt-muted2">Scenarios</span>
+                <button
+                  type="button"
+                  onClick={selectAllCreatableScenarios}
+                  className="text-[11px] font-semibold text-[#004EB2] underline hover:text-[#003B86] dark:text-indigo-300"
+                >
+                  Select all
+                </button>
+                <button
+                  type="button"
+                  onClick={clearDemoScenarios}
+                  className="text-[11px] font-semibold text-gray-500 underline hover:text-gray-700 dark:text-volt-muted2"
+                >
+                  Clear
+                </button>
+                <span className="text-[11px] text-gray-400 dark:text-volt-muted2">
+                  ({demoSelectedScenarios.length} selected)
+                </span>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
+                {SCENARIO_DEMO_ORDER.map((id) => {
+                  const p = SCENARIO_DEMO_PRESETS[id];
+                  const blocked = p?.path === "none";
+                  const checked = demoSelectedScenarios.includes(id);
+                  return (
+                    <label
+                      key={id}
+                      title={blocked ? p?.help : p?.description}
+                      className={`inline-flex cursor-pointer items-center gap-2 text-xs ${
+                        blocked ? "cursor-not-allowed opacity-60" : ""
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked && !blocked}
+                        disabled={blocked}
+                        onChange={() => toggleDemoScenario(id)}
+                        className="h-3.5 w-3.5 rounded border-gray-300 text-[#004EB2] focus:ring-[#004EB2]"
+                      />
+                      <span className={blocked ? "text-gray-400 line-through" : "text-gray-700 dark:text-volt-text"}>
+                        {p?.label ?? id}
+                        {blocked ? " (batch only)" : ""}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-[11px] text-amber-800/90 dark:text-amber-200/90">
+                S4 is only assigned via dormant batch revival — not from this form.{" "}
+                <Link to="/campaigns" className="font-semibold text-[#004EB2] underline hover:text-[#003B86] dark:text-indigo-300">
+                  Campaigns
+                </Link>
+              </p>
+            </div>
+            <div className="sm:col-span-2 flex flex-wrap items-center gap-3">
+              <button
+                type="submit"
+                disabled={demoSubmitting || intakeModeLoading || !hasDemoSelection}
+                className="inline-flex h-9 items-center rounded-full bg-[#004EB2] px-4 text-xs font-semibold text-white shadow-[0_10px_25px_rgba(0,78,178,0.16)] transition hover:bg-[#003B86] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {demoSubmitting
+                  ? demoSubmitProgress
+                    ? `Creating ${demoSubmitProgress.current}/${demoSubmitProgress.total}…`
+                    : "Starting…"
+                  : `Create demo leads (${demoSelectedScenarios.filter((id) => SCENARIO_DEMO_PRESETS[id]?.path !== "none").length})`}
+              </button>
+              {demoError ? (
+                <span className="text-xs font-medium text-rose-600 dark:text-rose-300">{demoError}</span>
+              ) : null}
+            </div>
+          </form>
+          {demoResults && demoResults.length > 0 ? (
+            <ul className="mt-3 space-y-2 rounded-xl border border-emerald-100 bg-emerald-50/80 px-3 py-2 text-xs text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100">
+              {demoResults.map((row) => (
+                <li key={row.scenario} className="border-b border-emerald-100/80 pb-2 last:border-b-0 last:pb-0 dark:border-emerald-500/20">
+                  <span className="font-semibold">{row.scenario}</span>
+                  {row.ok && row.data ? (
+                    <>
+                      {" "}
+                      — started: {row.data.started ? "yes" : "no"}, intake_mode: {row.data.intake_mode ?? "—"}
+                      {row.data.lead_id ? (
+                        <>
+                          {" · "}
+                          <Link
+                            to={`/leads/${encodeURIComponent(row.data.lead_id)}`}
+                            className="font-semibold text-[#004EB2] underline hover:text-[#003B86] dark:text-indigo-300"
+                          >
+                            Open lead
+                          </Link>
+                          {row.data.thread_id ? (
+                            <span className="text-emerald-800/90 dark:text-emerald-200/90">
+                              {" "}
+                              (thread {String(row.data.thread_id).slice(0, 8)}…)
+                            </span>
+                          ) : null}
+                        </>
+                      ) : null}
+                    </>
+                  ) : (
+                    <span className="text-rose-700 dark:text-rose-300"> — {row.error}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
+
       {loadError ? (
         <div className="rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
           {loadError}{" "}
@@ -560,7 +1003,7 @@ const Settings = () => {
             >
               <div className={`absolute left-0 top-0 h-1 w-full ${r.topBar}`} />
               <p className="text-2xl font-semibold tracking-tight text-[#1e2a52] dark:text-white">
-                {loading ? "—" : roleCounts[r.key]}
+                {loading ? "â€”" : roleCounts[r.key]}
               </p>
               <p className="mt-1 text-xs font-medium text-gray-600 dark:text-volt-muted">{r.label}</p>
               <span className={`mt-3 inline-flex rounded-full px-3 py-1 text-[11px] font-semibold ring-1 ${r.tone}`}>
@@ -575,12 +1018,12 @@ const Settings = () => {
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-amber-50 text-amber-700 ring-1 ring-amber-100 dark:bg-amber-500/15 dark:text-amber-200 dark:ring-amber-500/20">
-              🔐
+              ðŸ”
             </span>
             <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("settings.permissionsMatrixTitle")}</p>
           </div>
           <p className="text-xs text-gray-400 dark:text-volt-muted2">
-            {totals.totalUsers} users • {totals.totalRoles} roles
+            {totals.totalUsers} users â€¢ {totals.totalRoles} roles
           </p>
         </div>
 
@@ -643,7 +1086,7 @@ const Settings = () => {
                         className="flex items-center justify-between rounded-2xl border border-gray-100 bg-gray-50 px-3 py-2 text-xs dark:border-volt-borderSoft dark:bg-white/5"
                       >
                         <span className="font-medium text-gray-600 dark:text-volt-muted">{c.label}</span>
-                        <span className="text-gray-700 dark:text-volt-text">{u[c.key] ? "✓" : "—"}</span>
+                        <span className="text-gray-700 dark:text-volt-text">{u[c.key] ? "âœ“" : "â€”"}</span>
                       </div>
                     ))}
                   </div>
@@ -874,7 +1317,7 @@ const Settings = () => {
 
             <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50 p-4 text-sm text-gray-700 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text">
               {viewLoading ? (
-                <p className="text-sm text-gray-500 dark:text-volt-muted">Loading…</p>
+                <p className="text-sm text-gray-500 dark:text-volt-muted">Loadingâ€¦</p>
               ) : viewUser ? (
                 <div className="space-y-2">
                   <p><span className="font-semibold">Name:</span> {viewUser.name}</p>
@@ -948,7 +1391,7 @@ const Settings = () => {
                 onClick={submitEdit}
                 className="inline-flex h-9 items-center justify-center rounded-full bg-[#004EB2] px-4 text-xs font-semibold text-white hover:bg-[#003B86] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {actionLoading ? "Saving…" : "Save changes"}
+                {actionLoading ? "Savingâ€¦" : "Save changes"}
               </button>
             </div>
           </div>
@@ -974,12 +1417,12 @@ const Settings = () => {
 
             {permLoading ? (
               <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50 p-4 text-sm text-gray-500 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted">
-                Loading permissions…
+                Loading permissionsâ€¦
               </div>
             ) : permDetail ? (
               <>
                 <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50 p-4 text-sm text-gray-700 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-text">
-                  <p className="text-xs font-semibold">User: {permDetail.name} • {permDetail.email} • Role: {permDetail.role}</p>
+                  <p className="text-xs font-semibold">User: {permDetail.name} â€¢ {permDetail.email} â€¢ Role: {permDetail.role}</p>
                   <p className="mt-1 text-[11px] text-gray-500 dark:text-volt-muted2">
                     Overrides are tri-state: Default (role), Grant, Revoke.
                   </p>
@@ -1042,7 +1485,7 @@ const Settings = () => {
                       onClick={submitPermissions}
                       className="inline-flex h-9 items-center justify-center rounded-full bg-[#004EB2] px-4 text-xs font-semibold text-white hover:bg-[#003B86] disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {actionLoading ? "Saving…" : "Save permissions"}
+                      {actionLoading ? "Savingâ€¦" : "Save permissions"}
                     </button>
                   </div>
                 </div>
@@ -1132,7 +1575,7 @@ const Settings = () => {
                 onClick={submitAdd}
                 className="inline-flex h-9 items-center justify-center rounded-full bg-[#004EB2] px-4 text-xs font-semibold text-white hover:bg-[#003B86] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {actionLoading ? "Creating…" : "Create user"}
+                {actionLoading ? "Creatingâ€¦" : "Create user"}
               </button>
             </div>
           </div>
@@ -1145,57 +1588,40 @@ const Settings = () => {
             <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">Role Definitions</p>
           </div>
 
-          <div className="space-y-3">
-            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 dark:border-volt-borderSoft dark:bg-white/5">
-              <div className="flex items-center gap-3">
-                <span className="inline-flex rounded-full bg-rose-50 px-3 py-1 text-[11px] font-semibold text-rose-700 ring-1 ring-rose-100">
-                  ADMIN
+          <div className="space-y-2">
+            {Object.entries(roleDefinitions).map(([key, def]) => (
+              <div
+                key={key}
+                className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-gray-50 px-3 py-2.5 dark:border-volt-borderSoft dark:bg-white/5"
+              >
+                <span className={`inline-flex rounded-full px-3 py-1 text-[11px] font-semibold ${def.badgeTone}`}>
+                  {def.badge}
                 </span>
-                <p className="text-xs font-semibold text-gray-700 dark:text-volt-text">Full platform access</p>
+                <p className="flex-1 text-xs font-semibold text-gray-700 dark:text-volt-text">{def.title}</p>
+                <div className="relative">
+                  <button
+                    type="button"
+                    aria-label={`Info for ${def.badge}`}
+                    onClick={() => setOpenRoleInfo((v) => (v === key ? null : key))}
+                    className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-400 transition hover:border-indigo-200 hover:text-indigo-500 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted2 dark:hover:text-indigo-300"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" className="h-3 w-3" aria-hidden="true">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                      <path d="M12 16v-4M12 8h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                  {openRoleInfo === key ? (
+                    <>
+                      <div className="fixed inset-0 z-30" onClick={() => setOpenRoleInfo(null)} />
+                      <div className="absolute right-0 top-7 z-40 w-64 rounded-2xl border border-gray-100 bg-white p-3 shadow-lg dark:border-volt-borderSoft dark:bg-volt-card">
+                        <p className={`mb-2 inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${def.badgeTone}`}>{def.badge}</p>
+                        <p className="text-[11px] text-gray-600 dark:text-volt-muted2">{def.description}</p>
+                      </div>
+                    </>
+                  ) : null}
+                </div>
               </div>
-              <p className="mt-2 text-xs text-gray-500 font-medium dark:text-volt-muted2">
-                Run/stop workflows, start any agent, approve all HITL gates, manage users, export data,
-                configure scenarios. Can modify RBAC roles.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 dark:border-volt-borderSoft dark:bg-white/5">
-              <div className="flex items-center gap-3">
-                <span className="inline-flex rounded-full bg-violet-50 px-3 py-1 text-[11px] font-semibold text-violet-700 ring-1 ring-violet-100">
-                  MANAGER
-                </span>
-                <p className="text-xs font-semibold text-gray-700 dark:text-volt-text">Workflow + HITL</p>
-              </div>
-              <p className="mt-2 text-xs text-gray-500 font-medium dark:text-volt-muted2">
-                Start/pause/resume workflows, click “Run from here” on agents, approve G1–G5 gates,
-                edit leads. Cannot manage users.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 dark:border-volt-borderSoft dark:bg-white/5">
-              <div className="flex items-center gap-3">
-                <span className="inline-flex rounded-full bg-amber-50 px-3 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-100">
-                  REVIEWER
-                </span>
-                <p className="text-xs font-semibold text-gray-700 dark:text-volt-text">HITL only</p>
-              </div>
-              <p className="mt-2 text-xs text-gray-500 font-medium dark:text-volt-muted2">
-                Review and approve/reject HITL gates (G1–G5). Can view lead details and edit content.
-                Cannot start workflows or agents.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 dark:border-volt-borderSoft dark:bg-white/5">
-              <div className="flex items-center gap-3">
-                <span className="inline-flex rounded-full bg-gray-100 px-3 py-1 text-[11px] font-semibold text-gray-700 ring-1 ring-gray-200">
-                  VIEWER
-                </span>
-                <p className="text-xs font-semibold text-gray-700 dark:text-volt-text">Read-only</p>
-              </div>
-              <p className="mt-2 text-xs text-gray-500 font-medium dark:text-volt-muted2">
-                View dashboard, lead list, workflow status, analytics. No edit or action permissions.
-              </p>
-            </div>
+            ))}
           </div>
         </div>
 
@@ -1260,7 +1686,7 @@ const Settings = () => {
                       className="mt-1 text-xs font-medium text-gray-500 dark:text-volt-muted2"
                       title={new Date(item.at).toLocaleString()}
                     >
-                      {formatRelativeTime(item.at)} • {item.role}
+                      {formatRelativeTime(item.at)} â€¢ {item.role}
                     </p>
                   </div>
                 </div>

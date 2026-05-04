@@ -695,12 +695,12 @@ const LeadDetail = () => {
               ) : null}
             </div>
             <div className="mt-2">
-              <GuidePanel title="Communication guide" subtitle="Email sequence and cadence" tone="indigo">
-                <p className="text-[11px] text-gray-600 dark:text-volt-muted2">
-                  This list shows all recorded emails for this lead. Email #N is the nurture sequence number; after a send,
-                  the next email should wait for cadence unless quiet-hours or HITL pauses intervene.
-                </p>
-              </GuidePanel>
+              <GuidePanel
+                title="Communication guide"
+                tone="indigo"
+                collapsible={false}
+                info="Recorded emails for this lead. Email #N is the nurture sequence; after a send, the next step follows scenario cadence unless quiet hours or a HITL gate pauses the graph."
+              />
             </div>
             <div className="mt-3 max-h-[300px] space-y-3 overflow-auto pr-1">
               {lead.communications?.length ? (

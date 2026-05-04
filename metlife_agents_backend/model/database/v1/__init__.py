@@ -34,6 +34,9 @@ from model.database.v1.sse_events import SSEEvent  # noqa: F401
 # ── Batch orchestration ──────────────────────────────────────────────
 from model.database.v1.batch_runs import BatchRun  # noqa: F401
 
+# ── Global runtime settings ──────────────────────────────────────────
+from model.database.v1.runtime_settings import RuntimeSettings  # noqa: F401
+
 __all__ = [
     "Base",
     "GUID",
@@ -53,4 +56,5 @@ __all__ = [
     "AuditLog",
     "SSEEvent",
     "BatchRun",
+    "RuntimeSettings",
 ]
