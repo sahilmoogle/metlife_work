@@ -87,6 +87,10 @@ class LeadState(dict):
     intent_summary: Optional[str]
     urgency: Optional[str]
     product_interest: Optional[str]
+    last_event_type: Optional[str]
+    last_event_at: Optional[str]
+    last_clicked_label: Optional[str]
+    last_clicked_url: Optional[str]
 
     # ── Scoring (A8) ─────────────────────────────────────────────────
     base_score: float
@@ -115,6 +119,7 @@ class LeadState(dict):
     current_node: Optional[str]
     is_converted: bool
     post_send_route: bool
+    regenerate_current_email: bool
 
     # ── Language ─────────────────────────────────────────────────────
     target_language: str  # EN | JA
@@ -184,6 +189,10 @@ def create_initial_state(
         "intent_summary": None,
         "urgency": None,
         "product_interest": None,
+        "last_event_type": None,
+        "last_event_at": None,
+        "last_clicked_label": None,
+        "last_clicked_url": None,
         # Score
         "base_score": 0.0,
         "engagement_score": 0.0,
@@ -206,6 +215,7 @@ def create_initial_state(
         "current_node": None,
         "is_converted": False,
         "post_send_route": False,
+        "regenerate_current_email": False,
         # Language
         "target_language": target_language,
         # Handoff

@@ -13,7 +13,11 @@ import time
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from prompts.writer import A4A5_WRITER_SYSTEM, A4A5_WRITER_USER
+from prompts.writer import (
+    A4A5_WRITER_SYSTEM,
+    A4A5_WRITER_USER,
+    COMMON_LLM_EMAIL_HTML_TEMPLATE,
+)
 from core.v1.services.agents.rules.scenario_rules import SCENARIO_DEFAULTS
 from core.v1.services.sse.manager import event_manager, node_transition_event
 from core.v1.services.agents.state import create_log_entry
@@ -58,6 +62,7 @@ async def generative_writer(
             template_style_reference=state.get(
                 "template_style_reference", "insurance nurturing email"
             ),
+            common_html_template=COMMON_LLM_EMAIL_HTML_TEMPLATE,
         )
 
         user_msg = A4A5_WRITER_USER.format(
@@ -66,6 +71,7 @@ async def generative_writer(
             age=state.get("age", "unknown"),
             scenario=scenario,
             intent_summary=state.get("intent_summary", ""),
+            product_interest=state.get("product_interest", "general"),
             pain_points="",
             previous_topics="",
         )
@@ -94,10 +100,15 @@ async def generative_writer(
         else:
             scenario = state.get("scenario", "S1")
             n = state.get("email_number", 1)
-            state["draft_email_subject"] = f"[Demo] {scenario} touch #{n}"
-            state["draft_email_body"] = (
-                "このメールは LLM 未設定のためプレースホルダーです。"
-                "本番では Azure OpenAI が本文を生成します。"
+            product = str(state.get("product_interest") or "general").replace("_", " ")
+            subject = f"[Demo] {scenario} {product} touch #{n}"
+            state["draft_email_subject"] = subject
+            state["draft_email_body"] = _render_placeholder_email(
+                subject=subject,
+                first_name=state.get("first_name") or "お客様",
+                product_interest=product,
+                intent_summary=state.get("intent_summary")
+                or "保険への関心が高まっています。",
             )
             logger.warning(
                 "A5 placeholder email for lead %s (LLM not configured, content_type=%s)",
@@ -147,3 +158,36 @@ async def generative_writer(
         )
     ]
     return state
+
+
+def _render_placeholder_email(
+    *,
+    subject: str,
+    first_name: str,
+    product_interest: str,
+    intent_summary: str,
+) -> str:
+    """Render the common HTML shell when no LLM is configured locally."""
+    return (
+        COMMON_LLM_EMAIL_HTML_TEMPLATE.replace("{{SUBJECT}}", subject)
+        .replace("{{PREHEADER}}", intent_summary[:110])
+        .replace("{{MIRROR_URL}}", "#mirror")
+        .replace("{{HEADLINE}}", subject)
+        .replace("{{GREETING}}", f"{first_name} 様")
+        .replace("{{INSIGHT_PARAGRAPH}}", intent_summary)
+        .replace(
+            "{{VALUE_PROPOSITION}}",
+            f"{product_interest} に関する関心に合わせて、必要な備えを整理するヒントをお届けします。",
+        )
+        .replace(
+            "{{RECOMMENDATION_PARAGRAPH}}",
+            "気になる保障内容やライフプランに合わせて、無理なく検討できるポイントをご確認ください。",
+        )
+        .replace("{{CTA_URL}}", "https://www.metlife.co.jp/")
+        .replace("{{CTA_TEXT}}", "詳しく確認する")
+        .replace(
+            "{{DISCLAIMER}}",
+            "このメールはデモ環境のプレースホルダーです。本番ではAzure OpenAIが内容を生成します。",
+        )
+        .replace("{{UNSUBSCRIBE_URL}}", "#unsubscribe")
+    )

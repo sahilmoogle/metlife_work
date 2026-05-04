@@ -47,6 +47,7 @@ from core.v1.services.agents.graph import (
     get_checkpointer,
     patch_checkpoint_state,
     jump_to_node,
+    continue_event_route,
 )
 from core.v1.services.runtime_settings_service import get_intake_mode, set_intake_mode
 from core.v1.services.agents.nodes.hitl_gates import persist_hitl_record
@@ -1250,6 +1251,7 @@ async def track_engagement_event(
     try:
         handoff_opened = False
         patched_state: dict = {}
+        superseded_pending_g1 = False
         config = {"configurable": {"thread_id": request.thread_id}}
 
         # Must use the persistent checkpointer — NOT a fresh MemorySaver
@@ -1293,27 +1295,42 @@ async def track_engagement_event(
                 "last_event_type": request.event_type,
                 "last_event_at": now.isoformat(),
                 "last_clicked_label": request.clicked_label,
+                "last_clicked_url": request.clicked_url,
             }
             if request.event_type not in ("unsubscribe", "bounce"):
                 state_patch["preferred_send_hour_jst"] = now.astimezone(
                     timezone(timedelta(hours=9))
                 ).hour
 
-            # For S5 CTA clicks: update product_interest so A4 generates the right content
-            if request.event_type == "email_clicked" and request.clicked_label:
-                _label_to_interest = {
-                    "Medical Insurance": "medical_insurance",
-                    "Life Insurance": "life_insurance",
-                    "Asset Formation": "asset_formation",
-                }
-                mapped = _label_to_interest.get(request.clicked_label)
-                if mapped:
-                    state_patch["product_interest"] = mapped
-                    logger.info(
-                        "S5 CTA click detected — product_interest set to '%s' for lead thread %s",
-                        mapped,
-                        request.thread_id,
-                    )
+            if (
+                request.event_type not in ("unsubscribe", "bounce")
+                and current_state.get("hitl_status") == "pending"
+                and current_state.get("hitl_gate") == "G1"
+            ):
+                superseded_pending_g1 = True
+                state_patch.update(
+                    {
+                        "event_pending_route": False,
+                        "regenerate_current_email": True,
+                        "hitl_status": "idle",
+                        "hitl_gate": None,
+                        "hitl_reviewer_notes": None,
+                        "draft_email_subject": None,
+                        "draft_email_body": None,
+                        "draft_email_subject_en": None,
+                        "content_type": None,
+                    }
+                )
+
+            if request.event_type == "email_clicked" and (
+                request.clicked_label or request.clicked_url
+            ):
+                logger.info(
+                    "CTA click captured for A3 intent analysis — thread=%s label=%r url=%r",
+                    request.thread_id,
+                    request.clicked_label,
+                    request.clicked_url,
+                )
 
             # consultation_booked → immediate handoff signal in state
             if request.event_type == "consultation_booked":
@@ -1447,15 +1464,30 @@ async def track_engagement_event(
                 )
                 await db.commit()
 
+        if superseded_pending_g1:
+            await db.execute(
+                sa_update(HITLQueue)
+                .where(HITLQueue.thread_id == request.thread_id)
+                .where(HITLQueue.gate_type == "G1")
+                .where(HITLQueue.review_status == "Awaiting")
+                .values(
+                    review_status="Superseded",
+                    reviewed_at=datetime.now(timezone.utc),
+                    reviewer_notes=(
+                        "Superseded automatically because a newer engagement event "
+                        "arrived before this draft was approved."
+                    ),
+                )
+            )
+            await db.commit()
+
         routable_state = patched_state or {**current_state, **state_patch}
-        should_route_event = (
-            request.event_type not in ("unsubscribe", "bounce")
-            and routable_state.get("hitl_status") != "pending"
+        should_route_event = request.event_type not in ("unsubscribe", "bounce") and (
+            routable_state.get("hitl_status") != "pending" or superseded_pending_g1
         )
         if should_route_event:
-            run_result = await jump_to_node(
+            run_result = await continue_event_route(
                 request.thread_id,
-                "intent_analyser",
                 db_session=db,
                 state_patch=state_patch,
             )

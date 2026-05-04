@@ -403,6 +403,9 @@ def _route_after_intent(state: dict) -> str:
     scenario = state.get("scenario")
     email_number = state.get("email_number", 0)
 
+    if state.get("regenerate_current_email"):
+        return "content_strategist"
+
     # After an email send or an external engagement event, score first so the
     # graph can either hand off, pause for cadence, or mark dormant. Without
     # this guard, S1-S5 loop directly into the next email in the same run.
@@ -911,3 +914,56 @@ async def jump_to_node(
         "thread_id": thread_id,
         "state": result,
     }
+
+
+async def continue_event_route(
+    thread_id: str,
+    *,
+    db_session: AsyncSession | None = None,
+    state_patch: dict | None = None,
+) -> dict:
+    """Run the event-driven path beyond A3 using direct node calls.
+
+    Avoid ``Command(goto=...)`` here: jumping to A4 naturally follows graph edges
+    into G1 interrupt, and repeated manual gotos can produce concurrent writes on
+    ``StateGraph(dict)``. Direct node calls make the API event route deterministic.
+    """
+    config = {"configurable": {"thread_id": thread_id}}
+
+    async with get_checkpointer() as cp:
+        graph = build_graph(db_session=db_session, checkpointer=cp)
+        if state_patch:
+            state = await patch_checkpoint_state(graph, config, state_patch)
+        else:
+            snapshot = await graph.aget_state(config)
+            state = dict(snapshot.values or {}) if snapshot else {}
+
+        llm = get_llm()
+
+        # Always refresh intent first so A4/A8 sees the newest click context.
+        state = await intent_analyser(state, llm=llm, db=db_session)
+        await patch_checkpoint_state(graph, config, state)
+
+        if state.get("regenerate_current_email"):
+            # Rebuild the same email number and pause at a fresh G1 review.
+            state = await content_strategist(state, db=db_session)
+            state = await generative_writer(state, llm=llm, db=db_session)
+            state = await prep_g1(state, db=db_session)
+            await patch_checkpoint_state(graph, config, state)
+            return {"thread_id": thread_id, "state": state}
+
+        if state.get("event_pending_route") or state.get("post_send_route"):
+            state = await propensity_scorer(state, db=db_session)
+            next_route = _route_after_scoring(state)
+            if next_route == "schedule_cadence":
+                state = await schedule_cadence_timer(state, db=db_session)
+            elif next_route == "prep_g5":
+                state = await prep_g5(state, db=db_session)
+            elif next_route == "sales_handoff":
+                state = await sales_handoff(state, llm=llm, db=db_session)
+                state = await prep_g4(state, db=db_session)
+            elif next_route == "mark_dormant":
+                state = await mark_dormant(state, db=db_session)
+            await patch_checkpoint_state(graph, config, state)
+
+        return {"thread_id": thread_id, "state": state}

@@ -45,7 +45,12 @@ async def intent_analyser(state: dict, *, llm=None, db=None) -> dict:
         gender=state.get("gender", "unknown"),
         engagement_score=state.get("engagement_score", 0),
         email_number=state.get("email_number", 0),
+        product_interest=state.get("product_interest") or "unknown",
         context_block=state.get("context_block", "No context available"),
+        last_event_type=state.get("last_event_type") or "N/A",
+        last_clicked_label=state.get("last_clicked_label") or "N/A",
+        last_clicked_url=state.get("last_clicked_url") or "N/A",
+        last_event_at=state.get("last_event_at") or "N/A",
         memo=state.get("memo") or "N/A",
     )
 
@@ -60,21 +65,37 @@ async def intent_analyser(state: dict, *, llm=None, db=None) -> dict:
             parsed = json.loads(response.content)
             state["intent_summary"] = parsed.get("intent_summary", "")
             state["urgency"] = parsed.get("urgency", "medium")
-            state["product_interest"] = parsed.get("product_interest", "general")
+            product_interest = parsed.get("product_interest")
+            if product_interest and product_interest != "general":
+                state["product_interest"] = product_interest
+            elif not state.get("product_interest"):
+                state["product_interest"] = product_interest or "general"
         except Exception as exc:
             logger.warning("A3 LLM call failed, using defaults: %s", exc)
-            state["intent_summary"] = "Intent analysis unavailable — LLM error."
+            state["intent_summary"] = (
+                state.get("intent_summary")
+                or "Intent analysis unavailable — LLM error."
+            )
             state["urgency"] = "medium"
-            state["product_interest"] = "general"
+            state["product_interest"] = state.get("product_interest") or "general"
     else:
         # ── Fallback: rule-based defaults ────────────────────────────
-        state["intent_summary"] = (
+        event_hint = ""
+        if state.get("last_event_type"):
+            event_hint = (
+                f" Latest event: {state.get('last_event_type')}"
+                f" label={state.get('last_clicked_label') or 'N/A'}"
+                f" url={state.get('last_clicked_url') or 'N/A'}."
+            )
+        state["intent_summary"] = state.get("intent_summary") or (
             f"Lead {state.get('first_name', '')} in scenario "
             f"{state.get('scenario', 'unknown')}. "
-            f"Score: {state.get('engagement_score', 0)}."
+            f"Score: {state.get('engagement_score', 0)}.{event_hint}"
         )
         state["urgency"] = "medium"
-        state["product_interest"] = state.get("product_code") or "general"
+        state["product_interest"] = (
+            state.get("product_interest") or state.get("product_code") or "general"
+        )
 
     state["current_node"] = NODE_ID
     if db is not None:
