@@ -35,6 +35,15 @@ const hitlGateLegend = [
   ["G5", "Score Override", "Force handoff or hold nurture when score is near threshold."],
 ];
 
+const hitlQueueStateLines = [
+  "Pending — waiting for human review now.",
+  "Resolved — a decision was already recorded for this gate.",
+  "Approval resumes the workflow from the paused gate.",
+];
+
+const allGatesFilterHelp =
+  "Shows items from every gate. Counts match the current queue tab (Pending or Resolved).";
+
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
 
 const Reviews = () => {
@@ -56,6 +65,8 @@ const Reviews = () => {
   const [bulkApproving, setBulkApproving] = useState(false);
   const [bulkMessage, setBulkMessage] = useState("");
   const [bulkError, setBulkError] = useState("");
+  const [hitlGuidePopover, setHitlGuidePopover] = useState(null); // "queue" | "G1" | .. | null
+  const [filterGateInfo, setFilterGateInfo] = useState(null); // "all" | "G1" | .. | null — filter row ⓘ
 
   useEffect(() => {
     let cancelled = false;
@@ -304,19 +315,76 @@ const Reviews = () => {
 
       <GuidePanel
         title="HITL gateway guide"
-        subtitle="G1-G5 review gates and queue states"
         tone="amber"
+        info="Human-review gates G1–G5 and Pending vs Resolved queues. Gate definitions use the round icons in this row and next to each filter."
       >
-        <div className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-gray-500 dark:text-volt-muted2">
-          <span>Pending = waiting now</span>
-          <span>Resolved = decision already recorded</span>
-          <span>Approval resumes the workflow from the paused gate</span>
-        </div>
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="relative flex flex-wrap items-center gap-x-2 gap-y-2">
+          {/* Queue states */}
+          <div className="relative flex items-center gap-1">
+            <span className="text-[11px] font-semibold text-amber-900/90 dark:text-amber-100">Queue</span>
+            <button
+              type="button"
+              aria-label="Queue state definitions"
+              onClick={() => {
+                setFilterGateInfo(null);
+                setHitlGuidePopover((v) => (v === "queue" ? null : "queue"));
+              }}
+              className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-200/80 bg-white/90 text-amber-600 transition hover:border-amber-400 hover:text-amber-800 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-200"
+            >
+              <svg viewBox="0 0 24 24" fill="none" className="h-3 w-3" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                <path d="M12 16v-4M12 8h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </button>
+            {hitlGuidePopover === "queue" ? (
+              <>
+                <div className="fixed inset-0 z-30" onClick={() => setHitlGuidePopover(null)} />
+                <div className="absolute left-0 top-7 z-40 w-64 rounded-2xl border border-amber-100 bg-white p-3 shadow-lg dark:border-amber-500/25 dark:bg-amber-950/95">
+                  <p className="mb-2 text-[11px] font-semibold text-amber-950 dark:text-amber-100">Queue states</p>
+                  <ul className="space-y-1.5 text-[11px] text-gray-600 dark:text-amber-100/85">
+                    {hitlQueueStateLines.map((line) => (
+                      <li key={line} className="leading-snug">• {line}</li>
+                    ))}
+                  </ul>
+                </div>
+              </>
+            ) : null}
+          </div>
+
+          <span className="hidden h-4 w-px bg-amber-200/80 sm:inline dark:bg-amber-500/30" aria-hidden />
+
+          {/* G1–G5 chips + i */}
           {hitlGateLegend.map(([gate, label, detail]) => (
-            <div key={gate} className="rounded-xl border border-amber-100 bg-amber-50/60 px-3 py-2 text-[11px] dark:border-amber-500/25 dark:bg-amber-500/10">
-              <span className="font-semibold text-amber-900 dark:text-amber-100">{gate} · {label}</span>
-              <p className="mt-0.5 text-amber-900/80 dark:text-amber-100/80">{detail}</p>
+            <div key={gate} className="relative flex items-center gap-0.5">
+              <span className="inline-flex items-center gap-0.5 rounded-full border border-amber-200/90 bg-amber-50/90 px-2 py-0.5 text-[11px] font-semibold text-amber-950 dark:border-amber-500/35 dark:bg-amber-500/15 dark:text-amber-100">
+                <span>{gate}</span>
+                <span className="font-normal opacity-80">{label}</span>
+              </span>
+              <button
+                type="button"
+                aria-label={`${gate} definition`}
+                onClick={() => {
+                  setFilterGateInfo(null);
+                  setHitlGuidePopover((v) => (v === gate ? null : gate));
+                }}
+                className="inline-flex h-5 w-5 flex-none items-center justify-center rounded-full border border-amber-200/80 bg-white/90 text-amber-600 transition hover:border-amber-400 hover:text-amber-800 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-200"
+              >
+                <svg viewBox="0 0 24 24" fill="none" className="h-3 w-3" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                  <path d="M12 16v-4M12 8h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </button>
+              {hitlGuidePopover === gate ? (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setHitlGuidePopover(null)} />
+                  <div className="absolute left-0 top-7 z-40 w-56 rounded-2xl border border-amber-100 bg-white p-3 shadow-lg dark:border-amber-500/25 dark:bg-amber-950/95">
+                    <p className="text-[11px] font-semibold text-amber-950 dark:text-amber-100">
+                      {gate} · {label}
+                    </p>
+                    <p className="mt-1.5 text-[11px] text-gray-600 dark:text-amber-100/85">{detail}</p>
+                  </div>
+                </>
+              ) : null}
             </div>
           ))}
         </div>
@@ -359,13 +427,17 @@ const Reviews = () => {
         <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-600 dark:text-volt-muted2">
           {t("reviews.filterByGate")}
         </p>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {gateFilters.map((g) => {
             const isActive = activeGate === g.key;
             const cnt = gateCounts[g.key] ?? 0;
-            return (
+            const meta =
+              g.key !== "all"
+                ? hitlGateLegend.find(([gate]) => gate === g.key)
+                : null;
+
+            const FilterChipButton = (
               <button
-                key={g.key}
                 type="button"
                 onClick={() => setActiveGate(g.key)}
                 className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
@@ -385,6 +457,56 @@ const Reviews = () => {
                   {cnt}
                 </span>
               </button>
+            );
+
+            const infoKey = g.key === "all" ? "all" : g.key;
+
+            return (
+              <div key={g.key} className="inline-flex items-center gap-0.5">
+                {FilterChipButton}
+                <div className="relative">
+                  <button
+                    type="button"
+                    aria-label={
+                      g.key === "all"
+                        ? "What All Gates means"
+                        : `${g.key} gate definition`
+                    }
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setHitlGuidePopover(null);
+                      setFilterGateInfo((v) => (v === infoKey ? null : infoKey));
+                    }}
+                    className="inline-flex h-6 w-6 flex-none items-center justify-center rounded-full border border-gray-200 bg-white text-gray-400 transition hover:border-[#a7c4f2] hover:text-[#004EB2] dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted2 dark:hover:text-indigo-300"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" className="h-3 w-3" aria-hidden="true">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                      <path d="M12 16v-4M12 8h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                  {filterGateInfo === infoKey ? (
+                    <>
+                      <div className="fixed inset-0 z-30" onClick={() => setFilterGateInfo(null)} />
+                      <div className="absolute left-0 top-8 z-40 w-56 rounded-2xl border border-gray-100 bg-white p-3 shadow-lg dark:border-volt-borderSoft dark:bg-volt-card">
+                        {g.key === "all" ? (
+                          <>
+                            <p className="text-[11px] font-semibold text-gray-800 dark:text-white">All Gates</p>
+                            <p className="mt-1.5 text-[11px] text-gray-600 dark:text-volt-muted2">{allGatesFilterHelp}</p>
+                          </>
+                        ) : meta ? (
+                          <>
+                            <p className="text-[11px] font-semibold text-gray-800 dark:text-white">
+                              {meta[0]} · {meta[1]}
+                            </p>
+                            <p className="mt-1.5 text-[11px] text-gray-600 dark:text-volt-muted2">{meta[2]}</p>
+                          </>
+                        ) : null}
+                      </div>
+                    </>
+                  ) : null}
+                </div>
+              </div>
             );
           })}
         </div>

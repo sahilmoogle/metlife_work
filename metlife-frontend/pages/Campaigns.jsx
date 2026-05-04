@@ -11,13 +11,13 @@ import GuidePanel from "../components/GuidePanel";
 const SCENARIO_IDS = ["S1", "S2", "S3", "S4", "S5", "S6", "S7"];
 
 const scenarioCards = [
-  { id: "S1", label: "Young Prof", tone: "text-indigo-700 bg-indigo-50 ring-indigo-100" },
-  { id: "S2", label: "Life Event", tone: "text-emerald-700 bg-emerald-50 ring-emerald-100" },
-  { id: "S3", label: "Senior", tone: "text-violet-700 bg-violet-50 ring-violet-100" },
-  { id: "S4", label: "Dormant", tone: "text-amber-700 bg-amber-50 ring-amber-100" },
-  { id: "S5", label: "Buyer", tone: "text-cyan-700 bg-cyan-50 ring-cyan-100" },
-  { id: "S6", label: "F2F", tone: "text-teal-700 bg-teal-50 ring-teal-100" },
-  { id: "S7", label: "W2C", tone: "text-rose-700 bg-rose-50 ring-rose-100" },
+  { id: "S1", label: "Young Prof",  desc: "Survey path for younger leads without a life-event answer.",      tone: "text-indigo-700 bg-indigo-50 ring-indigo-100" },
+  { id: "S2", label: "Life Event",  desc: "Life event such as marriage, birth, home, or job change.",        tone: "text-emerald-700 bg-emerald-50 ring-emerald-100" },
+  { id: "S3", label: "Senior",      desc: "Older survey path with more formal communication rules.",         tone: "text-violet-700 bg-violet-50 ring-violet-100" },
+  { id: "S4", label: "Dormant",     desc: "Reactivation path for old inactive leads.",                      tone: "text-amber-700 bg-amber-50 ring-amber-100" },
+  { id: "S5", label: "Buyer",       desc: "High intent quote/survey answer path with product interest.",    tone: "text-cyan-700 bg-cyan-50 ring-cyan-100" },
+  { id: "S6", label: "F2F",         desc: "Consultation form path, usually one email then handoff.",        tone: "text-teal-700 bg-teal-50 ring-teal-100" },
+  { id: "S7", label: "W2C",         desc: "Callback or call-based path, may skip email when none captured.", tone: "text-rose-700 bg-rose-50 ring-rose-100" },
 ];
 
 const workflowDefinitions = [
@@ -27,16 +27,6 @@ const workflowDefinitions = [
   ["Awaiting HITL", "A human review gate is open and the workflow is waiting before continuing."],
   ["Cadence", "After a send, the next email waits for the scenario cadence timer instead of sending immediately."],
   ["Revival", "Old dormant leads re-enter through S4 after the dormancy window, not immediately after completion."],
-];
-
-const scenarioLegend = [
-  ["S1", "Young Professional", "Survey path for younger leads without a life-event answer."],
-  ["S2", "Life Event", "Life event such as marriage, birth, home, or job change."],
-  ["S3", "Senior", "Older survey path with more formal communication rules."],
-  ["S4", "Dormant Revival", "Reactivation path for old inactive leads."],
-  ["S5", "Active Buyer", "High intent quote/survey answer path with product interest."],
-  ["S6", "Face-to-Face", "Consultation form path, usually one email then handoff."],
-  ["S7", "Web-to-Call", "Callback or call-based path, may skip email when none captured."],
 ];
 
 /** Maps backend ``Lead.current_agent_node`` values → pipeline card keys (see agent NODE_ID constants). */
@@ -371,6 +361,7 @@ const Campaigns = () => {
   const [batch, setBatch] = useState(null);
   const [loadError, setLoadError] = useState("");
   const [runError, setRunError] = useState("");
+  const [openScenarioInfo, setOpenScenarioInfo] = useState(null); // scenario id or null
   const [loading, setLoading] = useState(true);
   /** Pending HITL rows for legend + tiles (scoped to ``batch.batch_id`` when present). */
   const [awaitingHitl, setAwaitingHitl] = useState(0);
@@ -753,7 +744,11 @@ const Campaigns = () => {
         </div>
 
         <div className="mt-4 space-y-3">
-          <GuidePanel title="Workflow guide" subtitle="Batch counts, cadence, and selected runs" tone="indigo">
+          <GuidePanel
+            title="Workflow guide"
+            tone="indigo"
+            info="Vocabulary for this run: Run All / Run Selected, what Succeeded means, Awaiting HITL, cadence timers, and dormant revival."
+          >
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {workflowDefinitions.map(([term, detail]) => (
                 <div key={term} className="rounded-xl bg-white/75 px-3 py-2 text-[11px] dark:bg-volt-panel/60">
@@ -842,35 +837,49 @@ const Campaigns = () => {
           <p className="px-1 text-[10px] leading-snug text-gray-500 dark:text-volt-muted2">
             {t("campaigns.scenarios.subtitle")}
           </p>
-          <GuidePanel title="Scenario legend" subtitle="S1-S7 routing definitions">
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-              {scenarioLegend.map(([id, label, detail]) => (
-                <div key={id} className="rounded-xl bg-gray-50 px-3 py-2 text-[11px] dark:bg-white/5">
-                  <span className="font-semibold text-indigo-700 dark:text-indigo-200">{id} · {label}</span>
-                  <p className="mt-0.5 text-gray-600 dark:text-volt-muted2">{detail}</p>
-                </div>
-              ))}
-            </div>
-          </GuidePanel>
+          <GuidePanel
+            title="Scenario legend"
+            tone="gray"
+            collapsible={false}
+            info="S1–S7 are nurture-route labels for MetLife JP. Counts are on the tiles above — open each tile’s round icon for the full routing description."
+          />
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
             {scenarioCards.map((s) => (
-              <div
-                key={s.id}
-                className="app-surface-nested p-3"
-              >
+              <div key={s.id} className="app-surface-nested p-3">
                 <div className="flex items-center justify-between">
                   <span className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ring-1 ${s.tone}`}>
                     {s.id}
                   </span>
-                  <span className="text-[11px] font-semibold text-gray-400">
-                    {status === "idle" ? "—" : ""}
-                  </span>
+                  {/* i button */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      aria-label={`Info for ${s.id}`}
+                      onClick={() => setOpenScenarioInfo((v) => (v === s.id ? null : s.id))}
+                      className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-400 transition hover:border-indigo-200 hover:text-indigo-500 dark:border-volt-borderSoft dark:bg-volt-card/60 dark:text-volt-muted2 dark:hover:text-indigo-300"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" className="h-3 w-3" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                        <path d="M12 16v-4M12 8h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      </svg>
+                    </button>
+                    {openScenarioInfo === s.id ? (
+                      <>
+                        <div className="fixed inset-0 z-30" onClick={() => setOpenScenarioInfo(null)} />
+                        <div className="absolute right-0 top-7 z-40 w-52 rounded-2xl border border-gray-100 bg-white p-3 shadow-lg dark:border-volt-borderSoft dark:bg-volt-card">
+                          <p className={`mb-1.5 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${s.tone}`}>{s.id}</p>
+                          <p className="text-[11px] font-semibold text-gray-800 dark:text-white">{s.label}</p>
+                          <p className="mt-1 text-[11px] text-gray-500 dark:text-volt-muted2">{s.desc}</p>
+                        </div>
+                      </>
+                    ) : null}
+                  </div>
                 </div>
                 <p className="mt-3 text-xl font-semibold tracking-tight text-[#1e2a52] dark:text-white">
                   {loading ? "—" : formatInt(scenarioCounts[s.id] || 0)}
                 </p>
                 <p className="mt-1 text-xs font-medium text-gray-500 dark:text-volt-muted2">{s.label}</p>
-                <p className="mt-2 text-[11px] text-gray-800 dark:text-volt-muted2">
+                <p className="mt-1 text-[11px] text-gray-400 dark:text-volt-muted2">
                   {loading ? t("campaigns.status.loading") : t("campaigns.status.ready")}
                 </p>
               </div>
@@ -880,11 +889,12 @@ const Campaigns = () => {
           <div className="app-surface-card p-4">
             <div className="mb-3">
               <p className="text-sm font-semibold text-[#1e2a52] dark:text-white">{t("campaigns.pipeline.title")}</p>
-              <p className="mt-1 text-[11px] text-gray-500 dark:text-volt-muted2">
-                Agent tiles show this batch's node completions; subtext shows current DB queue position.
-              </p>
               <div className="mt-3">
-                <GuidePanel title="Pipeline legend" subtitle="Agent steps, cadence, and HITL gates">
+                <GuidePanel
+                  title="Pipeline legend"
+                  tone="gray"
+                  info="Agent tiles reflect this batch’s graph completions; captions show queue position where applicable. Below lists each pipeline step code."
+                >
                   <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                     {pipelineLegend.map(([code, label, detail]) => (
                       <div key={code} className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2 text-[11px] dark:border-volt-borderSoft dark:bg-white/5">

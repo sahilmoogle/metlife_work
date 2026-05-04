@@ -306,9 +306,24 @@ async def approve_hitl(
     hitl_record = hitl_result.scalars().first()
 
     if not hitl_record:
+        # Often happens after a 500 on resume: DB was already updated to Approved
+        # but LangGraph did not finish. Re-approve then returns 404.
+        any_row = await db.execute(
+            select(HITLQueue).where(HITLQueue.thread_id == thread_id).limit(1)
+        )
+        existing = any_row.scalars().first()
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"This review is not pending (status={existing.review_status}). "
+                    "If a previous approve failed while resuming the workflow, use "
+                    f"POST /api/v1/agents/{thread_id}/resume to continue, or create a new demo lead."
+                ),
+            )
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No pending HITL record for thread {thread_id}",
+            detail=f"No HITL record for thread {thread_id}",
         )
 
     lead_id = str(hitl_record.lead_id)

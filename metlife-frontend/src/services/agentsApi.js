@@ -246,6 +246,37 @@ export const intakeConsultation = async (token, body, { seminar = false } = {}) 
   return payload?.data;
 };
 
+/** GET /agents/settings/intake-mode — returns { mode: "automatic"|"manual", description } */
+export const getIntakeMode = async (token) => {
+  const response = await fetch(`${buildUrl(envConfig.agentsPath)}/settings/intake-mode`, {
+    method: "GET",
+    headers: authedHeaders(token),
+  });
+
+  if (!response.ok) {
+    const message = await parseApiError(response, "Failed to load intake mode.");
+    throw new Error(message);
+  }
+  const payload = await response.json();
+  return payload?.data;
+};
+
+/** PATCH /agents/settings/intake-mode — set mode to "automatic" or "manual" */
+export const setIntakeMode = async (token, mode) => {
+  const response = await fetch(`${buildUrl(envConfig.agentsPath)}/settings/intake-mode`, {
+    method: "PATCH",
+    headers: authedHeaders(token, { "Content-Type": "application/json" }),
+    body: JSON.stringify({ mode }),
+  });
+
+  if (!response.ok) {
+    const message = await parseApiError(response, "Failed to update intake mode.");
+    throw new Error(message);
+  }
+  const payload = await response.json();
+  return payload?.data;
+};
+
 export const getWorkflowState = async (token, threadId) => {
   const safeId = encodeURIComponent(threadId);
   const response = await fetch(`${buildUrl(envConfig.agentsPath)}/state/${safeId}`, {

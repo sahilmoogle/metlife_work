@@ -443,6 +443,10 @@ def _route_after_scoring(state: dict) -> str:
         return "prep_g5"
     if email_number >= max_emails:
         return "mark_dormant"
+    # cadence_days=0 means send immediately — skip the timer pause.
+    if int(state.get("cadence_days") or 0) == 0:
+        state["post_send_route"] = False
+        return "intent_analyser"
     return "schedule_cadence"
 
 
@@ -488,6 +492,9 @@ def _route_after_g5(state: dict) -> str:
     if decision == "hold":
         if state.get("email_number", 0) >= state.get("max_emails", 0):
             return "mark_dormant"
+        if int(state.get("cadence_days") or 0) == 0:
+            state["post_send_route"] = False
+            return "intent_analyser"
         return "schedule_cadence"
     return "sales_handoff"
 
@@ -506,6 +513,9 @@ def _route_after_g4(state: dict) -> str:
         ):
             return "end"
         if state.get("email_number", 0) < state.get("max_emails", 0):
+            if int(state.get("cadence_days") or 0) == 0:
+                state["post_send_route"] = False
+                return "intent_analyser"
             return "schedule_cadence"
         return "mark_dormant"
     return "end"
@@ -696,6 +706,7 @@ def build_graph(*, db_session=None, checkpointer=None):
             "prep_g5": "prep_g5",
             "sales_handoff": "sales_handoff",
             "mark_dormant": "mark_dormant",
+            "intent_analyser": "intent_analyser",
         },
     )
 
@@ -713,6 +724,7 @@ def build_graph(*, db_session=None, checkpointer=None):
             "schedule_cadence": "schedule_cadence",
             "sales_handoff": "sales_handoff",
             "mark_dormant": "mark_dormant",
+            "intent_analyser": "intent_analyser",
         },
     )
 
@@ -730,6 +742,7 @@ def build_graph(*, db_session=None, checkpointer=None):
             "schedule_cadence": "schedule_cadence",
             "mark_dormant": "mark_dormant",
             "end": END,
+            "intent_analyser": "intent_analyser",
         },
     )
 

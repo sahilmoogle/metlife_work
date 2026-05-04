@@ -27,6 +27,8 @@ from model.api.v1.agents import (
     IntakeConsultationRequest,
     TrackClickRequest,
     ScenarioConfigUpdateRequest,
+    IntakeModeResponse,
+    IntakeModeUpdateRequest,
 )
 from model.database.v1.leads import Lead
 from model.database.v1.quotes import Quote
@@ -46,6 +48,7 @@ from core.v1.services.agents.graph import (
     patch_checkpoint_state,
     jump_to_node,
 )
+from core.v1.services.runtime_settings_service import get_intake_mode, set_intake_mode
 from core.v1.services.agents.nodes.hitl_gates import persist_hitl_record
 from core.v1.services.agents.nodes.sales_handoff import sales_handoff
 from core.v1.services.sse.manager import event_manager, batch_progress_event
@@ -213,6 +216,68 @@ async def retry_resume_workflow(
         )
 
 
+@router.get(
+    "/settings/intake-mode",
+    response_model=APIResponse[IntakeModeResponse],
+)
+async def get_intake_mode_setting(
+    db: AsyncSession = Depends(get_db),
+):
+    """Return the current workflow intake mode (automatic / manual)."""
+    mode = await get_intake_mode(db)
+    return APIResponse(
+        success=True,
+        status_code=status.HTTP_200_OK,
+        data=IntakeModeResponse(
+            mode=mode,
+            description=(
+                "Automatic: every new lead triggers the agent workflow immediately. "
+                "Manual: leads are saved but the workflow must be started explicitly."
+            ),
+        ),
+        message="Intake mode retrieved.",
+    )
+
+
+@router.patch(
+    "/settings/intake-mode",
+    response_model=APIResponse[IntakeModeResponse],
+)
+async def update_intake_mode_setting(
+    request: IntakeModeUpdateRequest,
+    _: dict = Depends(require_permission("start_agent")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Toggle the global workflow intake mode.
+
+    ``automatic``  –  every new lead from an intake endpoint immediately
+    starts the full agent workflow (default).
+
+    ``manual``  –  leads are persisted but the workflow must be triggered
+    explicitly via ``POST /agents/start``.
+    """
+    try:
+        mode = await set_intake_mode(db, request.mode)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
+    return APIResponse(
+        success=True,
+        status_code=status.HTTP_200_OK,
+        data=IntakeModeResponse(
+            mode=mode,
+            description=(
+                "Automatic: every new lead triggers the agent workflow immediately. "
+                "Manual: leads are saved but the workflow must be started explicitly."
+            ),
+        ),
+        message=f"Intake mode updated to '{mode}'.",
+    )
+
+
 @router.post(
     "/intake/quote",
     response_model=APIResponse[dict],
@@ -224,6 +289,8 @@ async def intake_quote(
     db: AsyncSession = Depends(get_db),
 ):
     """Internal quote intake endpoint replacing source-system webhooks in demo mode."""
+    intake_mode = await get_intake_mode(db)
+
     lead_id = uuid.uuid4()
     lead = Lead(
         id=lead_id,
@@ -264,8 +331,13 @@ async def intake_quote(
     )
     await db.commit()
 
+    # Automatic mode: always start the workflow for every new lead.
+    # Manual mode: lead is persisted but workflow must be started explicitly
+    # via POST /agents/start — intake never auto-triggers it.
+    should_start = intake_mode == "automatic"
+
     workflow = None
-    if request.start_workflow:
+    if should_start:
         workflow = await start_workflow(lead_id=str(lead_id), db_session=db)
 
     return APIResponse(
@@ -275,6 +347,7 @@ async def intake_quote(
             "lead_id": str(lead_id),
             "thread_id": workflow.get("thread_id") if workflow else None,
             "started": bool(workflow),
+            "intake_mode": intake_mode,
         },
         message="Quote intake accepted.",
     )
@@ -291,6 +364,8 @@ async def intake_consultation(
     db: AsyncSession = Depends(get_db),
 ):
     """Internal consultation/seminar intake endpoint for S6/S7 source events."""
+    intake_mode = await get_intake_mode(db)
+
     lead_id = uuid.uuid4()
     registration_source = (
         "f2f_form" if request.request_type == "face_to_face" else "web_callback"
@@ -335,8 +410,10 @@ async def intake_consultation(
     )
     await db.commit()
 
+    should_start = intake_mode == "automatic"
+
     workflow = None
-    if request.start_workflow:
+    if should_start:
         workflow = await start_workflow(lead_id=str(lead_id), db_session=db)
 
     return APIResponse(
@@ -346,6 +423,7 @@ async def intake_consultation(
             "lead_id": str(lead_id),
             "thread_id": workflow.get("thread_id") if workflow else None,
             "started": bool(workflow),
+            "intake_mode": intake_mode,
         },
         message="Consultation intake accepted.",
     )

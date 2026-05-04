@@ -167,6 +167,15 @@ class BatchRunRequest(BaseModel):
     lead_ids: list[str] = Field(default_factory=list)
 
 
+class IntakeModeResponse(BaseModel):
+    mode: str  # "automatic" | "manual"
+    description: str = ""
+
+
+class IntakeModeUpdateRequest(BaseModel):
+    mode: str  # "automatic" | "manual"
+
+
 class WorkflowStateResponse(BaseModel):
     """Full LangGraph checkpoint state — used by the state inspector endpoint."""
 
